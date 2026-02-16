@@ -1,0 +1,127 @@
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
+import { ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import type { Meta } from '../types';
+
+export interface Filters {
+  mainVarietal: string;
+  region: string;
+  type: string;
+  priceMax: string;
+  ratingMin: string;
+}
+
+export const emptyFilters: Filters = {
+  mainVarietal: '',
+  region: '',
+  type: '',
+  priceMax: '',
+  ratingMin: '',
+};
+
+function SelectFilter({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="min-w-[160px]">
+      <Listbox value={value} onChange={onChange}>
+        <div className="relative">
+          <ListboxButton className="relative w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-8 text-left text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+              {value || label}
+            </span>
+            <span className="absolute inset-y-0 right-0 flex items-center pr-2">
+              <ChevronUpDownIcon className="h-4 w-4 text-gray-400" />
+            </span>
+          </ListboxButton>
+          <ListboxOptions className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none text-sm">
+            <ListboxOption
+              value=""
+              className="cursor-pointer select-none px-3 py-2 text-gray-400 hover:bg-indigo-50 data-[selected]:bg-indigo-100"
+            >
+              All {label}s
+            </ListboxOption>
+            {options.map((opt) => (
+              <ListboxOption
+                key={opt}
+                value={opt}
+                className="cursor-pointer select-none px-3 py-2 text-gray-900 hover:bg-indigo-50 data-[selected]:bg-indigo-100 data-[selected]:font-medium"
+              >
+                {opt}
+              </ListboxOption>
+            ))}
+          </ListboxOptions>
+        </div>
+      </Listbox>
+    </div>
+  );
+}
+
+export default function FilterPanel({
+  meta,
+  filters,
+  onChange,
+}: {
+  meta: Meta | null;
+  filters: Filters;
+  onChange: (filters: Filters) => void;
+}) {
+  const hasFilters = Object.values(filters).some((v) => v !== '');
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {meta && (
+        <>
+          <SelectFilter
+            label="Varietal"
+            value={filters.mainVarietal}
+            options={meta.varietals}
+            onChange={(v) => onChange({ ...filters, mainVarietal: v })}
+          />
+          <SelectFilter
+            label="Region"
+            value={filters.region}
+            options={meta.regions}
+            onChange={(v) => onChange({ ...filters, region: v })}
+          />
+          <SelectFilter
+            label="Type"
+            value={filters.type}
+            options={meta.types}
+            onChange={(v) => onChange({ ...filters, type: v })}
+          />
+        </>
+      )}
+      <input
+        type="text"
+        placeholder="Max price"
+        value={filters.priceMax}
+        onChange={(e) => onChange({ ...filters, priceMax: e.target.value })}
+        className="w-24 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+      <input
+        type="text"
+        placeholder="Min rating"
+        value={filters.ratingMin}
+        onChange={(e) => onChange({ ...filters, ratingMin: e.target.value })}
+        className="w-24 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+      {hasFilters && (
+        <button
+          onClick={() => onChange(emptyFilters)}
+          className="flex items-center gap-1 rounded-md px-2 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+        >
+          <XMarkIcon className="h-4 w-4" />
+          Clear
+        </button>
+      )}
+    </div>
+  );
+}
