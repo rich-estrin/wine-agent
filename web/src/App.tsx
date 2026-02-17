@@ -85,18 +85,26 @@ export default function App() {
       (k) => !['limit', 'sort_by', 'sort_order'].includes(k)
     );
 
+    if (!hasSearchCriteria && initialLoad) {
+      // Load wines on first load with current sort settings
+      setLoading(true);
+      searchWines(params)
+        .then(setWines)
+        .catch(console.error)
+        .finally(() => {
+          setLoading(false);
+          setInitialLoad(false);
+        });
+      return;
+    }
+
     if (!hasSearchCriteria) {
-      if (initialLoad) {
-        // Load top-rated wines on first load
-        setLoading(true);
-        searchWines({ limit: 40, sort_by: 'rating', sort_order: 'desc' })
-          .then(setWines)
-          .catch(console.error)
-          .finally(() => {
-            setLoading(false);
-            setInitialLoad(false);
-          });
-      }
+      // No search criteria but not initial load - still search to apply sort changes
+      setLoading(true);
+      searchWines(params)
+        .then(setWines)
+        .catch(console.error)
+        .finally(() => setLoading(false));
       return;
     }
 

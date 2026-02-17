@@ -31,7 +31,7 @@ export default function WineList({
       <p className="text-sm text-gray-500 mb-3">
         Showing {wines.length} wine{wines.length !== 1 ? 's' : ''}
       </p>
-      <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
         {wines.map((wine) => (
           <WineCard
             key={`${wine.id}-${wine.wineName}`}
