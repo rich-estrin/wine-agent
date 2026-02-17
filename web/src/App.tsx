@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import type { Wine, Meta } from './types';
-import type { SearchParams } from './api';
-import { searchWines, fetchMeta } from './api';
+import type { SearchParams, ChatMessage } from './api';
+import { searchWines, fetchMeta, sendChatMessage } from './api';
 import SearchBar from './components/SearchBar';
 import FilterPanel, {
   type Filters,
@@ -22,6 +22,8 @@ export default function App() {
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
 
   // Fetch meta on mount
   useEffect(() => {
@@ -43,6 +45,32 @@ export default function App() {
     if (filters.ratingMin) params.rating = `>=${filters.ratingMin}`;
     return params;
   }, [query, filters, sortBy, sortOrder]);
+
+  // Handle chat message sending
+  const handleChatSend = async (content: string) => {
+    const userMessage: ChatMessage = { role: 'user', content };
+    const newMessages = [...chatMessages, userMessage];
+    setChatMessages(newMessages);
+    setChatLoading(true);
+
+    try {
+      const response = await sendChatMessage(newMessages);
+      setChatMessages([...newMessages, { role: 'assistant', content: response }]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setChatMessages([
+        ...newMessages,
+        {
+          role: 'assistant',
+          content: `Sorry, I encountered an error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   // Debounced search
   useEffect(() => {
@@ -136,7 +164,11 @@ export default function App() {
             />
           </TabPanel>
           <TabPanel>
-            <Chat />
+            <Chat
+              messages={chatMessages}
+              loading={chatLoading}
+              onSend={handleChatSend}
+            />
           </TabPanel>
         </TabPanels>
       </TabGroup>

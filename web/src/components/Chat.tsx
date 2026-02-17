@@ -1,42 +1,23 @@
-import { useState, useEffect, useRef } from 'react';
-import { sendChatMessage, type ChatMessage as ChatMessageType } from '../api';
+import { useEffect, useRef } from 'react';
+import type { ChatMessage as ChatMessageType } from '../api';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 
-export default function Chat() {
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function Chat({
+  messages,
+  loading,
+  onSend,
+}: {
+  messages: ChatMessageType[];
+  loading: boolean;
+  onSend: (content: string) => void;
+}) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const handleSend = async (content: string) => {
-    const userMessage: ChatMessageType = { role: 'user', content };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setLoading(true);
-
-    try {
-      const response = await sendChatMessage(newMessages);
-      setMessages([...newMessages, { role: 'assistant', content: response }]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      setMessages([
-        ...newMessages,
-        {
-          role: 'assistant',
-          content: `Sorry, I encountered an error: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="flex h-[calc(100vh-16rem)] flex-col">
@@ -53,19 +34,19 @@ export default function Chat() {
             <div className="mt-6 space-y-2 text-left">
               <p className="text-xs text-gray-400">Try asking:</p>
               <button
-                onClick={() => handleSend('Find me the highest rated wines under $40')}
+                onClick={() => onSend('Find me the highest rated wines under $40')}
                 className="block w-full rounded-md bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
               >
                 "Find me the highest rated wines under $40"
               </button>
               <button
-                onClick={() => handleSend('Show me recent Quilceda Creek reviews')}
+                onClick={() => onSend('Show me recent Quilceda Creek reviews')}
                 className="block w-full rounded-md bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
               >
                 "Show me recent Quilceda Creek reviews"
               </button>
               <button
-                onClick={() => handleSend('What are the best Oregon Pinot Noirs?')}
+                onClick={() => onSend('What are the best Oregon Pinot Noirs?')}
                 className="block w-full rounded-md bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
               >
                 "What are the best Oregon Pinot Noirs?"
@@ -104,7 +85,7 @@ export default function Chat() {
 
       {/* Input */}
       <div className="mt-4">
-        <ChatInput onSend={handleSend} disabled={loading} />
+        <ChatInput onSend={onSend} disabled={loading} />
       </div>
     </div>
   );
