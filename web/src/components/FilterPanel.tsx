@@ -9,6 +9,7 @@ export interface Filters {
   type: string;
   priceMax: string;
   ratingMin: string;
+  dateRange: string;
 }
 
 export const emptyFilters: Filters = {
@@ -17,7 +18,61 @@ export const emptyFilters: Filters = {
   type: '',
   priceMax: '',
   ratingMin: '',
+  dateRange: '',
 };
+
+// Date range options
+const dateRangeOptions = [
+  { label: 'Last 3 months', value: '3m' },
+  { label: 'Last 6 months', value: '6m' },
+  { label: 'Last 1 year', value: '1y' },
+  { label: 'Last 2 years', value: '2y' },
+  { label: 'Last 3 years', value: '3y' },
+  { label: 'Last 5 years', value: '5y' },
+  { label: 'Last 10 years', value: '10y' },
+];
+
+// Convert date range to filter format
+export function getDateFilter(dateRange: string): string {
+  if (!dateRange) return '';
+
+  const now = new Date();
+  let yearsAgo: number;
+
+  switch (dateRange) {
+    case '3m':
+      yearsAgo = 0.25;
+      break;
+    case '6m':
+      yearsAgo = 0.5;
+      break;
+    case '1y':
+      yearsAgo = 1;
+      break;
+    case '2y':
+      yearsAgo = 2;
+      break;
+    case '3y':
+      yearsAgo = 3;
+      break;
+    case '5y':
+      yearsAgo = 5;
+      break;
+    case '10y':
+      yearsAgo = 10;
+      break;
+    default:
+      return '';
+  }
+
+  const pastDate = new Date(now);
+  pastDate.setFullYear(now.getFullYear() - Math.floor(yearsAgo));
+  if (yearsAgo < 1) {
+    pastDate.setMonth(now.getMonth() - Math.floor(yearsAgo * 12));
+  }
+
+  return `>=${pastDate.toISOString().split('T')[0]}`;
+}
 
 function StarRatingFilter({
   value,
@@ -147,6 +202,43 @@ export default function FilterPanel({
         value={filters.ratingMin}
         onChange={(v) => onChange({ ...filters, ratingMin: v })}
       />
+      <Listbox
+        value={filters.dateRange}
+        onChange={(v) => onChange({ ...filters, dateRange: v })}
+      >
+        <div className="relative min-w-[140px]">
+          <ListboxButton className="relative w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-8 text-left text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <span
+              className={filters.dateRange ? 'text-gray-900' : 'text-gray-400'}
+            >
+              {filters.dateRange
+                ? dateRangeOptions.find((o) => o.value === filters.dateRange)
+                    ?.label
+                : 'Review Date'}
+            </span>
+            <span className="absolute inset-y-0 right-0 flex items-center pr-2">
+              <ChevronUpDownIcon className="h-4 w-4 text-gray-400" />
+            </span>
+          </ListboxButton>
+          <ListboxOptions className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none text-sm">
+            <ListboxOption
+              value=""
+              className="cursor-pointer select-none px-3 py-2 text-gray-400 hover:bg-indigo-50 data-[selected]:bg-indigo-100"
+            >
+              All Dates
+            </ListboxOption>
+            {dateRangeOptions.map((opt) => (
+              <ListboxOption
+                key={opt.value}
+                value={opt.value}
+                className="cursor-pointer select-none px-3 py-2 text-gray-900 hover:bg-indigo-50 data-[selected]:bg-indigo-100 data-[selected]:font-medium"
+              >
+                {opt.label}
+              </ListboxOption>
+            ))}
+          </ListboxOptions>
+        </div>
+      </Listbox>
       {hasFilters && (
         <button
           onClick={() => onChange(emptyFilters)}

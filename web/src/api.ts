@@ -10,6 +10,7 @@ export interface SearchParams {
   price?: string;
   rating?: string;
   vintage?: string;
+  publicationDate?: string;
   limit?: number;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
