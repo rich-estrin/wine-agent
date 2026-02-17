@@ -1,12 +1,12 @@
 # Deploying Wine Agent to EC2 with Nginx
 
-This guide covers deploying the Wine Agent webapp to your EC2 instance at `yoursite.com/wines`.
+This guide covers deploying the Wine Agent webapp to your EC2 instance at `yoursite.com/wwr-search`.
 
 ## Architecture
 
-- **Frontend:** Static React files served by Nginx at `/wines`
+- **Frontend:** Static React files served by Nginx at `/wwr-search`
 - **Backend:** Express API running on port 3001 (PM2 managed)
-- **Nginx:** Proxies `/wines/api/*` requests to Express server
+- **Nginx:** Proxies `/wwr-search/api/*` requests to Express server
 
 ## Prerequisites on EC2
 
@@ -98,8 +98,8 @@ scp /Users/rich/src/wine-agent/credentials/wine-agent-project-f7325e67212b.json 
 # On EC2
 cd /var/www/wine-agent/web
 
-# Build with base path for /wines subdirectory
-VITE_BASE_PATH=/wines npm run build
+# Build with base path for /wwr-search subdirectory
+VITE_BASE_PATH=/wwr-search npm run build
 
 # This creates /var/www/wine-agent/web/dist with your static files
 ```
@@ -129,7 +129,7 @@ curl http://localhost:3001/api/meta  # Should return wine metadata
 Create Nginx configuration:
 
 ```bash
-sudo nano /etc/nginx/sites-available/wines
+sudo nano /etc/nginx/sites-available/wwr-search
 ```
 
 Add this configuration:
@@ -143,9 +143,9 @@ server {
     # (keep your existing root and php config)
 
     # Wine app static files
-    location /wines {
+    location /wwr-search {
         alias /var/www/wine-agent/web/dist;
-        try_files $uri $uri/ /wines/index.html;
+        try_files $uri $uri/ /wwr-search/index.html;
 
         # Cache static assets
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
@@ -155,8 +155,8 @@ server {
     }
 
     # Proxy API requests to Express
-    location /wines/api {
-        rewrite ^/wines/api/(.*) /api/$1 break;
+    location /wwr-search/api {
+        rewrite ^/wwr-search/api/(.*) /api/$1 break;
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -173,7 +173,7 @@ server {
 Enable the configuration:
 ```bash
 # If using sites-enabled pattern
-sudo ln -s /etc/nginx/sites-available/wines /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/wwr-search /etc/nginx/sites-enabled/
 
 # Test configuration
 sudo nginx -t
@@ -184,12 +184,12 @@ sudo systemctl reload nginx
 
 ### Step 6: Test Deployment
 
-Visit `http://yoursite.com/wines` in your browser!
+Visit `http://yoursite.com/wwr-search` in your browser!
 
 Test the API:
 ```bash
-curl http://yoursite.com/wines/api/meta
-curl http://yoursite.com/wines/api/search?q=Pinot
+curl http://yoursite.com/wwr-search/api/meta
+curl http://yoursite.com/wwr-search/api/search?q=Pinot
 ```
 
 ## Optional: Set Up SSL (Recommended)
@@ -213,7 +213,7 @@ git pull
 npm run build
 cd web
 npm install
-VITE_BASE_PATH=/wines npm run build
+VITE_BASE_PATH=/wwr-search npm run build
 pm2 restart wine-api
 ```
 
@@ -290,7 +290,7 @@ node -e "require('dotenv').config(); console.log(process.env.GOOGLE_APPLICATION_
 - **Frontend static files:** `/var/www/wine-agent/web/dist`
 - **API server:** `/var/www/wine-agent/web/server/index.ts`
 - **Environment config:** `/var/www/wine-agent/web/.env`
-- **Nginx config:** `/etc/nginx/sites-available/wines`
+- **Nginx config:** `/etc/nginx/sites-available/wwr-search`
 - **PM2 logs:** `~/.pm2/logs/`
 
 ## Security Notes
