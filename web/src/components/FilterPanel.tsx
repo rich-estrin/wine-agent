@@ -1,5 +1,6 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { StarIcon } from '@heroicons/react/24/solid';
 import type { Meta } from '../types';
 
 export interface Filters {
@@ -17,6 +18,42 @@ export const emptyFilters: Filters = {
   priceMax: '',
   ratingMin: '',
 };
+
+function StarRatingFilter({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const rating = value ? parseFloat(value) : 0;
+  const stars = [1, 2, 3, 4, 5];
+
+  return (
+    <div className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2">
+      <span className="text-xs text-gray-500 mr-1">Min:</span>
+      {stars.map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(rating === star ? '' : star.toString())}
+          className="focus:outline-none"
+        >
+          <StarIcon
+            className={`h-5 w-5 ${
+              star <= rating
+                ? 'text-yellow-400'
+                : 'text-gray-300 hover:text-yellow-200'
+            }`}
+          />
+        </button>
+      ))}
+      {rating > 0 && (
+        <span className="text-xs text-gray-600 ml-1">{rating}+</span>
+      )}
+    </div>
+  );
+}
 
 function SelectFilter({
   label,
@@ -106,12 +143,9 @@ export default function FilterPanel({
         onChange={(e) => onChange({ ...filters, priceMax: e.target.value })}
         className="w-24 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
-      <input
-        type="text"
-        placeholder="Min rating"
+      <StarRatingFilter
         value={filters.ratingMin}
-        onChange={(e) => onChange({ ...filters, ratingMin: e.target.value })}
-        className="w-24 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        onChange={(v) => onChange({ ...filters, ratingMin: v })}
       />
       {hasFilters && (
         <button
