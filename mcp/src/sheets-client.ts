@@ -130,13 +130,15 @@ export class SheetsClient {
       return index !== undefined ? (row[index] || '').toString() : '';
     };
 
+    const price = getValue('price');
+
     return {
       id: getValue('id'),
       brandName: getValue('brandName'),
       wineName: getValue('wineName'),
       ava: getValue('ava'),
       vintage: getValue('vintage'),
-      price: getValue('price'),
+      price: price && price.trim() ? price : 'N/A',
       rating: getValue('rating'),
       review: getValue('review'),
       region: getValue('region'),

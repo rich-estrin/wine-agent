@@ -36,11 +36,9 @@ export default function WineDetail({
 
               <div className="mt-3 flex items-center gap-4">
                 <RatingDisplay rating={wine.rating} size="lg" />
-                {wine.price && wine.price !== 'NA' && wine.price !== '$NA' && (
-                  <span className="text-lg font-semibold text-gray-900">
-                    {wine.price}
-                  </span>
-                )}
+                <span className="text-lg font-semibold text-gray-900">
+                  {wine.price}
+                </span>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">

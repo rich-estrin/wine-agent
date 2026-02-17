@@ -24,13 +24,14 @@ export interface Wine {
 /**
  * Parse price string to number
  * @param priceStr - Price string like "$30" or "$45.99"
- * @returns Numeric price value
+ * @returns Numeric price value (9999 for N/A prices)
  */
 export function parsePrice(priceStr: string): number {
-  if (!priceStr) return 0;
+  if (!priceStr) return 9999;
+  if (priceStr.trim() === 'N/A') return 9999;
   const cleaned = priceStr.replace(/[$,]/g, '').trim();
   const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
+  return isNaN(parsed) ? 9999 : parsed;
 }
 
 /**

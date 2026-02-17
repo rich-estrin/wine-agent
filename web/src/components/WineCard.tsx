@@ -33,11 +33,9 @@ export default function WineCard({
           </p>
         </div>
         <div className="text-right shrink-0">
-          {wine.price && wine.price !== 'NA' && wine.price !== '$NA' && (
-            <p className="text-base font-semibold text-gray-900">
-              {wine.price}
-            </p>
-          )}
+          <p className="text-base font-semibold text-gray-900">
+            {wine.price}
+          </p>
           <RatingDisplay rating={wine.rating} />
         </div>
       </div>
