@@ -28,11 +28,12 @@ npm --version
 sudo npm install -g pm2
 ```
 
-### 3. Install Build Dependencies
+### 3. Build MCP Server
 
 ```bash
-# On your local machine, build the parent project first
-cd /Users/rich/src/wine-agent
+# On your local machine, build the MCP server first
+cd /Users/rich/src/wine-agent/mcp
+npm install
 npm run build
 ```
 
@@ -61,14 +62,15 @@ cd wine-agent
 # On EC2
 cd /var/www/wine-agent
 
-# Install dependencies
+# Install MCP server dependencies
+cd mcp
 npm install
 
 # Build TypeScript
 npm run build
 
 # Set up web app dependencies
-cd web
+cd ../web
 npm install
 
 # Create .env file with your credentials
@@ -80,7 +82,7 @@ Add your environment variables:
 GOOGLE_SHEET_ID=your-sheet-id-here
 GOOGLE_SHEET_NAME=TN Db
 GOOGLE_SHEET_RANGE=A:Q
-GOOGLE_APPLICATION_CREDENTIALS=/var/www/wine-agent/credentials/service-account.json
+GOOGLE_APPLICATION_CREDENTIALS=/var/www/wine-agent/mcp/credentials/service-account.json
 PORT=3001
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
@@ -88,8 +90,8 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 **Important:** Upload your Google service account credentials:
 ```bash
 # On your local machine
-scp /Users/rich/src/wine-agent/credentials/wine-agent-project-f7325e67212b.json \
-  your-user@your-ec2-ip:/var/www/wine-agent/credentials/
+scp /Users/rich/src/wine-agent/mcp/credentials/wine-agent-project-f7325e67212b.json \
+  your-user@your-ec2-ip:/var/www/wine-agent/mcp/credentials/
 ```
 
 ### Step 3: Build Frontend

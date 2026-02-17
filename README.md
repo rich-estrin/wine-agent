@@ -1,14 +1,26 @@
-# Wine Agent MCP Server
+# Wine Agent
 
-An MCP (Model Context Protocol) server that provides natural language access to wine reviews stored in Google Sheets. Query, filter, and search through thousands of wine reviews using conversational language.
+A complete wine search and discovery platform with:
+- **MCP Server** - Natural language access to wine reviews via Model Context Protocol
+- **Web Application** - Search, filter, and chat interface with AI-powered wine recommendations
+
+Access thousands of wine reviews from Google Sheets through conversational language or a beautiful web interface.
 
 ## Features
 
+### MCP Server
 - **Full-text search** - Search across wine names, brands, reviews, regions, and varietals
 - **Advanced filtering** - Filter by price, rating, vintage, region, varietal, and publication date
 - **Flexible sorting** - Sort results by any column
 - **Date-based queries** - Filter wines by publication or tasting date
 - **Natural language** - Designed to work with Claude's natural language understanding
+
+### Web Application
+- **Search Interface** - Text search with real-time results
+- **Smart Filters** - Filter by varietal, region, wine type, price, rating, and date range
+- **AI Chat** - Conversational wine recommendations powered by Claude
+- **Mobile Responsive** - Beautiful interface on desktop and mobile
+- **Northwest Wine Report Branding** - Styled to match northwestwinereport.com
 
 ## Prerequisites
 
@@ -16,11 +28,37 @@ An MCP (Model Context Protocol) server that provides natural language access to 
 - A Google Cloud Platform account
 - A Google Sheet with wine review data
 
+## Project Structure
+
+```
+wine-agent/
+├── mcp/                      # MCP Server
+│   ├── src/                  # Server source code
+│   │   ├── index.ts          # Main MCP server
+│   │   ├── sheets-client.ts  # Google Sheets integration
+│   │   ├── types.ts          # TypeScript types
+│   │   └── tools/            # MCP tool implementations
+│   ├── credentials/          # Service account credentials (gitignored)
+│   ├── dist/                 # Compiled JavaScript (gitignored)
+│   ├── package.json
+│   └── tsconfig.json
+├── web/                      # Web Application
+│   ├── server/               # Express API server
+│   ├── src/                  # React frontend
+│   ├── dist/                 # Built static files
+│   └── package.json
+├── DEPLOYMENT.md             # EC2 deployment guide
+└── README.md
+```
+
 ## Setup
+
+### MCP Server Setup
 
 ### 1. Install Dependencies
 
 ```bash
+cd mcp
 npm install
 ```
 
@@ -52,12 +90,13 @@ npm install
 
 ### 5. Configure Credentials
 
-1. Create a `credentials` directory in the project root:
+1. Create a `credentials` directory in the `mcp` folder:
    ```bash
+   cd mcp
    mkdir credentials
    ```
 
-2. Move the downloaded JSON file to `credentials/service-account.json`
+2. Move the downloaded JSON file to `mcp/credentials/service-account.json`
 
 3. Make sure the credentials directory is in `.gitignore` (it already is!)
 
@@ -78,9 +117,10 @@ https://docs.google.com/spreadsheets/d/[SHEET_ID]/edit
 
 Copy that `SHEET_ID` for the next step.
 
-### 8. Build the Project
+### 8. Build the MCP Server
 
 ```bash
+cd mcp
 npm run build
 ```
 
@@ -96,12 +136,12 @@ Add this server to your Claude Desktop configuration file:
   "mcpServers": {
     "wine-agent": {
       "command": "node",
-      "args": ["/absolute/path/to/wine-agent/dist/index.js"],
+      "args": ["/absolute/path/to/wine-agent/mcp/dist/index.js"],
       "env": {
         "GOOGLE_SHEET_ID": "your-sheet-id-here",
         "GOOGLE_SHEET_NAME": "Sheet1",
         "GOOGLE_SHEET_RANGE": "A:Q",
-        "GOOGLE_APPLICATION_CREDENTIALS": "/absolute/path/to/wine-agent/credentials/service-account.json"
+        "GOOGLE_APPLICATION_CREDENTIALS": "/absolute/path/to/wine-agent/mcp/credentials/service-account.json"
       }
     }
   }
@@ -113,7 +153,7 @@ Add this server to your Claude Desktop configuration file:
 - `GOOGLE_SHEET_ID`: Your Google Sheet ID from step 7
 - `GOOGLE_SHEET_NAME`: The name of the tab/sheet (default: "Sheet1")
 - `GOOGLE_SHEET_RANGE`: The range to read (default: "A:Q" reads all rows, columns A-Q)
-- `GOOGLE_APPLICATION_CREDENTIALS`: Absolute path to your service account JSON file
+- `GOOGLE_APPLICATION_CREDENTIALS`: Absolute path to your `mcp/credentials/service-account.json` file
 
 ## Restart Claude Desktop
 
@@ -188,31 +228,75 @@ The server expects these columns in your Google Sheet:
 - **Temp (if not standard)** - Serving temperature
 - **Hyperlink** - URL to full review
 
+## Web Application Setup
+
+The web application provides a beautiful interface for searching wines and chatting with an AI sommelier.
+
+### 1. Install Web Dependencies
+
+```bash
+cd web
+npm install
+```
+
+### 2. Configure Environment
+
+Create a `web/.env` file with:
+
+```bash
+# Google Sheets credentials (same as MCP server)
+GOOGLE_SHEET_ID=your-sheet-id-here
+GOOGLE_SHEET_NAME=Sheet1
+GOOGLE_SHEET_RANGE=A:Q
+GOOGLE_APPLICATION_CREDENTIALS=../mcp/credentials/service-account.json
+
+# Anthropic API key for AI chat feature
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+### 3. Build and Run
+
+**Development:**
+```bash
+cd web
+npm run dev:all
+```
+
+This runs both the React dev server (port 5173) and Express API (port 3001).
+
+**Production:**
+```bash
+# Build MCP server first
+cd mcp && npm run build
+
+# Build web app
+cd ../web
+VITE_BASE_PATH=/wwr-search npm run build
+
+# Serve with your web server (Nginx, Apache, etc.)
+```
+
+See `DEPLOYMENT.md` for detailed EC2 deployment instructions.
+
 ## Development
 
-### Scripts
+### MCP Server Scripts
 
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm start` - Run the compiled server
-- `npm run dev` - Watch mode for development
-
-### Project Structure
-
+```bash
+cd mcp
+npm run build  # Compile TypeScript to JavaScript
+npm start      # Run the compiled server
+npm run dev    # Watch mode for development
 ```
-wine-agent/
-├── src/
-│   ├── index.ts              # Main MCP server
-│   ├── sheets-client.ts      # Google Sheets integration
-│   ├── types.ts              # TypeScript types and helpers
-│   └── tools/                # MCP tool implementations
-│       ├── search.ts         # Full-text search
-│       ├── filter.ts         # Advanced filtering
-│       └── get-wine.ts       # Get wine details
-├── credentials/              # Service account credentials (gitignored)
-├── dist/                     # Compiled JavaScript (gitignored)
-├── package.json
-├── tsconfig.json
-└── README.md
+
+### Web App Scripts
+
+```bash
+cd web
+npm run dev:all     # Run frontend + backend in development
+npm run dev         # Frontend only (Vite dev server)
+npm run dev:server  # Backend only (Express API)
+npm run build       # Build for production
 ```
 
 ## Performance
@@ -224,20 +308,40 @@ wine-agent/
 
 ## Troubleshooting
 
-### "No data found in sheet"
+### MCP Server Issues
+
+**"No data found in sheet"**
 - Verify the sheet name matches `GOOGLE_SHEET_NAME`
 - Check that the range `GOOGLE_SHEET_RANGE` is correct
 - Ensure the first row contains column headers
 
-### Authentication errors
+**Authentication errors**
 - Verify the service account email is shared with the Google Sheet
-- Check that `GOOGLE_APPLICATION_CREDENTIALS` points to the correct JSON file
+- Check that `GOOGLE_APPLICATION_CREDENTIALS` points to the correct JSON file in `mcp/credentials/`
 - Ensure the Google Sheets API is enabled in your GCP project
 
-### Server won't start
-- Make sure you've run `npm run build`
+**Server won't start**
+- Make sure you've run `npm run build` in the `mcp/` directory
 - Verify `GOOGLE_SHEET_ID` is set correctly
 - Check that all environment variables use absolute paths
+
+### Web App Issues
+
+**No data loading**
+- Verify the Express server is running (check port 3001)
+- Check that `web/.env` has correct Google Sheets credentials
+- Ensure the MCP server is built (`cd mcp && npm run build`)
+- Check browser console for API errors
+
+**Chat not working**
+- Verify `ANTHROPIC_API_KEY` is set in `web/.env`
+- Check that the API key is valid and active
+- Look for errors in the Express server logs
+
+**Build failures**
+- Make sure Node.js 18+ is installed
+- Clear node_modules and reinstall: `rm -rf node_modules package-lock.json && npm install`
+- Check that you're building the MCP server first: `cd mcp && npm run build`
 
 ## License
 

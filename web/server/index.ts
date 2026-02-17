@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { SheetsClient } from '../../dist/sheets-client.js';
-import { searchWines } from '../../dist/tools/search.js';
-import { filterWines } from '../../dist/tools/filter.js';
-import { getWineDetails } from '../../dist/tools/get-wine.js';
+import { SheetsClient } from '../../mcp/dist/sheets-client.js';
+import { searchWines } from '../../mcp/dist/tools/search.js';
+import { filterWines } from '../../mcp/dist/tools/filter.js';
+import { getWineDetails } from '../../mcp/dist/tools/get-wine.js';
 
 const app = express();
 app.use(express.json());
