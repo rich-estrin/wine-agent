@@ -2,15 +2,18 @@ import { useState } from 'react';
 import {
   MagnifyingGlassIcon,
   ChevronDownIcon,
+  Bars3Icon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <header className="bg-[#141617] border-b border-[#434549]">
       {/* Top Utility Bar */}
-      <div className="border-b border-[#434549]">
+      <div className="border-b border-[#434549] hidden md:block">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between py-2 text-xs">
             {/* Social Links */}
@@ -79,25 +82,39 @@ export default function Header() {
       </div>
 
       {/* Logo Section */}
-      <div className="py-6">
+      <div className="py-4 md:py-6">
         <div className="max-w-7xl mx-auto px-4">
-          <a
-            href="https://www.northwestwinereport.com/"
-            className="flex justify-center"
-          >
-            <img
-              src="https://www.northwestwinereport.com/wp-content/uploads/2023/06/SPS_Gold_TransparentBg-600-116-1.png"
-              alt="Northwest Wine Report Logo"
-              className="h-14"
-            />
-          </a>
+          <div className="flex items-center justify-between md:justify-center">
+            <a
+              href="https://www.northwestwinereport.com/"
+              className="flex"
+            >
+              <img
+                src="https://www.northwestwinereport.com/wp-content/uploads/2023/06/SPS_Gold_TransparentBg-600-116-1.png"
+                alt="Northwest Wine Report Logo"
+                className="h-10 md:h-14"
+              />
+            </a>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden text-gray-300 hover:text-[#deb77d]"
+              aria-label="Menu"
+            >
+              {mobileMenuOpen ? (
+                <XMarkIcon className="w-6 h-6" />
+              ) : (
+                <Bars3Icon className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Navigation */}
-      <nav className="border-t border-[#434549]">
+      {/* Main Navigation - Desktop */}
+      <nav className="border-t border-[#434549] hidden md:block">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-center gap-8 py-3 text-sm">
+          <div className="flex items-center justify-center gap-6 lg:gap-8 py-3 text-sm">
             <a
               href="https://www.northwestwinereport.com/"
               className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide"
@@ -166,6 +183,75 @@ export default function Header() {
           )}
         </div>
       </nav>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <nav className="md:hidden border-t border-[#434549] bg-[#212326]">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex flex-col gap-3 text-sm">
+              <a
+                href="https://www.northwestwinereport.com/"
+                className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide py-2"
+              >
+                Home
+              </a>
+              <a
+                href="https://www.northwestwinereport.com/news"
+                className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide py-2"
+              >
+                News
+              </a>
+              <a
+                href="https://www.northwestwinereport.com/features"
+                className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide py-2"
+              >
+                Features
+              </a>
+              <a
+                href="https://www.northwestwinereport.com/opinion"
+                className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide py-2"
+              >
+                Opinion
+              </a>
+              <div className="text-[#deb77d] uppercase tracking-wide font-medium py-2 border-l-2 border-[#deb77d] pl-3">
+                Wine Search
+              </div>
+              <a
+                href="https://www.northwestwinereport.com/wine-articles"
+                className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide py-2"
+              >
+                Reviews
+              </a>
+              <a
+                href="https://www.northwestwinereport.com/resources"
+                className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide py-2"
+              >
+                Resources
+              </a>
+              <a
+                href="https://www.northwestwinereport.com/about"
+                className="text-gray-300 hover:text-[#deb77d] uppercase tracking-wide py-2"
+              >
+                About
+              </a>
+              <div className="pt-2 mt-2 border-t border-[#434549]">
+                <a
+                  href="https://www.northwestwinereport.com/login"
+                  className="text-gray-400 hover:text-[#deb77d] uppercase tracking-wide text-xs block py-2"
+                >
+                  My Account
+                </a>
+                <a
+                  href="https://www.northwestwinereport.com/subscribe"
+                  className="text-gray-400 hover:text-[#deb77d] uppercase tracking-wide text-xs block py-2"
+                >
+                  Subscribe
+                </a>
+              </div>
+            </div>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

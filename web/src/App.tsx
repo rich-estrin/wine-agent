@@ -115,20 +115,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-3 md:px-4 py-4 md:py-8">
 
       <TabGroup>
-        <TabList className="flex space-x-1 rounded-lg bg-[#141617] p-1 mb-6 border border-[#434549]">
-          <Tab className="w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-[#deb77d] focus:outline-none data-[selected]:bg-[#bd2a29] data-[selected]:text-white data-[selected]:shadow data-[hover]:bg-[#434549]">
+        <TabList className="flex space-x-1 rounded-lg bg-[#141617] p-1 mb-4 md:mb-6 border border-[#434549]">
+          <Tab className="w-full rounded-lg py-2 md:py-2.5 text-xs md:text-sm font-medium leading-5 text-[#deb77d] focus:outline-none data-[selected]:bg-[#bd2a29] data-[selected]:text-white data-[selected]:shadow data-[hover]:bg-[#434549]">
             Search
           </Tab>
-          <Tab className="w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-[#deb77d] focus:outline-none data-[selected]:bg-[#bd2a29] data-[selected]:text-white data-[selected]:shadow data-[hover]:bg-[#434549]">
+          <Tab className="w-full rounded-lg py-2 md:py-2.5 text-xs md:text-sm font-medium leading-5 text-[#deb77d] focus:outline-none data-[selected]:bg-[#bd2a29] data-[selected]:text-white data-[selected]:shadow data-[hover]:bg-[#434549]">
             Chat
           </Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
               <SearchBar value={query} onChange={setQuery} />
               <FilterPanel
                 meta={meta}
