@@ -77,12 +77,12 @@ sudo nano .env
 
 Add your environment variables:
 ```env
-GOOGLE_SHEET_ID=15GwAWYPzT1hFPnGeraUfkXQeSpxQR5y9gsmK0x0QgcM
+GOOGLE_SHEET_ID=your-sheet-id-here
 GOOGLE_SHEET_NAME=TN Db
 GOOGLE_SHEET_RANGE=A:Q
 GOOGLE_APPLICATION_CREDENTIALS=/var/www/wine-agent/credentials/service-account.json
 PORT=3001
-ANTHROPIC_API_KEY=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
+ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 **Important:** Upload your Google service account credentials:
