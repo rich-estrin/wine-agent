@@ -1,6 +1,6 @@
 import type { Wine, Meta } from './types';
 
-const BASE = '/api';
+const BASE = './api';
 
 export interface SearchParams {
   q?: string;
