@@ -32,3 +32,24 @@ export async function fetchMeta(): Promise<Meta> {
   if (!res.ok) throw new Error(`Meta failed: ${res.statusText}`);
   return res.json();
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export async function sendChatMessage(
+  messages: ChatMessage[]
+): Promise<string> {
+  const res = await fetch(`${BASE}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Chat failed: ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.message;
+}
