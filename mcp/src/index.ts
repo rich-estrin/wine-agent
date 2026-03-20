@@ -6,28 +6,26 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { SheetsClient } from './sheets-client.js';
+import { WordPressClient } from './wordpress-client.js';
 import { searchWines, SearchWinesSchema } from './tools/search.js';
 import { filterWines, FilterWinesSchema } from './tools/filter.js';
 import { getWineDetails, GetWineDetailsSchema } from './tools/get-wine.js';
 
 // Configuration from environment variables
-const config = {
-  spreadsheetId: process.env.GOOGLE_SHEET_ID || '',
-  sheetName: process.env.GOOGLE_SHEET_NAME || 'Sheet1',
-  range: process.env.GOOGLE_SHEET_RANGE || 'A:Q',
-  credentialsPath:
-    process.env.GOOGLE_APPLICATION_CREDENTIALS || './credentials/service-account.json',
-};
+const wpApiUrl = process.env.WP_API_URL || '';
+const wpApiKey = process.env.WP_API_KEY || '';
 
-// Validate configuration
-if (!config.spreadsheetId) {
-  console.error('Error: GOOGLE_SHEET_ID environment variable is required');
+if (!wpApiUrl) {
+  console.error('Error: WP_API_URL environment variable is required');
+  process.exit(1);
+}
+if (!wpApiKey) {
+  console.error('Error: WP_API_KEY environment variable is required');
   process.exit(1);
 }
 
-// Initialize the Sheets client
-const sheetsClient = new SheetsClient(config);
+// Initialize the WordPress client
+const sheetsClient = new WordPressClient({ apiUrl: wpApiUrl, apiKey: wpApiKey });
 
 // Create MCP server
 const server = new Server(
@@ -224,7 +222,7 @@ async function main() {
   try {
     console.error('Initializing Wine Agent MCP Server...');
     await sheetsClient.initialize();
-    console.error('Google Sheets data loaded successfully');
+    console.error('WordPress data loaded successfully');
 
     const transport = new StdioServerTransport();
     await server.connect(transport);

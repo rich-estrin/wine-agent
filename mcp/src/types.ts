@@ -28,8 +28,9 @@ export interface Wine {
  */
 export function parsePrice(priceStr: string): number {
   if (!priceStr) return 9999;
-  if (priceStr.trim() === 'N/A') return 9999;
-  const cleaned = priceStr.replace(/[$,]/g, '').trim();
+  const trimmed = priceStr.trim();
+  if (trimmed === 'N/A' || trimmed === 'NA' || trimmed === '0') return 9999;
+  const cleaned = trimmed.replace(/[$,]/g, '');
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 9999 : parsed;
 }
@@ -42,12 +43,13 @@ export function parsePrice(priceStr: string): number {
 export function parseRating(ratingStr: string): number {
   if (!ratingStr) return 0;
 
-  // Count full stars
+  // Numeric rating (e.g. "92")
+  const numeric = parseFloat(ratingStr);
+  if (!isNaN(numeric) && !ratingStr.includes('*')) return numeric;
+
+  // Star rating (e.g. "*** 1/2")
   const stars = (ratingStr.match(/\*/g) || []).length;
-
-  // Check for half star
   const hasHalf = ratingStr.includes('1/2');
-
   return stars + (hasHalf ? 0.5 : 0);
 }
 

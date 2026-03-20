@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { SheetsClient } from '../../mcp/dist/sheets-client.js';
+import { WordPressClient } from '../../mcp/dist/wordpress-client.js';
 import { searchWines } from '../../mcp/dist/tools/search.js';
 import { filterWines } from '../../mcp/dist/tools/filter.js';
 import { getWineDetails } from '../../mcp/dist/tools/get-wine.js';
@@ -13,16 +13,10 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
-const config = {
-  spreadsheetId: process.env.GOOGLE_SHEET_ID || '',
-  sheetName: process.env.GOOGLE_SHEET_NAME || 'Sheet1',
-  range: process.env.GOOGLE_SHEET_RANGE || 'A:Q',
-  credentialsPath:
-    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-    '../credentials/service-account.json',
-};
-
-const sheetsClient = new SheetsClient(config);
+const sheetsClient = new WordPressClient({
+  apiUrl: process.env.WP_API_URL || '',
+  apiKey: process.env.WP_API_KEY || '',
+});
 
 // Cache for filter dropdown values
 let metaCache: {
@@ -328,7 +322,7 @@ AVA, main varietal, type (Red/White/Rosé/etc.), tasting notes, tasting/publicat
 
 async function start() {
   await sheetsClient.initialize();
-  console.log(`Loaded ${sheetsClient.getAllWines().length} wines`);
+  console.log(`Loaded ${sheetsClient.getAllWines().length} wines from WordPress`);
 
   const PORT = parseInt(process.env.PORT || '3001');
   app.listen(PORT, () => {
