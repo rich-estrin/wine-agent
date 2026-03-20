@@ -1,4 +1,5 @@
 import type { Wine } from '../types';
+import { formatPrice, numericScore } from '../types';
 import RatingDisplay from './RatingDisplay';
 
 export default function WineCard({
@@ -13,12 +14,22 @@ export default function WineCard({
       ? wine.review.slice(0, 120) + '...'
       : wine.review;
 
+  const score = numericScore(wine.rating);
+
   return (
     <button
       onClick={onClick}
       className="w-full text-left bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        {/* Score badge */}
+        {score && (
+          <div className="shrink-0 flex items-center justify-center rounded w-14 h-14 bg-[#141617]">
+            <span className="text-2xl font-bold text-[#deb77d] leading-none">{score}</span>
+          </div>
+        )}
+
+        {/* Wine info */}
         <div className="flex-1 min-w-0">
           <p className="text-xs text-gray-500 uppercase tracking-wide">
             {wine.brandName}
@@ -32,11 +43,13 @@ export default function WineCard({
               .join(' \u00b7 ')}
           </p>
         </div>
+
+        {/* Price + stars */}
         <div className="text-right shrink-0">
           <p className="text-base font-semibold text-gray-900">
-            {wine.price}
+            {formatPrice(wine.price)}
           </p>
-          <RatingDisplay rating={wine.rating} />
+          {!score && <RatingDisplay rating={wine.rating} />}
         </div>
       </div>
       {reviewTeaser && (

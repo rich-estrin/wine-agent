@@ -1,6 +1,7 @@
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import type { Wine } from '../types';
+import { formatPrice, numericScore } from '../types';
 import RatingDisplay from './RatingDisplay';
 
 export default function WineDetail({
@@ -17,28 +18,36 @@ export default function WineDetail({
         <DialogPanel className="w-full max-w-2xl max-h-[90vh] md:max-h-[85vh] overflow-y-auto rounded-xl bg-white p-4 md:p-6 shadow-xl">
           {wine && (
             <>
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start gap-4">
+                {/* Score badge */}
+                {numericScore(wine.rating) && (
+                  <div className="shrink-0 flex items-center justify-center rounded w-16 h-16 bg-[#141617]">
+                    <span className="text-3xl font-bold text-[#deb77d] leading-none">{numericScore(wine.rating)}</span>
+                  </div>
+                )}
+
+                {/* Title block */}
+                <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-500 uppercase tracking-wide">
                     {wine.brandName}
                   </p>
                   <DialogTitle className="text-xl font-bold text-gray-900">
                     {wine.wineName}
                   </DialogTitle>
+                  <div className="mt-1 flex items-center gap-3">
+                    {!numericScore(wine.rating) && <RatingDisplay rating={wine.rating} size="lg" />}
+                    <span className="text-lg font-semibold text-gray-900">
+                      {formatPrice(wine.price)}
+                    </span>
+                  </div>
                 </div>
+
                 <button
                   onClick={onClose}
-                  className="rounded-md p-1 text-gray-400 hover:text-gray-600"
+                  className="rounded-md p-1 text-gray-400 hover:text-gray-600 shrink-0"
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>
-              </div>
-
-              <div className="mt-3 flex items-center gap-4">
-                <RatingDisplay rating={wine.rating} size="lg" />
-                <span className="text-lg font-semibold text-gray-900">
-                  {wine.price}
-                </span>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
