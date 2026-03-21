@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { AdjustmentsHorizontalIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import type { Wine, Meta } from './types';
 import type { SearchParams, ChatMessage } from './api';
 import { searchWines, fetchMeta, sendChatMessage } from './api';
@@ -16,97 +16,6 @@ import WineDetail from './components/WineDetail';
 import Chat from './components/Chat';
 import Header from './components/Header';
 import BottomSheet from './components/BottomSheet';
-
-// ── Mobile filter bar ──────────────────────────────────────────────────────
-
-function MobileFilterBar({
-  filters,
-  onChange,
-  onOpen,
-  sortBy,
-  sortOrder,
-  onSortBy,
-  onToggleSortOrder,
-}: {
-  filters: Filters;
-  onChange: (f: Filters) => void;
-  onOpen: () => void;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
-  onSortBy: (s: string) => void;
-  onToggleSortOrder: () => void;
-}) {
-  const activeCount = Object.values(filters).filter((v) => v !== '').length;
-
-  return (
-    <div
-      className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-white border-b border-warm-border overflow-x-auto"
-      style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' as any }}
-    >
-      {/* Filter button */}
-      <button
-        onClick={onOpen}
-        className="inline-flex items-center gap-1.5 flex-shrink-0 px-3 py-[7px] text-[11px] font-medium tracking-[0.06em] uppercase border border-warm-border rounded-full text-ink bg-white whitespace-nowrap"
-      >
-        <AdjustmentsHorizontalIcon className="w-3 h-3" />
-        Filters
-        {activeCount > 0 && (
-          <span className="w-4 h-4 rounded-full bg-gold text-white text-[9px] font-bold flex items-center justify-center">
-            {activeCount}
-          </span>
-        )}
-      </button>
-
-      {/* Divider */}
-      {activeCount > 0 && <div className="w-px h-5 bg-warm-border flex-shrink-0" />}
-
-      {/* Active filter chips */}
-      {filters.mainVarietal && (
-        <Chip label={filters.mainVarietal} onRemove={() => onChange({ ...filters, mainVarietal: '' })} />
-      )}
-      {filters.ava && (
-        <Chip label={filters.ava} onRemove={() => onChange({ ...filters, ava: '' })} />
-      )}
-      {filters.type && (
-        <Chip label={filters.type} onRemove={() => onChange({ ...filters, type: '' })} />
-      )}
-      {(filters.priceMin || filters.priceMax) && (
-        <Chip
-          label={filters.priceMin && filters.priceMax ? `$${filters.priceMin}–$${filters.priceMax}` : filters.priceMin ? `$${filters.priceMin}+` : `Up to $${filters.priceMax}`}
-          onRemove={() => onChange({ ...filters, priceMin: '', priceMax: '' })}
-        />
-      )}
-      {(filters.scoreMin || filters.scoreMax) && (
-        <Chip
-          label={`Score ${filters.scoreMin || '80'}–${filters.scoreMax || '100'}`}
-          onRemove={() => onChange({ ...filters, scoreMin: '', scoreMax: '' })}
-        />
-      )}
-
-      {/* Divider + sort */}
-      <div className="w-px h-5 bg-warm-border flex-shrink-0 ml-auto" />
-      <button
-        onClick={onToggleSortOrder}
-        className="flex-shrink-0 text-[11px] font-medium tracking-[0.06em] uppercase text-muted whitespace-nowrap"
-      >
-        {sortBy === 'rating' ? 'Rating' : sortBy === 'price' ? 'Price' : sortBy === 'vintage' ? 'Vintage' : 'Date'}
-        {' '}{sortOrder === 'desc' ? '↓' : '↑'}
-      </button>
-    </div>
-  );
-}
-
-function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <button
-      onClick={onRemove}
-      className="inline-flex items-center gap-1 flex-shrink-0 px-3 py-[7px] text-[11px] font-medium tracking-[0.06em] uppercase bg-ink text-parchment border border-ink rounded-full whitespace-nowrap"
-    >
-      {label}
-      <XMarkIcon className="w-3 h-3 opacity-60" />
-    </button>
-  );
-}
 
 // ── App ────────────────────────────────────────────────────────────────────
 
@@ -129,6 +38,7 @@ export default function App() {
   const PAGE_SIZE = 40;
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const activeFilterCount = Object.values(filters).filter((v) => v !== '').length;
 
   // Fetch meta on mount
   useEffect(() => {
@@ -232,11 +142,11 @@ export default function App() {
   }, [hasMore, loading, loadingMore, offset, buildParams]);
 
   return (
-    <div className="min-h-screen bg-cream font-sans text-ink">
+    <div className="min-h-screen bg-[#faf7f2] font-sans text-ink">
       <Header />
 
       {/* Tab navigation */}
-      <div className="sticky top-0 z-50 bg-ink border-b border-parchment/[0.08]">
+      <div className="bg-ink border-b border-parchment/[0.08]">
         <div className="flex">
           <button
             onClick={() => setActiveTab('search')}
@@ -264,28 +174,17 @@ export default function App() {
       {/* Search tab */}
       {activeTab === 'search' && (
         <>
-          {/* Mobile filter bar — sticky below tab nav */}
-          <MobileFilterBar
-            filters={filters}
-            onChange={setFilters}
-            onOpen={() => setSheetOpen(true)}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onSortBy={setSortBy}
-            onToggleSortOrder={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-          />
-
           {/* Page body: sidebar + main */}
           <div className="flex">
             {/* Desktop sidebar */}
-            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-cream border-r border-warm-border sticky top-10 self-start">
+            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start">
               <Sidebar meta={meta} filters={filters} onChange={setFilters} />
             </aside>
 
             {/* Main content */}
             <main className="flex-1 min-w-0 px-5 md:px-7 py-5 md:py-6">
-              {/* Search + sort bar */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-5 md:mb-6">
+              {/* Search bar + desktop sort */}
+              <div className="flex gap-2 mb-3">
                 <div className="flex-1">
                   <SearchBar value={query} onChange={setQuery} />
                 </div>
@@ -303,9 +202,43 @@ export default function App() {
                   </select>
                   <button
                     onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:border-gold/60 hover:text-ink transition-colors"
+                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
                   >
                     {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile: Filters button + sort controls */}
+              <div className="lg:hidden flex items-center gap-2 mb-3">
+                <button
+                  onClick={() => setSheetOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-[7px] text-[11px] font-medium tracking-[0.06em] uppercase border border-warm-border rounded-full text-ink bg-white"
+                >
+                  <AdjustmentsHorizontalIcon className="w-3 h-3" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-[#7b2d3e] text-white text-[9px] font-bold flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-[11px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2 py-[6px] outline-none cursor-pointer"
+                  >
+                    <option value="rating">Rating</option>
+                    <option value="price">Price</option>
+                    <option value="vintage">Vintage</option>
+                    <option value="publicationDate">Date</option>
+                  </select>
+                  <button
+                    onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
+                  >
+                    {sortOrder === 'desc' ? '↓' : '↑'}
                   </button>
                 </div>
               </div>

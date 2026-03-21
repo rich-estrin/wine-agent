@@ -421,6 +421,12 @@ export function ActiveChips({
           <XMarkIcon className="w-[7px] h-[7px] opacity-60" />
         </button>
       ))}
+      <button
+        onClick={() => onChange(emptyFilters)}
+        className="inline-flex items-center px-2.5 py-[3px] text-[10px] font-medium tracking-[0.06em] uppercase text-muted hover:text-ink transition-colors"
+      >
+        Clear all
+      </button>
     </div>
   );
 }

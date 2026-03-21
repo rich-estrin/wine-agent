@@ -1,12 +1,20 @@
 import type { Wine } from '../types';
 import { numericScore } from '../types';
 
-function scoreBadgeGradient(score: number | null): string {
-  if (score === null) return 'from-[#1a1410] to-[#2d2520]';
-  if (score >= 95) return 'from-[#57192a] to-[#7b2d3e]';
-  if (score >= 92) return 'from-[#283a50] to-[#3b5570]';
-  if (score >= 88) return 'from-[#3a2a18] to-[#5c4225]';
-  return 'from-[#1e1812] to-[#2d2822]';
+const TYPE_BADGE: Record<string, { gradient: string; text: string }> = {
+  red:        { gradient: 'from-[#4a1520] to-[#7b2d3e]', text: '#ffffff' },
+  white:      { gradient: 'from-[#c49a10] to-[#f5d96a]', text: '#2a1a00' },
+  'rosé':     { gradient: 'from-[#d4607a] to-[#f8b8ca]', text: '#3a0818' },
+  rose:       { gradient: 'from-[#d4607a] to-[#f8b8ca]', text: '#3a0818' },
+  orange:     { gradient: 'from-[#7a4520] to-[#b8682a]', text: '#ffffff' },
+  sparkling:  { gradient: 'from-[#d4c040] to-[#f8f090]', text: '#2a1a00' },
+  dessert:    { gradient: 'from-[#111111] to-[#2a2a2a]', text: '#ffffff' },
+  fortified:  { gradient: 'from-[#3d1f0a] to-[#6b3510]', text: '#ffffff' },
+};
+const DEFAULT_BADGE = { gradient: 'from-[#1a1410] to-[#2d2520]', text: '#ffffff' };
+
+function typeBadge(type: string) {
+  return TYPE_BADGE[type?.toLowerCase() ?? ''] ?? DEFAULT_BADGE;
 }
 
 function PriceDisplay({ price }: { price: string }) {
@@ -31,9 +39,8 @@ export default function WineCard({
   wine: Wine;
   onClick: () => void;
 }) {
-  const scoreStr = numericScore(wine.rating); // e.g. "92" or null
-  const scoreNum = scoreStr ? parseInt(scoreStr, 10) : null;
-  const gradient = scoreBadgeGradient(scoreNum);
+  const scoreStr = numericScore(wine.rating);
+  const { gradient, text: badgeText } = typeBadge(wine.type);
 
   return (
     <button
@@ -49,11 +56,11 @@ export default function WineCard({
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
         {scoreStr ? (
-          <span className="font-cormorant text-[21px] md:text-[24px] font-medium text-white leading-none relative z-10">
+          <span className="font-cormorant text-[21px] md:text-[24px] font-medium leading-none relative z-10" style={{ color: badgeText }}>
             {scoreStr}
           </span>
         ) : (
-          <span className="font-cormorant text-[13px] font-light italic text-parchment/60 relative z-10 px-1 text-center leading-tight">
+          <span className="font-cormorant text-[13px] font-light italic relative z-10 px-1 text-center leading-tight" style={{ color: badgeText, opacity: 0.6 }}>
             {wine.rating || '—'}
           </span>
         )}
