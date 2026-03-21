@@ -16,8 +16,8 @@ export default {
         'sidebar-bg': '#1e1812',
       },
       fontFamily: {
-        cormorant: ['"Cormorant Garamond"', 'Georgia', 'serif'],
-        sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+        cormorant: ['Georgia', 'serif'],
+        sans: ['system-ui', 'sans-serif'],
       },
     },
   },
