@@ -5,6 +5,20 @@ import type { Wine } from '../../mcp/src/types.js';
 
 const DEFAULT_CACHE_PATH = './cache/wines.json';
 
+// Canonical spellings for known data-entry typos
+const AVA_CORRECTIONS: Record<string, string> = {
+  'columbia valley':                    'Columbia Valley',
+  'horse heaven hills':                 'Horse Heaven Hills',
+  'walla walla valley':                 'Walla Walla Valley',
+  'ancient lakes':                      'Ancient Lakes of Columbia Valley',
+  'ancient lakes of columbia valley':   'Ancient Lakes of Columbia Valley',
+};
+
+function normalizeAva(raw: string): string {
+  const key = raw.trim().toLowerCase();
+  return AVA_CORRECTIONS[key] ?? raw.trim();
+}
+
 interface CacheFile {
   fetchedAt: string;
   csvPath: string;
@@ -76,7 +90,7 @@ export class CSVClient {
       id: (row['ID'] ?? '').trim(),
       brandName: (row['Title'] ?? '').trim(),
       wineName: designation || varietyStyle || varietalLabel,
-      ava: (row['Review Input => Appellation'] ?? '').trim(),
+      ava: normalizeAva(row['Review Input => Appellation'] ?? ''),
       vintage: (row['Review Input => Vintage'] ?? '').trim(),
       price,
       rating: (row['Review Input => Rating'] ?? '').trim(),

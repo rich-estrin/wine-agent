@@ -5,6 +5,7 @@ const BASE = './api';
 export interface SearchParams {
   q?: string;
   mainVarietal?: string;
+  ava?: string;
   region?: string;
   type?: string;
   price?: string;
@@ -13,6 +14,8 @@ export interface SearchParams {
   priceMax?: string;
   scoreMin?: string;
   scoreMax?: string;
+  vintageMin?: string;
+  vintageMax?: string;
   vintage?: string;
   publicationDate?: string;
   limit?: number;

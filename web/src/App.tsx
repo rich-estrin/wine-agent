@@ -4,6 +4,7 @@ import type { Wine, Meta } from './types';
 import type { SearchParams, ChatMessage } from './api';
 import { searchWines, fetchMeta, sendChatMessage } from './api';
 import SearchBar from './components/SearchBar';
+import { expandAva } from './data/ava-tree';
 import FilterPanel, {
   type Filters,
   emptyFilters,
@@ -47,12 +48,15 @@ export default function App() {
     };
     if (query.trim()) params.q = query.trim();
     if (filters.mainVarietal) params.mainVarietal = filters.mainVarietal;
+    if (filters.ava) params.ava = expandAva(filters.ava).join(',');
     if (filters.region) params.region = filters.region;
     if (filters.type) params.type = filters.type;
     if (filters.priceMin) params.priceMin = filters.priceMin;
     if (filters.priceMax) params.priceMax = filters.priceMax;
     if (filters.scoreMin) params.scoreMin = filters.scoreMin;
     if (filters.scoreMax) params.scoreMax = filters.scoreMax;
+    if (filters.vintageMin) params.vintageMin = filters.vintageMin;
+    if (filters.vintageMax) params.vintageMax = filters.vintageMax;
     if (filters.dateRange) {
       const dateFilter = getDateFilter(filters.dateRange);
       if (dateFilter) params.publicationDate = dateFilter;

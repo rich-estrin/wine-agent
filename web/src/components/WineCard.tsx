@@ -30,9 +30,10 @@ export default function WineCard({
           <h3 className="text-base text-gray-900 truncate">
             <span className="font-semibold">{wine.brandName}</span>
             {wine.wineName && <span className="font-normal text-gray-600"> {wine.wineName}</span>}
+            {wine.vintage && <span className="font-normal text-gray-400"> {wine.vintage}</span>}
           </h3>
           <p className="text-sm text-gray-600 mt-0.5">
-            {[wine.mainVarietal, wine.region, wine.vintage]
+            {[wine.mainVarietal, wine.ava]
               .filter(Boolean)
               .join(' \u00b7 ')}
           </p>

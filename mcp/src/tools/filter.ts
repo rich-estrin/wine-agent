@@ -68,6 +68,18 @@ function matchesFilter(wine: Wine, key: string, filterValue: string): boolean {
     const n = parsePrice(wine.price);
     return n !== 9999 && n <= parseFloat(filterValue);
   }
+  if (key === 'ava') {
+    const allowed = filterValue.split(',').map((s) => s.trim().toLowerCase());
+    return allowed.includes(wine.ava.toLowerCase());
+  }
+  if (key === 'vintageMin') {
+    const v = parseInt(wine.vintage);
+    return !isNaN(v) && v >= parseInt(filterValue);
+  }
+  if (key === 'vintageMax') {
+    const v = parseInt(wine.vintage);
+    return !isNaN(v) && v <= parseInt(filterValue);
+  }
 
   // Get the wine's value for this field
   const wineValue = (wine as any)[key];
