@@ -17,6 +17,41 @@ function typeBadge(type: string) {
   return TYPE_BADGE[type?.toLowerCase() ?? ''] ?? DEFAULT_BADGE;
 }
 
+function parseStarRating(rating: string): number | null {
+  if (!rating || !rating.includes('*')) return null;
+  const full = (rating.match(/\*/g) || []).length;
+  const half = /½|1\/2/.test(rating) ? 0.5 : 0;
+  return full + half;
+}
+
+function StarRow({ count }: { count: number }) {
+  return (
+    <div className="flex items-center gap-[1px] pr-1 pt-1 pl-1">
+      {[1, 2, 3, 4, 5].map((i) => {
+        const fill = i <= count ? 1 : i - 0.5 <= count ? 0.5 : 0;
+        const id = `star-${i}-${count}`;
+        return (
+          <svg key={i} width="14" height="14" viewBox="0 0 24 24">
+            {fill === 0.5 && (
+              <defs>
+                <linearGradient id={id}>
+                  <stop offset="50%" stopColor="#FF9900" />
+                  <stop offset="50%" stopColor="#FF9900" stopOpacity="0.2" />
+                </linearGradient>
+              </defs>
+            )}
+            <path
+              d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01z"
+              fill={fill === 0.5 ? `url(#${id})` : '#FF9900'}
+              fillOpacity={fill === 0 ? 0.18 : 1}
+            />
+          </svg>
+        );
+      })}
+    </div>
+  );
+}
+
 function PriceDisplay({ price }: { price: string }) {
   if (!price || price === 'N/A') {
     return <span className="text-sm text-muted">N/A</span>;
@@ -40,31 +75,39 @@ export default function WineCard({
   onClick: () => void;
 }) {
   const scoreStr = numericScore(wine.rating);
+  const starCount = parseStarRating(wine.rating);
   const { gradient, text: badgeText } = typeBadge(wine.type);
 
   return (
     <button
       onClick={onClick}
-      className="wine-card-animate w-full text-left bg-white border border-warm-border rounded-[4px] px-4 py-[18px] md:px-5
-        grid grid-cols-[46px_1fr] md:grid-cols-[52px_1fr_auto] gap-3 md:gap-4 items-start
+      className={`wine-card-animate w-full text-left bg-white border border-warm-border rounded-[4px] px-4 py-[18px] md:px-5
+        grid gap-3 md:gap-4 items-start
         hover:shadow-[0_4px_18px_rgba(26,20,16,0.1)] hover:border-gold/40 hover:-translate-y-px
-        transition-all duration-200"
+        transition-all duration-200
+        ${starCount !== null
+          ? 'grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_auto]'
+          : 'grid-cols-[46px_1fr] md:grid-cols-[52px_1fr_auto]'}`}
     >
-      {/* Score badge */}
-      <div
-        className={`w-[46px] h-[46px] md:w-[52px] md:h-[52px] rounded-[3px] flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${gradient} relative overflow-hidden`}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
-        {scoreStr ? (
-          <span className="font-cormorant text-[21px] md:text-[24px] font-medium leading-none relative z-10" style={{ color: badgeText }}>
-            {scoreStr}
-          </span>
-        ) : (
-          <span className="font-cormorant text-[13px] font-light italic relative z-10 px-1 text-center leading-tight" style={{ color: badgeText, opacity: 0.6 }}>
-            {wine.rating || '—'}
-          </span>
-        )}
-      </div>
+      {/* Score badge or star row */}
+      {starCount !== null ? (
+        <StarRow count={starCount} />
+      ) : (
+        <div
+          className={`w-[46px] h-[46px] md:w-[52px] md:h-[52px] rounded-[3px] flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${gradient} relative overflow-hidden`}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
+          {scoreStr ? (
+            <span className="font-cormorant text-[21px] md:text-[24px] font-medium leading-none relative z-10" style={{ color: badgeText }}>
+              {scoreStr}
+            </span>
+          ) : (
+            <span className="font-cormorant text-[13px] font-light italic relative z-10 px-1 text-center leading-tight" style={{ color: badgeText, opacity: 0.6 }}>
+              {wine.rating || '—'}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Body */}
       <div className="min-w-0">
