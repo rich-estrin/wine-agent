@@ -1,6 +1,28 @@
 import type { Wine } from '../types';
-import { formatPrice, numericScore } from '../types';
-import RatingDisplay from './RatingDisplay';
+import { numericScore } from '../types';
+
+function scoreBadgeGradient(score: number | null): string {
+  if (score === null) return 'from-[#1a1410] to-[#2d2520]';
+  if (score >= 95) return 'from-[#57192a] to-[#7b2d3e]';
+  if (score >= 92) return 'from-[#283a50] to-[#3b5570]';
+  if (score >= 88) return 'from-[#3a2a18] to-[#5c4225]';
+  return 'from-[#1e1812] to-[#2d2822]';
+}
+
+function PriceDisplay({ price }: { price: string }) {
+  if (!price || price === 'N/A') {
+    return <span className="text-sm text-muted">N/A</span>;
+  }
+  const stripped = price.replace(/[^\d.]/g, '');
+  const num = parseFloat(stripped);
+  if (isNaN(num)) return <span className="text-sm text-muted">{price}</span>;
+  return (
+    <span className="font-cormorant text-[22px] font-normal text-ink tracking-tight leading-none">
+      <sup className="text-[12px] font-light text-muted align-super leading-none">$</sup>
+      {Math.round(num)}
+    </span>
+  );
+}
 
 export default function WineCard({
   wine,
@@ -9,49 +31,83 @@ export default function WineCard({
   wine: Wine;
   onClick: () => void;
 }) {
-
-  const score = numericScore(wine.rating);
+  const scoreStr = numericScore(wine.rating); // e.g. "92" or null
+  const scoreNum = scoreStr ? parseInt(scoreStr, 10) : null;
+  const gradient = scoreBadgeGradient(scoreNum);
 
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all"
+      className="wine-card-animate w-full text-left bg-white border border-warm-border rounded-[4px] px-4 py-[18px] md:px-5
+        grid grid-cols-[46px_1fr] md:grid-cols-[52px_1fr_auto] gap-3 md:gap-4 items-start
+        hover:shadow-[0_4px_18px_rgba(26,20,16,0.1)] hover:border-gold/40 hover:-translate-y-px
+        transition-all duration-200"
     >
-      <div className="flex items-start gap-3">
-        {/* Score badge */}
-        {score && (
-          <div className="shrink-0 flex items-center justify-center rounded w-14 h-14 bg-[#141617]">
-            <span className="text-2xl font-bold text-[#deb77d] leading-none">{score}</span>
-          </div>
+      {/* Score badge */}
+      <div
+        className={`w-[46px] h-[46px] md:w-[52px] md:h-[52px] rounded-[3px] flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${gradient} relative overflow-hidden`}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
+        {scoreStr ? (
+          <span className="font-cormorant text-[21px] md:text-[24px] font-medium text-white leading-none relative z-10">
+            {scoreStr}
+          </span>
+        ) : (
+          <span className="font-cormorant text-[13px] font-light italic text-parchment/60 relative z-10 px-1 text-center leading-tight">
+            {wine.rating || '—'}
+          </span>
         )}
-
-        {/* Wine info */}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base text-gray-900 truncate">
-            <span className="font-semibold">{wine.brandName}</span>
-            {wine.wineName && <span className="font-normal text-gray-600"> {wine.wineName}</span>}
-            {wine.vintage && <span className="font-normal text-gray-400"> {wine.vintage}</span>}
-          </h3>
-          <p className="text-sm text-gray-600 mt-0.5">
-            {[wine.mainVarietal, wine.ava]
-              .filter(Boolean)
-              .join(' \u00b7 ')}
-          </p>
-        </div>
-
-        {/* Price + stars */}
-        <div className="text-right shrink-0">
-          <p className="text-base font-semibold text-gray-900">
-            {formatPrice(wine.price)}
-          </p>
-          {!score && <RatingDisplay rating={wine.rating} />}
-        </div>
       </div>
-      {wine.review && (
-        <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-          {wine.review}
-        </p>
-      )}
+
+      {/* Body */}
+      <div className="min-w-0">
+        {/* Winery + wine name + vintage */}
+        <div className="flex items-baseline flex-wrap gap-x-1.5 gap-y-0 mb-1">
+          <span className="font-cormorant text-[17px] md:text-[18px] font-medium text-ink leading-tight">
+            {wine.brandName}
+          </span>
+          {wine.wineName && (
+            <span className="font-cormorant text-[17px] md:text-[18px] font-light italic text-[#3d3028] leading-tight">
+              {wine.wineName}
+            </span>
+          )}
+          {wine.vintage && (
+            <span className="text-[12px] text-muted tracking-[0.04em]">
+              {wine.vintage}
+            </span>
+          )}
+        </div>
+
+        {/* Meta row: varietal pill + region */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+          {wine.mainVarietal && (
+            <span className="text-[10px] font-medium tracking-[0.07em] uppercase text-wine bg-wine/[0.07] border border-wine/[0.18] px-2 py-[2px] rounded-full">
+              {wine.mainVarietal}
+            </span>
+          )}
+          {wine.ava && (
+            <span className="text-[12px] text-muted">{wine.ava}</span>
+          )}
+          {/* Mobile price inline */}
+          {wine.price && wine.price !== 'N/A' && (
+            <span className="md:hidden font-cormorant text-[15px] font-normal text-ink/70 ml-auto">
+              {wine.price}
+            </span>
+          )}
+        </div>
+
+        {/* Review */}
+        {wine.review && (
+          <p className="text-[13px] leading-[1.65] text-[#5a5044] font-light">
+            {wine.review}
+          </p>
+        )}
+      </div>
+
+      {/* Price column — desktop only */}
+      <div className="hidden md:flex flex-col items-end pt-0.5 flex-shrink-0">
+        <PriceDisplay price={wine.price} />
+      </div>
     </button>
   );
 }

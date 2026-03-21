@@ -12,34 +12,29 @@ export default function WineList({
 }) {
   if (loading) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        Searching wines...
+      <div className="text-center py-16 font-cormorant text-[18px] italic text-muted">
+        Searching wines…
       </div>
     );
   }
 
   if (wines.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-400">
+      <div className="text-center py-16 font-cormorant text-[18px] italic text-muted">
         No wines found. Try a different search or adjust your filters.
       </div>
     );
   }
 
   return (
-    <div>
-      <p className="text-sm text-gray-500 mb-3">
-        Showing {wines.length} wine{wines.length !== 1 ? 's' : ''}
-      </p>
-      <div className="flex flex-col gap-3">
-        {wines.map((wine) => (
-          <WineCard
-            key={`${wine.id}-${wine.wineName}`}
-            wine={wine}
-            onClick={() => onSelect(wine)}
-          />
-        ))}
-      </div>
+    <div className="flex flex-col gap-2.5">
+      {wines.map((wine) => (
+        <WineCard
+          key={`${wine.id}-${wine.wineName}`}
+          wine={wine}
+          onClick={() => onSelect(wine)}
+        />
+      ))}
     </div>
   );
 }
