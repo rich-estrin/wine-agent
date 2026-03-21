@@ -9,10 +9,6 @@ export default function WineCard({
   wine: Wine;
   onClick: () => void;
 }) {
-  const reviewTeaser =
-    wine.review.length > 300
-      ? wine.review.slice(0, 300) + '...'
-      : wine.review;
 
   const score = numericScore(wine.rating);
 
@@ -31,11 +27,9 @@ export default function WineCard({
 
         {/* Wine info */}
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">
-            {wine.brandName}
-          </p>
-          <h3 className="text-base font-semibold text-gray-900 truncate">
-            {wine.wineName}
+          <h3 className="text-base text-gray-900 truncate">
+            <span className="font-semibold">{wine.brandName}</span>
+            {wine.wineName && <span className="font-normal text-gray-600"> {wine.wineName}</span>}
           </h3>
           <p className="text-sm text-gray-600 mt-0.5">
             {[wine.mainVarietal, wine.region, wine.vintage]
@@ -52,9 +46,9 @@ export default function WineCard({
           {!score && <RatingDisplay rating={wine.rating} />}
         </div>
       </div>
-      {reviewTeaser && (
+      {wine.review && (
         <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-          {reviewTeaser}
+          {wine.review}
         </p>
       )}
     </button>

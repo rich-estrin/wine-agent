@@ -16,6 +16,7 @@ export interface SearchParams {
   vintage?: string;
   publicationDate?: string;
   limit?: number;
+  offset?: number;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
 }

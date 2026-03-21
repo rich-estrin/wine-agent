@@ -28,7 +28,7 @@ let metaCache: {
 // Combined search + filter endpoint
 app.get('/api/search', (req, res) => {
   try {
-    const { q, limit, sort_by, sort_order, ...filterParams } = req.query;
+    const { q, limit, offset, sort_by, sort_order, ...filterParams } = req.query;
 
     let results = sheetsClient.getAllWines();
 
@@ -74,9 +74,10 @@ app.get('/api/search', (req, res) => {
       });
     }
 
-    // Step 4: Apply limit
+    // Step 4: Apply limit + offset
     const finalLimit = limit ? parseInt(limit as string) : 20;
-    res.json(results.slice(0, finalLimit));
+    const finalOffset = offset ? parseInt(offset as string) : 0;
+    res.json(results.slice(finalOffset, finalOffset + finalLimit));
   } catch (error) {
     res
       .status(500)

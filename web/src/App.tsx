@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import type { Wine, Meta } from './types';
 import type { SearchParams, ChatMessage } from './api';
@@ -23,7 +23,12 @@ export default function App() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const [initialLoad, setInitialLoad] = useState(true);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const PAGE_SIZE = 40;
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
 
@@ -33,9 +38,10 @@ export default function App() {
   }, []);
 
   // Build search params from current state
-  const buildParams = useCallback((): SearchParams => {
+  const buildParams = useCallback((pageOffset = 0): SearchParams => {
     const params: SearchParams = {
-      limit: 40,
+      limit: PAGE_SIZE,
+      offset: pageOffset,
       sort_by: sortBy,
       sort_order: sortOrder,
     };
@@ -80,47 +86,52 @@ export default function App() {
     }
   };
 
-  // Debounced search
+  // Reset and fetch first page whenever search params change
   useEffect(() => {
-    const params = buildParams();
-    const hasSearchCriteria = params.q || Object.keys(params).some(
-      (k) => !['limit', 'sort_by', 'sort_order'].includes(k)
-    );
-
-    if (!hasSearchCriteria && initialLoad) {
-      // Load wines on first load with current sort settings
-      setLoading(true);
-      searchWines(params)
-        .then(setWines)
-        .catch(console.error)
-        .finally(() => {
-          setLoading(false);
-          setInitialLoad(false);
-        });
-      return;
-    }
-
-    if (!hasSearchCriteria) {
-      // No search criteria but not initial load - still search to apply sort changes
-      setLoading(true);
-      searchWines(params)
-        .then(setWines)
-        .catch(console.error)
-        .finally(() => setLoading(false));
-      return;
-    }
-
+    setOffset(0);
+    setHasMore(true);
     setInitialLoad(false);
+
     const timer = setTimeout(() => {
       setLoading(true);
-      searchWines(params)
-        .then(setWines)
+      searchWines(buildParams(0))
+        .then((batch) => {
+          setWines(batch);
+          setHasMore(batch.length === PAGE_SIZE);
+        })
         .catch(console.error)
         .finally(() => setLoading(false));
-    }, 300);
+    }, initialLoad ? 0 : 300);
 
     return () => clearTimeout(timer);
-  }, [buildParams, initialLoad]);
+  }, [buildParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // IntersectionObserver — load next page when sentinel scrolls into view
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          const nextOffset = offset + PAGE_SIZE;
+          setLoadingMore(true);
+          searchWines(buildParams(nextOffset))
+            .then((batch) => {
+              setWines((prev) => [...prev, ...batch]);
+              setOffset(nextOffset);
+              setHasMore(batch.length === PAGE_SIZE);
+            })
+            .catch(console.error)
+            .finally(() => setLoadingMore(false));
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, offset, buildParams]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -173,6 +184,13 @@ export default function App() {
               loading={loading}
               onSelect={setSelectedWine}
             />
+            <div ref={sentinelRef} className="h-1" />
+            {loadingMore && (
+              <p className="text-center text-sm text-gray-400 py-4">Loading more…</p>
+            )}
+            {!hasMore && wines.length > 0 && (
+              <p className="text-center text-sm text-gray-400 py-4">All {wines.length} results shown</p>
+            )}
           </TabPanel>
           <TabPanel>
             <Chat
