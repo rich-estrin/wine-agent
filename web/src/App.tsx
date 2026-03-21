@@ -9,6 +9,7 @@ import Sidebar, {
   type Filters,
   emptyFilters,
   getDateFilter,
+  ActiveChips,
 } from './components/Sidebar';
 import WineList from './components/WineList';
 import WineDetail from './components/WineDetail';
@@ -309,11 +310,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Results count */}
-              {!loading && wines.length > 0 && (
-                <p className="font-cormorant text-[15px] text-muted mb-4 pb-3.5 border-b border-warm-border">
-                  Showing <strong className="text-ink font-medium">{wines.length}</strong> wines
-                </p>
+              {/* Active filter pills */}
+              {Object.values(filters).some((v) => v !== '') && (
+                <div className="mb-4 pb-3.5 border-b border-warm-border">
+                  <ActiveChips filters={filters} onChange={setFilters} />
+                </div>
               )}
 
               <WineList

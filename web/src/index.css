@@ -57,21 +57,21 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #b8924a;
+  background: #7b2d3e;
   cursor: pointer;
   margin-top: -5px;
-  box-shadow: 0 0 0 3px rgba(184, 146, 74, 0.15);
+  box-shadow: 0 0 0 3px rgba(123, 45, 62, 0.15);
   transition: box-shadow 0.15s;
 }
 .sidebar-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 0 5px rgba(184, 146, 74, 0.22);
+  box-shadow: 0 0 0 5px rgba(123, 45, 62, 0.22);
 }
 .sidebar-slider::-moz-range-thumb {
   pointer-events: all;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #b8924a;
+  background: #7b2d3e;
   border: none;
   cursor: pointer;
 }

@@ -228,13 +228,13 @@ function SidebarDualRange({
   const maxPct = ((hi - sliderMin) / (sliderMax - sliderMin)) * 100;
 
   const inputClass =
-    'font-cormorant text-[17px] text-[#b8924a] bg-transparent border-b border-[rgba(184,146,74,0.3)] outline-none focus:border-[#b8924a] transition-colors w-12';
+    'font-cormorant text-[17px] text-ink bg-transparent border-b border-[rgba(26,20,16,0.15)] outline-none focus:border-[#7b2d3e] transition-colors w-12';
 
   return (
     <div>
       <div className="flex justify-between mb-2.5">
         <div className="flex items-baseline gap-0.5">
-          {prefix && <span className="font-cormorant text-[13px] text-[rgba(184,146,74,0.6)]">{prefix}</span>}
+          {prefix && <span className="font-cormorant text-[13px] text-muted">{prefix}</span>}
           <input
             type="text"
             inputMode="numeric"
@@ -244,7 +244,7 @@ function SidebarDualRange({
           />
         </div>
         <div className="flex items-baseline gap-0.5">
-          {prefix && <span className="font-cormorant text-[13px] text-[rgba(184,146,74,0.6)]">{prefix}</span>}
+          {prefix && <span className="font-cormorant text-[13px] text-muted">{prefix}</span>}
           <input
             type="text"
             inputMode="numeric"
@@ -257,7 +257,7 @@ function SidebarDualRange({
       <div className="relative flex items-center h-5 w-full mb-1">
         <div className="absolute w-full h-[3px] bg-warm-border rounded-sm" />
         <div
-          className="absolute h-[3px] bg-[#b8924a] rounded-sm"
+          className="absolute h-[3px] bg-[#7b2d3e] rounded-sm"
           style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
         />
         <input
@@ -374,8 +374,8 @@ function SidebarVintageSlider({
   );
 }
 
-// Active chips shown at top of sidebar
-function ActiveChips({
+// Active chips — exported so App.tsx can render them in the main content area
+export function ActiveChips({
   filters,
   onChange,
 }: {
@@ -410,7 +410,7 @@ function ActiveChips({
   }
   if (chips.length === 0) return null;
   return (
-    <div className="px-5 pt-3 pb-1 flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1.5">
       {chips.map((chip) => (
         <button
           key={chip.label}
@@ -454,9 +454,6 @@ export default function Sidebar({
           </button>
         )}
       </div>
-
-      {/* Active chips */}
-      <ActiveChips filters={filters} onChange={onChange} />
 
       {/* Facet groups */}
       {meta && (
