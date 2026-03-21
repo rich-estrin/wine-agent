@@ -277,7 +277,7 @@ export default function App() {
           {/* Page body: sidebar + main */}
           <div className="flex">
             {/* Desktop sidebar */}
-            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-sidebar-bg border-r border-gold/[0.14] sticky top-10 self-start">
+            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-cream border-r border-warm-border sticky top-10 self-start">
               <Sidebar meta={meta} filters={filters} onChange={setFilters} />
             </aside>
 

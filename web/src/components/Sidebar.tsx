@@ -95,20 +95,20 @@ function FacetGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-white/[0.05]">
+    <div className="border-b border-warm-border">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-[13px] hover:bg-white/[0.025] transition-colors text-left"
+        className="w-full flex items-center justify-between px-5 py-[13px] hover:bg-[rgba(0,0,0,0.03)] transition-colors text-left"
       >
         <span
           className={`text-[11px] font-medium tracking-[0.1em] uppercase transition-colors ${
-            hasSelection ? 'text-gold-light' : 'text-parchment/[0.52]'
+            hasSelection ? 'text-gold' : 'text-muted'
           }`}
         >
           {label}
         </span>
         <ChevronDownIcon
-          className={`w-2.5 h-2.5 text-parchment/20 transition-transform flex-shrink-0 ${open ? '' : '-rotate-90'}`}
+          className={`w-2.5 h-2.5 text-muted transition-transform flex-shrink-0 ${open ? '' : '-rotate-90'}`}
         />
       </button>
       {open && <div className="px-5 pb-3.5 pt-1">{children}</div>}
@@ -152,7 +152,7 @@ function FacetOption({
       </div>
       <span
         className={`text-[12px] transition-colors flex-1 text-left ${
-          selected ? 'text-parchment' : 'text-parchment/50 group-hover:text-parchment/75'
+          selected ? 'text-ink' : 'text-muted group-hover:text-ink'
         }`}
       >
         {label}
@@ -187,7 +187,7 @@ function FacetList({
       {options.length > maxVisible && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="mt-1 text-[10px] font-medium tracking-[0.08em] uppercase text-gold/65 hover:text-gold transition-colors"
+          className="mt-1 text-[10px] font-medium tracking-[0.08em] uppercase text-[rgba(184,146,74,0.65)] hover:text-[#b8924a] transition-colors"
         >
           {showAll ? 'Show less' : `+${options.length - maxVisible} more`}
         </button>
@@ -228,13 +228,13 @@ function SidebarDualRange({
   const maxPct = ((hi - sliderMin) / (sliderMax - sliderMin)) * 100;
 
   const inputClass =
-    'font-cormorant text-[17px] text-gold-light bg-transparent border-b border-gold/30 outline-none focus:border-gold transition-colors w-12';
+    'font-cormorant text-[17px] text-[#b8924a] bg-transparent border-b border-[rgba(184,146,74,0.3)] outline-none focus:border-[#b8924a] transition-colors w-12';
 
   return (
     <div>
       <div className="flex justify-between mb-2.5">
         <div className="flex items-baseline gap-0.5">
-          {prefix && <span className="font-cormorant text-[13px] text-gold-light/60">{prefix}</span>}
+          {prefix && <span className="font-cormorant text-[13px] text-[rgba(184,146,74,0.6)]">{prefix}</span>}
           <input
             type="text"
             inputMode="numeric"
@@ -244,7 +244,7 @@ function SidebarDualRange({
           />
         </div>
         <div className="flex items-baseline gap-0.5">
-          {prefix && <span className="font-cormorant text-[13px] text-gold-light/60">{prefix}</span>}
+          {prefix && <span className="font-cormorant text-[13px] text-[rgba(184,146,74,0.6)]">{prefix}</span>}
           <input
             type="text"
             inputMode="numeric"
@@ -255,9 +255,9 @@ function SidebarDualRange({
         </div>
       </div>
       <div className="relative flex items-center h-5 w-full mb-1">
-        <div className="absolute w-full h-[3px] bg-[rgba(123,45,62,0.5)] rounded-sm" />
+        <div className="absolute w-full h-[3px] bg-warm-border rounded-sm" />
         <div
-          className="absolute h-[3px] bg-gold rounded-sm"
+          className="absolute h-[3px] bg-[#b8924a] rounded-sm"
           style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
         />
         <input
@@ -415,7 +415,7 @@ function ActiveChips({
         <button
           key={chip.label}
           onClick={chip.clear}
-          className="inline-flex items-center gap-[5px] px-2.5 py-[3px] text-[10px] font-medium tracking-[0.06em] uppercase text-parchment bg-wine/40 border border-wine-light/[0.38] rounded-full hover:bg-wine/65 transition-colors"
+          className="inline-flex items-center gap-[5px] px-2.5 py-[3px] text-[10px] font-medium tracking-[0.06em] uppercase text-white bg-[#7b2d3e] border border-[rgba(123,45,62,0.6)] rounded-full hover:bg-[#a84458] transition-colors"
         >
           {chip.label}
           <XMarkIcon className="w-[7px] h-[7px] opacity-60" />
@@ -441,8 +441,8 @@ export default function Sidebar({
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="px-5 py-[18px] border-b border-parchment/[0.055] flex items-center justify-between flex-shrink-0">
-        <span className="text-[10px] font-medium tracking-[0.14em] uppercase text-parchment/30">
+      <div className="px-5 py-[18px] border-b border-warm-border flex items-center justify-between flex-shrink-0">
+        <span className="text-[10px] font-medium tracking-[0.14em] uppercase text-muted">
           Filters
         </span>
         {hasFilters && (

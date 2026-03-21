@@ -18,7 +18,7 @@ function PriceDisplay({ price }: { price: string }) {
   if (isNaN(num)) return <span className="text-sm text-muted">{price}</span>;
   return (
     <span className="font-cormorant text-[22px] font-normal text-ink tracking-tight leading-none">
-      <sup className="text-[12px] font-light text-muted align-super leading-none">$</sup>
+      <span className="text-[22px] font-light text-muted">$</span>
       {Math.round(num)}
     </span>
   );
@@ -72,7 +72,7 @@ export default function WineCard({
             </span>
           )}
           {wine.vintage && (
-            <span className="text-[12px] text-muted tracking-[0.04em]">
+            <span className="font-cormorant text-[17px] md:text-[18px] font-light text-muted">
               {wine.vintage}
             </span>
           )}
@@ -81,7 +81,7 @@ export default function WineCard({
         {/* Meta row: varietal pill + region */}
         <div className="flex items-center gap-1.5 flex-wrap mb-2">
           {wine.mainVarietal && (
-            <span className="text-[10px] font-medium tracking-[0.07em] uppercase text-wine bg-wine/[0.07] border border-wine/[0.18] px-2 py-[2px] rounded-full">
+            <span className="text-[10px] font-medium tracking-[0.07em] uppercase text-[#7b2d3e] bg-[rgba(123,45,62,0.07)] border border-[rgba(123,45,62,0.18)] px-2 py-[2px] rounded-full">
               {wine.mainVarietal}
             </span>
           )}
