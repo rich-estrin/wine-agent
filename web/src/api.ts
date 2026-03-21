@@ -9,6 +9,10 @@ export interface SearchParams {
   type?: string;
   price?: string;
   rating?: string;
+  priceMin?: string;
+  priceMax?: string;
+  scoreMin?: string;
+  scoreMax?: string;
   vintage?: string;
   publicationDate?: string;
   limit?: number;

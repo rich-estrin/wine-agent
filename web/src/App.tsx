@@ -43,8 +43,10 @@ export default function App() {
     if (filters.mainVarietal) params.mainVarietal = filters.mainVarietal;
     if (filters.region) params.region = filters.region;
     if (filters.type) params.type = filters.type;
-    if (filters.priceMax) params.price = `<${filters.priceMax}`;
-    if (filters.ratingMin) params.rating = `>=${filters.ratingMin}`;
+    if (filters.priceMin) params.priceMin = filters.priceMin;
+    if (filters.priceMax) params.priceMax = filters.priceMax;
+    if (filters.scoreMin) params.scoreMin = filters.scoreMin;
+    if (filters.scoreMax) params.scoreMax = filters.scoreMax;
     if (filters.dateRange) {
       const dateFilter = getDateFilter(filters.dateRange);
       if (dateFilter) params.publicationDate = dateFilter;

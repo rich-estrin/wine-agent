@@ -10,8 +10,8 @@ export default function WineCard({
   onClick: () => void;
 }) {
   const reviewTeaser =
-    wine.review.length > 120
-      ? wine.review.slice(0, 120) + '...'
+    wine.review.length > 300
+      ? wine.review.slice(0, 300) + '...'
       : wine.review;
 
   const score = numericScore(wine.rating);
@@ -53,7 +53,7 @@ export default function WineCard({
         </div>
       </div>
       {reviewTeaser && (
-        <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+        <p className="mt-2 text-sm text-gray-500 leading-relaxed">
           {reviewTeaser}
         </p>
       )}

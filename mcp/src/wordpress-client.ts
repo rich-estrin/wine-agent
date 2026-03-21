@@ -127,7 +127,7 @@ export class WordPressClient {
     return {
       id: String(r.id),
       brandName: r.brand_name,
-      wineName: r.wine_name,
+      wineName: r.designation,
       ava: r.appellation,
       vintage: r.vintage,
       price: (r.price && r.price.trim() && r.price.trim() !== 'NA') ? r.price : 'N/A',

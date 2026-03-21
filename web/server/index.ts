@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { WordPressClient } from '../../mcp/dist/wordpress-client.js';
+import { CSVClient } from './csv-client.js';
 import { searchWines } from '../../mcp/dist/tools/search.js';
 import { filterWines } from '../../mcp/dist/tools/filter.js';
 import { getWineDetails } from '../../mcp/dist/tools/get-wine.js';
@@ -13,10 +13,9 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
-const sheetsClient = new WordPressClient({
-  apiUrl: process.env.WP_API_URL || '',
-  apiKey: process.env.WP_API_KEY || '',
-});
+const sheetsClient = new CSVClient(
+  process.env.CSV_PATH || '',
+);
 
 // Cache for filter dropdown values
 let metaCache: {
@@ -321,8 +320,8 @@ AVA, main varietal, type (Red/White/Rosé/etc.), tasting notes, tasting/publicat
 });
 
 async function start() {
-  await sheetsClient.initialize();
-  console.log(`Loaded ${sheetsClient.getAllWines().length} wines from WordPress`);
+  sheetsClient.initialize();
+  console.log(`Loaded ${sheetsClient.getAllWines().length} wines from CSV`);
 
   const PORT = parseInt(process.env.PORT || '3001');
   app.listen(PORT, () => {

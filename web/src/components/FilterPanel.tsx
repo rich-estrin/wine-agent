@@ -1,14 +1,15 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { StarIcon } from '@heroicons/react/24/solid';
 import type { Meta } from '../types';
 
 export interface Filters {
   mainVarietal: string;
   region: string;
   type: string;
+  priceMin: string;
   priceMax: string;
-  ratingMin: string;
+  scoreMin: string;
+  scoreMax: string;
   dateRange: string;
 }
 
@@ -16,8 +17,10 @@ export const emptyFilters: Filters = {
   mainVarietal: '',
   region: '',
   type: '',
+  priceMin: '',
   priceMax: '',
-  ratingMin: '',
+  scoreMin: '',
+  scoreMax: '',
   dateRange: '',
 };
 
@@ -74,38 +77,157 @@ export function getDateFilter(dateRange: string): string {
   return `>=${pastDate.toISOString().split('T')[0]}`;
 }
 
-function StarRatingFilter({
-  value,
+const PRICE_SLIDER_MIN = 0;
+const PRICE_SLIDER_MAX = 300;
+
+function PriceRangeSlider({
+  priceMin,
+  priceMax,
   onChange,
 }: {
-  value: string;
-  onChange: (value: string) => void;
+  priceMin: string;
+  priceMax: string;
+  onChange: (min: string, max: string) => void;
 }) {
-  const rating = value ? parseFloat(value) : 0;
-  const stars = [1, 2, 3, 4, 5];
+  const minVal = priceMin !== '' ? parseInt(priceMin) : PRICE_SLIDER_MIN;
+  const maxVal = priceMax !== '' ? parseInt(priceMax) : PRICE_SLIDER_MAX;
+  const isActive = priceMin !== '' || priceMax !== '';
+
+  // Clamp to slider range for thumb positioning
+  const sliderMin = Math.max(PRICE_SLIDER_MIN, Math.min(minVal, PRICE_SLIDER_MAX));
+  const sliderMax = Math.max(PRICE_SLIDER_MIN, Math.min(maxVal, PRICE_SLIDER_MAX));
+  const minPct = ((sliderMin - PRICE_SLIDER_MIN) / (PRICE_SLIDER_MAX - PRICE_SLIDER_MIN)) * 100;
+  const maxPct = ((sliderMax - PRICE_SLIDER_MIN) / (PRICE_SLIDER_MAX - PRICE_SLIDER_MIN)) * 100;
+
+  const handleMinSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Math.min(parseInt(e.target.value), sliderMax - 1);
+    onChange(v === PRICE_SLIDER_MIN ? '' : String(v), priceMax);
+  };
+  const handleMaxSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Math.max(parseInt(e.target.value), sliderMin + 1);
+    onChange(priceMin, v === PRICE_SLIDER_MAX ? '' : String(v));
+  };
+  const handleMinText = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value.replace(/\D/g, ''), priceMax);
+  };
+  const handleMaxText = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(priceMin, e.target.value.replace(/\D/g, ''));
+  };
 
   return (
-    <div className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2">
-      <span className="text-xs text-gray-500 mr-1">Min:</span>
-      {stars.map((star) => (
-        <button
-          key={star}
-          type="button"
-          onClick={() => onChange(rating === star ? '' : star.toString())}
-          className="focus:outline-none"
-        >
-          <StarIcon
-            className={`h-5 w-5 ${
-              star <= rating
-                ? 'text-yellow-400'
-                : 'text-gray-300 hover:text-yellow-200'
-            }`}
-          />
-        </button>
-      ))}
-      {rating > 0 && (
-        <span className="text-xs text-gray-600 ml-1">{rating}+</span>
-      )}
+    <div className={`flex items-center gap-2 rounded-md border bg-white px-3 py-2 ${isActive ? 'border-[#141617]' : 'border-gray-300'}`}>
+      <span className="text-xs text-gray-500 whitespace-nowrap">Price</span>
+      <span className="text-xs text-gray-400">$</span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={priceMin}
+        onChange={handleMinText}
+        placeholder="Min"
+        className="w-10 text-xs text-gray-700 outline-none bg-transparent placeholder-gray-300"
+      />
+      <div className="relative flex items-center w-24 h-5">
+        <div className="absolute w-full h-1 bg-gray-200 rounded" />
+        <div
+          className="absolute h-1 bg-[#141617] rounded"
+          style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
+        />
+        <input
+          type="range"
+          min={PRICE_SLIDER_MIN}
+          max={PRICE_SLIDER_MAX}
+          value={sliderMin}
+          onChange={handleMinSlider}
+          className="score-slider"
+          style={{ zIndex: sliderMin > PRICE_SLIDER_MAX - 20 ? 5 : 3 }}
+        />
+        <input
+          type="range"
+          min={PRICE_SLIDER_MIN}
+          max={PRICE_SLIDER_MAX}
+          value={sliderMax}
+          onChange={handleMaxSlider}
+          className="score-slider"
+          style={{ zIndex: 4 }}
+        />
+      </div>
+      <span className="text-xs text-gray-400">$</span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={priceMax}
+        onChange={handleMaxText}
+        placeholder="Max"
+        className="w-10 text-xs text-gray-700 outline-none bg-transparent placeholder-gray-300"
+      />
+    </div>
+  );
+}
+
+const SCORE_MIN = 80;
+const SCORE_MAX = 100;
+
+function ScoreRangeSlider({
+  scoreMin,
+  scoreMax,
+  onChange,
+}: {
+  scoreMin: string;
+  scoreMax: string;
+  onChange: (min: string, max: string) => void;
+}) {
+  const minVal = scoreMin ? parseInt(scoreMin) : SCORE_MIN;
+  const maxVal = scoreMax ? parseInt(scoreMax) : SCORE_MAX;
+  const isActive = minVal > SCORE_MIN || maxVal < SCORE_MAX;
+
+  const minPct = ((minVal - SCORE_MIN) / (SCORE_MAX - SCORE_MIN)) * 100;
+  const maxPct = ((maxVal - SCORE_MIN) / (SCORE_MAX - SCORE_MIN)) * 100;
+
+  const handleMin = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Math.min(parseInt(e.target.value), maxVal - 1);
+    onChange(v === SCORE_MIN ? '' : String(v), scoreMax);
+  };
+
+  const handleMax = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Math.max(parseInt(e.target.value), minVal + 1);
+    onChange(scoreMin, v === SCORE_MAX ? '' : String(v));
+  };
+
+  return (
+    <div className={`flex items-center gap-3 rounded-md border bg-white px-3 py-2 ${isActive ? 'border-[#141617]' : 'border-gray-300'}`}>
+      <span className="text-xs text-gray-500 whitespace-nowrap">Score</span>
+      <div className="relative flex items-center w-28 h-5">
+        {/* Track background */}
+        <div className="absolute w-full h-1 bg-gray-200 rounded" />
+        {/* Active fill */}
+        <div
+          className="absolute h-1 bg-[#141617] rounded"
+          style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
+        />
+        {/* Min thumb */}
+        <input
+          type="range"
+          min={SCORE_MIN}
+          max={SCORE_MAX}
+          value={minVal}
+          onChange={handleMin}
+          className="score-slider"
+          style={{ zIndex: minVal > SCORE_MAX - 2 ? 5 : 3 }}
+        />
+        {/* Max thumb */}
+        <input
+          type="range"
+          min={SCORE_MIN}
+          max={SCORE_MAX}
+          value={maxVal}
+          onChange={handleMax}
+          className="score-slider"
+          style={{ zIndex: 4 }}
+        />
+      </div>
+      <span className={`text-xs font-medium whitespace-nowrap w-12 ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+        {isActive ? `${minVal}–${maxVal}` : 'Any'}
+      </span>
     </div>
   );
 }
@@ -191,16 +313,15 @@ export default function FilterPanel({
           />
         </>
       )}
-      <input
-        type="text"
-        placeholder="Max price"
-        value={filters.priceMax}
-        onChange={(e) => onChange({ ...filters, priceMax: e.target.value })}
-        className="w-24 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      <PriceRangeSlider
+        priceMin={filters.priceMin}
+        priceMax={filters.priceMax}
+        onChange={(min, max) => onChange({ ...filters, priceMin: min, priceMax: max })}
       />
-      <StarRatingFilter
-        value={filters.ratingMin}
-        onChange={(v) => onChange({ ...filters, ratingMin: v })}
+      <ScoreRangeSlider
+        scoreMin={filters.scoreMin}
+        scoreMax={filters.scoreMax}
+        onChange={(min, max) => onChange({ ...filters, scoreMin: min, scoreMax: max })}
       />
       <Listbox
         value={filters.dateRange}

@@ -47,6 +47,28 @@ export function filterWines(wines: Wine[], params: FilterWinesParams): Wine[] {
  * Check if a wine matches a single filter criterion
  */
 function matchesFilter(wine: Wine, key: string, filterValue: string): boolean {
+  // Special keys that operate on rating but aren't Wine fields
+  if (key === 'scoreMin') {
+    const raw = wine.rating;
+    if (!raw || raw.includes('*')) return false;
+    const n = parseFloat(raw);
+    return !isNaN(n) && n >= parseFloat(filterValue);
+  }
+  if (key === 'scoreMax') {
+    const raw = wine.rating;
+    if (!raw || raw.includes('*')) return false;
+    const n = parseFloat(raw);
+    return !isNaN(n) && n <= parseFloat(filterValue);
+  }
+  if (key === 'priceMin') {
+    const n = parsePrice(wine.price);
+    return n !== 9999 && n >= parseFloat(filterValue);
+  }
+  if (key === 'priceMax') {
+    const n = parsePrice(wine.price);
+    return n !== 9999 && n <= parseFloat(filterValue);
+  }
+
   // Get the wine's value for this field
   const wineValue = (wine as any)[key];
   if (wineValue === undefined) {
@@ -69,6 +91,7 @@ function matchesFilter(wine: Wine, key: string, filterValue: string): boolean {
       const expectedRating = parseFloat(value);
       return compareValues(actualRating, operator, expectedRating);
     }
+
 
     case 'vintage': {
       const actualVintage = parseInt(wineValue) || 0;
