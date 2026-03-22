@@ -10,6 +10,7 @@ export interface Wine {
   region: string;
   type: string;
   mainVarietal: string;
+  varietyStyle: string;
   tastingDate: string;
   publicationDate: string;
   setting: string;

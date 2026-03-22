@@ -12,7 +12,8 @@ export interface Wine {
   review: string;
   region: string;
   type: string; // Red, White, Rosé, etc.
-  mainVarietal: string; // Pinot Noir, Chardonnay, etc.
+  mainVarietal: string; // Display label from "Varietal Label" column
+  varietyStyle: string; // Search/classification from "Variety Style" column
   tastingDate: string;
   publicationDate: string;
   setting: string;

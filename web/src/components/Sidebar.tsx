@@ -431,6 +431,18 @@ export function ActiveChips({
   );
 }
 
+const TYPE_ORDER = ['Red', 'White', 'Rosé', 'Sparkling', 'Dessert'];
+function sortTypes(types: string[]): string[] {
+  return [...types].sort((a, b) => {
+    const ai = TYPE_ORDER.indexOf(a);
+    const bi = TYPE_ORDER.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+}
+
 // ── Main Sidebar component ───────────────────────────────────────────────────
 
 export default function Sidebar({
@@ -493,7 +505,7 @@ export default function Sidebar({
             defaultOpen={true}
           >
             <FacetList
-              options={meta.types}
+              options={sortTypes(meta.types)}
               value={filters.type}
               onChange={(v) => onChange({ ...filters, type: v })}
             />

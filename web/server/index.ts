@@ -77,7 +77,7 @@ app.get('/api/search', (req, res) => {
     // Step 4: Apply limit + offset
     const finalLimit = limit ? parseInt(limit as string) : 20;
     const finalOffset = offset ? parseInt(offset as string) : 0;
-    res.json(results.slice(finalOffset, finalOffset + finalLimit));
+    res.json({ wines: results.slice(finalOffset, finalOffset + finalLimit), total: results.length });
   } catch (error) {
     res
       .status(500)

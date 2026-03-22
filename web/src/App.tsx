@@ -38,6 +38,7 @@ export default function App() {
   const PAGE_SIZE = 40;
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [totalResults, setTotalResults] = useState<number | null>(null);
   const activeFilterCount = Object.values(filters).filter((v) => v !== '').length;
 
   // Fetch meta on mount
@@ -105,8 +106,9 @@ export default function App() {
     const timer = setTimeout(() => {
       setLoading(true);
       searchWines(buildParams(0))
-        .then((batch) => {
+        .then(({ wines: batch, total }) => {
           setWines(batch);
+          setTotalResults(total);
           setHasMore(batch.length === PAGE_SIZE);
         })
         .catch(console.error)
@@ -126,7 +128,7 @@ export default function App() {
           const nextOffset = offset + PAGE_SIZE;
           setLoadingMore(true);
           searchWines(buildParams(nextOffset))
-            .then((batch) => {
+            .then(({ wines: batch }) => {
               setWines((prev) => [...prev, ...batch]);
               setOffset(nextOffset);
               setHasMore(batch.length === PAGE_SIZE);
@@ -243,12 +245,19 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Active filter pills */}
-              {Object.values(filters).some((v) => v !== '') && (
-                <div className="mb-4 pb-3.5 border-b border-warm-border">
-                  <ActiveChips filters={filters} onChange={setFilters} />
+              {/* Active filter pills + result count */}
+              <div className="mb-4 pb-3 border-b border-warm-border flex items-end justify-between gap-3">
+                <div className="flex-1">
+                  {Object.values(filters).some((v) => v !== '') && (
+                    <ActiveChips filters={filters} onChange={setFilters} />
+                  )}
                 </div>
-              )}
+                {totalResults !== null && !loading && (
+                  <span className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
+                    {totalResults.toLocaleString()} wines found
+                  </span>
+                )}
+              </div>
 
               <WineList
                 wines={wines}

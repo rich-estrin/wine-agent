@@ -19,6 +19,11 @@ function normalizeAva(raw: string): string {
   return AVA_CORRECTIONS[key] ?? raw.trim();
 }
 
+// Capitalize the first letter of every word (handles hyphens too)
+function toTitleCase(s: string): string {
+  return s.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 interface CacheFile {
   fetchedAt: string;
   csvPath: string;
@@ -95,9 +100,10 @@ export class CSVClient {
       price,
       rating: (row['Review Input => Rating'] ?? '').trim(),
       review: (row['Review Input => Review Content'] ?? '').trim(),
-      region: (row['Review Input => Home Region'] ?? '').trim(),
-      type: (row['Review Input => Wine Type'] ?? '').trim(),
-      mainVarietal: varietalLabel || varietyStyle,
+      region: toTitleCase(row['Review Input => Home Region'] ?? ''),
+      type: toTitleCase(row['Review Input => Wine Type'] ?? ''),
+      mainVarietal: toTitleCase(varietalLabel),
+      varietyStyle: toTitleCase(varietyStyle),
       publicationDate: (row['Date'] ?? '').trim(),
       tastingDate: '',
       setting: '',

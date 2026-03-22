@@ -24,7 +24,7 @@ export interface SearchParams {
   sort_order?: 'asc' | 'desc';
 }
 
-export async function searchWines(params: SearchParams): Promise<Wine[]> {
+export async function searchWines(params: SearchParams): Promise<{ wines: Wine[]; total: number }> {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== '') {
