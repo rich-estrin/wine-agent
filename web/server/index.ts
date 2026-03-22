@@ -36,7 +36,7 @@ app.get('/api/search', (req, res) => {
     if (q && typeof q === 'string' && q.trim()) {
       results = searchWines(results, {
         query: q,
-        limit: 10000,
+        limit: Infinity,
         sort_order: 'desc',
       });
     }
@@ -51,7 +51,7 @@ app.get('/api/search', (req, res) => {
     if (Object.keys(filters).length > 0) {
       results = filterWines(results, {
         filters,
-        limit: 10000,
+        limit: Infinity,
         sort_order: 'desc',
       });
     }
@@ -68,7 +68,7 @@ app.get('/api/search', (req, res) => {
     if (sortBy) {
       results = filterWines(results, {
         filters: {},
-        limit: 10000,
+        limit: Infinity,
         sort_by: sortBy,
         sort_order: sortOrd,
       });
