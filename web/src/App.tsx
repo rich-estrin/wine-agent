@@ -147,31 +147,7 @@ export default function App() {
     <div className="min-h-screen bg-[#faf7f2] font-sans text-ink">
       <Header />
 
-      {/* Tab navigation */}
-      <div className="bg-ink border-b border-parchment/[0.08]">
-        <div className="flex">
-          <button
-            onClick={() => setActiveTab('search')}
-            className={`px-5 py-2.5 text-[11px] font-medium tracking-[0.1em] uppercase transition-colors border-b-2 ${
-              activeTab === 'search'
-                ? 'text-gold border-gold'
-                : 'text-parchment/40 border-transparent hover:text-parchment/70'
-            }`}
-          >
-            Search
-          </button>
-          <button
-            onClick={() => setActiveTab('chat')}
-            className={`px-5 py-2.5 text-[11px] font-medium tracking-[0.1em] uppercase transition-colors border-b-2 ${
-              activeTab === 'chat'
-                ? 'text-gold border-gold'
-                : 'text-parchment/40 border-transparent hover:text-parchment/70'
-            }`}
-          >
-            Chat
-          </button>
-        </div>
-      </div>
+      {/* Tab navigation — Chat hidden until ready to launch */}
 
       {/* Search tab */}
       {activeTab === 'search' && (
@@ -281,16 +257,7 @@ export default function App() {
         </>
       )}
 
-      {/* Chat tab */}
-      {activeTab === 'chat' && (
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          <Chat
-            messages={chatMessages}
-            loading={chatLoading}
-            onSend={handleChatSend}
-          />
-        </div>
-      )}
+      {/* Chat tab — hidden until ready to launch */}
 
       <WineDetail wine={selectedWine} onClose={() => setSelectedWine(null)} />
     </div>

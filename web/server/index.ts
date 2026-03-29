@@ -208,8 +208,13 @@ const tools: Anthropic.Tool[] = [
   },
 ];
 
-// Chat endpoint with tool calling
-app.post('/api/chat', async (req, res) => {
+// Chat endpoint — disabled until ready to launch
+app.post('/api/chat', (_req, res) => {
+  res.status(503).json({ error: 'Chat is not available yet.' });
+});
+
+/* CHAT IMPLEMENTATION — re-enable by wiring back to app.post('/api/chat', ...) above
+async function chatHandler(req: any, res: any) {
   try {
     const { messages } = req.body;
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -320,7 +325,8 @@ AVA, main varietal, type (Red/White/Rosé/etc.), tasting notes, tasting/publicat
       error: error instanceof Error ? error.message : String(error),
     });
   }
-});
+}
+END CHAT IMPLEMENTATION */
 
 // ─── Webhook: receive live updates from WordPress ─────────────────────────────
 app.post('/api/webhook/review', (req, res) => {
