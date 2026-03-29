@@ -102,6 +102,53 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
     return $response;
 }
 
+// ─── [wine-search] shortcode ─────────────────────────────────────────────────
+//
+// Usage: add [wine-search] to any page or post.
+// The app JS/CSS are loaded from the configured app URL (Settings → Wine Agent API).
+// To set the URL: WP Admin → Settings → Wine Agent API → App URL.
+
+add_action( 'admin_init', function () {
+    register_setting( 'wine_agent_settings', 'wine_agent_app_url', [
+        'sanitize_callback' => 'esc_url_raw',
+        'default'           => '',
+    ] );
+} );
+
+add_shortcode( 'wine-search', function () {
+    $app_url = rtrim( get_option( 'wine_agent_app_url', '' ), '/' );
+    if ( empty( $app_url ) ) {
+        return '<p><em>Wine search: app URL not configured. Go to Settings → Wine Agent API and set the App URL.</em></p>';
+    }
+
+    // Load the Vite manifest to get the hashed asset filenames
+    $manifest_url = $app_url . '/assets/manifest.json';
+    $manifest     = @file_get_contents( $manifest_url );
+
+    if ( $manifest ) {
+        $assets = json_decode( $manifest, true );
+        $js_file  = $assets['src/main.tsx']['file'] ?? null;
+        $css_file = $assets['src/main.tsx']['css'][0] ?? null;
+    } else {
+        // Fallback: fetch index.html and parse asset URLs
+        $index_html = @file_get_contents( $app_url . '/index.html' );
+        preg_match( '/src="([^"]+\.js)"/', $index_html ?? '', $js_m );
+        preg_match( '/href="([^"]+\.css)"/', $index_html ?? '', $css_m );
+        $js_file  = $js_m[1]  ?? null;
+        $css_file = $css_m[1] ?? null;
+    }
+
+    if ( $js_file ) {
+        wp_enqueue_script( 'wine-agent-app', $app_url . '/' . ltrim( $js_file, '/' ), [], null, true );
+        wp_script_add_data( 'wine-agent-app', 'type', 'module' );
+    }
+    if ( $css_file ) {
+        wp_enqueue_style( 'wine-agent-app', $app_url . '/' . ltrim( $css_file, '/' ) );
+    }
+
+    return '<div id="wine-agent-root"></div>';
+} );
+
 // ─── Debug endpoint (temporary) ──────────────────────────────────────────────
 
 add_action( 'rest_api_init', function () {
@@ -153,6 +200,7 @@ function wine_agent_settings_page(): void {
     }
 
     $current_key = get_option( 'wine_agent_api_key', '' );
+    $app_url     = get_option( 'wine_agent_app_url', '' );
     $endpoint    = rest_url( 'wine-agent/v1/reviews' );
     ?>
     <div class="wrap">
@@ -162,12 +210,12 @@ function wine_agent_settings_page(): void {
         <p><code><?php echo esc_html( $endpoint ); ?></code></p>
         <p>Pass the API key in the <code>X-Wine-Agent-Key</code> request header.</p>
 
-        <h2>API Key</h2>
+        <h2>Settings</h2>
         <form method="post" action="options.php">
             <?php settings_fields( 'wine_agent_settings' ); ?>
             <table class="form-table">
                 <tr>
-                    <th scope="row"><label for="wine_agent_api_key">Current Key</label></th>
+                    <th scope="row"><label for="wine_agent_api_key">API Key</label></th>
                     <td>
                         <input
                             type="text"
@@ -176,11 +224,25 @@ function wine_agent_settings_page(): void {
                             value="<?php echo esc_attr( $current_key ); ?>"
                             class="regular-text"
                         />
-                        <p class="description">Keep this secret. Used by the wine agent to authenticate requests.</p>
+                        <p class="description">Keep this secret. Used by the search app to authenticate requests.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="wine_agent_app_url">Search App URL</label></th>
+                    <td>
+                        <input
+                            type="url"
+                            id="wine_agent_app_url"
+                            name="wine_agent_app_url"
+                            value="<?php echo esc_attr( $app_url ); ?>"
+                            class="regular-text"
+                            placeholder="http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com/wwr-search"
+                        />
+                        <p class="description">Base URL of the hosted search app. Used by the <code>[wine-search]</code> shortcode to load JS/CSS assets.</p>
                     </td>
                 </tr>
             </table>
-            <?php submit_button( 'Save Key' ); ?>
+            <?php submit_button( 'Save Settings' ); ?>
         </form>
 
         <h2>Regenerate Key</h2>

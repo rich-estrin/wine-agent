@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { CSVClient } from './csv-client.js';
+import { WPClient } from './wp-client.js';
 import { searchWines } from '../../mcp/dist/tools/search.js';
 import { filterWines } from '../../mcp/dist/tools/filter.js';
 import { getWineDetails } from '../../mcp/dist/tools/get-wine.js';
@@ -13,9 +14,10 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
-const sheetsClient = new CSVClient(
-  process.env.CSV_PATH || '',
-);
+// Data source: WP REST API when WP_API_URL is set, otherwise WP CSV export
+const dataClient = process.env.WP_API_URL
+  ? new WPClient(process.env.WP_API_URL, process.env.WP_API_KEY || '')
+  : new CSVClient(process.env.CSV_PATH || '');
 
 // Cache for filter dropdown values
 let metaCache: {
@@ -30,7 +32,7 @@ app.get('/api/search', (req, res) => {
   try {
     const { q, limit, offset, sort_by, sort_order, ...filterParams } = req.query;
 
-    let results = sheetsClient.getAllWines();
+    let results = dataClient.getAllWines();
 
     // Step 1: Full-text search if query provided
     if (q && typeof q === 'string' && q.trim()) {
@@ -89,7 +91,7 @@ app.get('/api/search', (req, res) => {
 app.get('/api/meta', (_req, res) => {
   try {
     if (!metaCache) {
-      const wines = sheetsClient.getAllWines();
+      const wines = dataClient.getAllWines();
       const unique = (values: string[]) =>
         [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort(
           (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
@@ -113,7 +115,7 @@ app.get('/api/meta', (_req, res) => {
 app.get('/api/wine/:name', (req, res) => {
   try {
     const exactMatch = req.query.exact_match === 'true';
-    const results = getWineDetails(sheetsClient.getAllWines(), {
+    const results = getWineDetails(dataClient.getAllWines(), {
       wine_name: req.params.name,
       exact_match: exactMatch,
     });
@@ -256,7 +258,7 @@ AVA, main varietal, type (Red/White/Rosé/etc.), tasting notes, tasting/publicat
 
       // Execute the tool
       let toolResult: any;
-      const wines = sheetsClient.getAllWines();
+      const wines = dataClient.getAllWines();
 
       try {
         switch (toolUse.name) {
@@ -321,8 +323,8 @@ AVA, main varietal, type (Red/White/Rosé/etc.), tasting notes, tasting/publicat
 });
 
 async function start() {
-  sheetsClient.initialize();
-  console.log(`Loaded ${sheetsClient.getAllWines().length} wines from CSV`);
+  dataClient.initialize();
+  console.log(`Loaded ${dataClient.getAllWines().length} wines`);
 
   const PORT = parseInt(process.env.PORT || '3001');
   app.listen(PORT, () => {
