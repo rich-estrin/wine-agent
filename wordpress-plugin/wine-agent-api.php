@@ -102,6 +102,84 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
     return $response;
 }
 
+// ─── Webhook: push review changes to the search app ──────────────────────────
+
+add_action( 'admin_init', function () {
+    register_setting( 'wine_agent_settings', 'wine_agent_webhook_url', [
+        'sanitize_callback' => 'esc_url_raw',
+        'default'           => '',
+    ] );
+    register_setting( 'wine_agent_settings', 'wine_agent_webhook_secret', [
+        'sanitize_callback' => 'sanitize_text_field',
+        'default'           => '',
+    ] );
+} );
+
+function wine_agent_build_review_payload( int $post_id ): array {
+    $post = get_post( $post_id );
+    return [
+        'id'               => $post_id,
+        'brand_name'       => $post->post_title,
+        'wine_name'        => get_post_meta( $post_id, 'designation', true )
+                           ?: get_post_meta( $post_id, 'variety_style', true )
+                           ?: get_post_meta( $post_id, 'varietal_label', true ),
+        'designation'      => (string) get_post_meta( $post_id, 'designation', true ),
+        'variety_style'    => (string) get_post_meta( $post_id, 'variety_style', true ),
+        'tasting_note'     => (string) get_post_meta( $post_id, 'review_content', true ),
+        'rating'           => (string) get_post_meta( $post_id, 'rating', true ),
+        'price'            => (string) get_post_meta( $post_id, 'price', true ),
+        'vintage'          => (string) get_post_meta( $post_id, 'vintage', true ),
+        'wine_type'        => (string) get_post_meta( $post_id, 'wine_type', true ),
+        'variety'          => (string) get_post_meta( $post_id, 'varietal_label', true ),
+        'region'           => (string) get_post_meta( $post_id, 'home_region', true ),
+        'appellation'      => (string) get_post_meta( $post_id, 'appellation', true ),
+        'publication_date' => $post->post_date,
+    ];
+}
+
+function wine_agent_send_webhook( string $action, int $post_id ): void {
+    $webhook_url    = get_option( 'wine_agent_webhook_url', '' );
+    $webhook_secret = get_option( 'wine_agent_webhook_secret', '' );
+
+    if ( empty( $webhook_url ) ) {
+        return;
+    }
+
+    $payload = wp_json_encode( [
+        'action' => $action,
+        'review' => wine_agent_build_review_payload( $post_id ),
+    ] );
+
+    $args = [
+        'method'    => 'POST',
+        'body'      => $payload,
+        'headers'   => [
+            'Content-Type'     => 'application/json',
+            'X-Webhook-Secret' => $webhook_secret,
+        ],
+        'timeout'   => 10,
+        'blocking'  => false, // fire-and-forget
+    ];
+
+    wp_remote_post( $webhook_url, $args );
+}
+
+// Fire on publish/update
+add_action( 'save_post_reviews', function ( int $post_id, WP_Post $post ) {
+    if ( $post->post_status !== 'publish' || wp_is_post_revision( $post_id ) ) {
+        return;
+    }
+    wine_agent_send_webhook( 'upsert', $post_id );
+}, 10, 2 );
+
+// Fire on trash
+add_action( 'trashed_post', function ( int $post_id ) {
+    if ( get_post_type( $post_id ) !== 'reviews' ) {
+        return;
+    }
+    wine_agent_send_webhook( 'delete', $post_id );
+} );
+
 // ─── [wine-search] shortcode ─────────────────────────────────────────────────
 //
 // Usage: add [wine-search] to any page or post.
@@ -199,9 +277,11 @@ function wine_agent_settings_page(): void {
         echo '<div class="notice notice-success"><p>API key regenerated.</p></div>';
     }
 
-    $current_key = get_option( 'wine_agent_api_key', '' );
-    $app_url     = get_option( 'wine_agent_app_url', '' );
-    $endpoint    = rest_url( 'wine-agent/v1/reviews' );
+    $current_key    = get_option( 'wine_agent_api_key', '' );
+    $app_url        = get_option( 'wine_agent_app_url', '' );
+    $webhook_url    = get_option( 'wine_agent_webhook_url', '' );
+    $webhook_secret = get_option( 'wine_agent_webhook_secret', '' );
+    $endpoint       = rest_url( 'wine-agent/v1/reviews' );
     ?>
     <div class="wrap">
         <h1>Wine Agent API</h1>
@@ -239,6 +319,33 @@ function wine_agent_settings_page(): void {
                             placeholder="http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com/wwr-search"
                         />
                         <p class="description">Base URL of the hosted search app. Used by the <code>[wine-search]</code> shortcode to load JS/CSS assets.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="wine_agent_webhook_url">Webhook URL</label></th>
+                    <td>
+                        <input
+                            type="url"
+                            id="wine_agent_webhook_url"
+                            name="wine_agent_webhook_url"
+                            value="<?php echo esc_attr( $webhook_url ); ?>"
+                            class="regular-text"
+                            placeholder="http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com/wwr-search/api/webhook/review"
+                        />
+                        <p class="description">The search app endpoint that receives live review updates when posts are published or trashed.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="wine_agent_webhook_secret">Webhook Secret</label></th>
+                    <td>
+                        <input
+                            type="text"
+                            id="wine_agent_webhook_secret"
+                            name="wine_agent_webhook_secret"
+                            value="<?php echo esc_attr( $webhook_secret ); ?>"
+                            class="regular-text"
+                        />
+                        <p class="description">Shared secret sent in the <code>X-Webhook-Secret</code> header. Must match <code>WEBHOOK_SECRET</code> in the app's <code>.env</code>.</p>
                     </td>
                 </tr>
             </table>

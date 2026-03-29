@@ -21,7 +21,7 @@ function toTitleCase(s: string): string {
   return (s ?? '').trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-interface WPReview {
+export interface WPReview {
   id: number;
   brand_name: string;
   wine_name: string;
@@ -36,6 +36,40 @@ interface WPReview {
   region: string;
   appellation: string;
   publication_date: string;
+}
+
+export function mapWPReview(row: WPReview): Wine {
+  const rawPrice = (row.price ?? '').trim();
+  const price =
+    !rawPrice || rawPrice === 'NA' || rawPrice === '0'
+      ? 'N/A'
+      : rawPrice.startsWith('$')
+      ? rawPrice
+      : `$${rawPrice}`;
+
+  const varietyStyle = (row.variety_style ?? '').trim();
+  const variety      = (row.variety ?? '').trim();
+
+  return {
+    id:                String(row.id),
+    brandName:         (row.brand_name ?? '').trim(),
+    wineName:          (row.wine_name ?? '').trim(),
+    ava:               normalizeAva(row.appellation ?? ''),
+    vintage:           (row.vintage ?? '').trim(),
+    price,
+    rating:            (row.rating ?? '').trim(),
+    review:            (row.tasting_note ?? '').trim(),
+    region:            toTitleCase(row.region ?? ''),
+    type:              toTitleCase(row.wine_type ?? ''),
+    mainVarietal:      toTitleCase(variety),
+    varietyStyle:      toTitleCase(varietyStyle),
+    publicationDate:   (row.publication_date ?? '').trim(),
+    tastingDate:       '',
+    setting:           '',
+    purchasedProvided: '',
+    temp:              '',
+    hyperlink:         '',
+  };
 }
 
 interface CacheFile {
@@ -108,40 +142,35 @@ export class WPClient {
   }
 
   private mapRow(row: WPReview): Wine {
-    const rawPrice = (row.price ?? '').trim();
-    const price =
-      !rawPrice || rawPrice === 'NA' || rawPrice === '0'
-        ? 'N/A'
-        : rawPrice.startsWith('$')
-        ? rawPrice
-        : `$${rawPrice}`;
-
-    const varietyStyle = (row.variety_style ?? '').trim();
-    const variety      = (row.variety ?? '').trim();
-
-    return {
-      id:               String(row.id),
-      brandName:        (row.brand_name ?? '').trim(),
-      wineName:         (row.wine_name ?? '').trim(),
-      ava:              normalizeAva(row.appellation ?? ''),
-      vintage:          (row.vintage ?? '').trim(),
-      price,
-      rating:           (row.rating ?? '').trim(),
-      review:           (row.tasting_note ?? '').trim(),
-      region:           toTitleCase(row.region ?? ''),
-      type:             toTitleCase(row.wine_type ?? ''),
-      mainVarietal:     toTitleCase(variety),
-      varietyStyle:     toTitleCase(varietyStyle),
-      publicationDate:  (row.publication_date ?? '').trim(),
-      tastingDate:      '',
-      setting:          '',
-      purchasedProvided:'',
-      temp:             '',
-      hyperlink:        '',
-    };
+    return mapWPReview(row);
   }
 
   getAllWines(): Wine[] {
     return this.wines;
   }
+
+  upsertWine(wine: Wine): void {
+    const idx = this.wines.findIndex((w) => w.id === wine.id);
+    if (idx >= 0) {
+      this.wines[idx] = wine;
+    } else {
+      this.wines.push(wine);
+    }
+    this.persist();
+  }
+
+  removeWine(id: string): void {
+    this.wines = this.wines.filter((w) => w.id !== id);
+    this.persist();
+  }
+
+  private persist(): void {
+    mkdirSync(dirname(this.cachePath), { recursive: true });
+    writeFileSync(this.cachePath, JSON.stringify({
+      fetchedAt: new Date().toISOString(),
+      wpUrl: this.wpUrl,
+      wines: this.wines,
+    }));
+  }
+
 }

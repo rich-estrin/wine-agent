@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { CSVClient } from './csv-client.js';
-import { WPClient } from './wp-client.js';
+import { WPClient, mapWPReview, type WPReview } from './wp-client.js';
 import { searchWines } from '../../mcp/dist/tools/search.js';
 import { filterWines } from '../../mcp/dist/tools/filter.js';
 import { getWineDetails } from '../../mcp/dist/tools/get-wine.js';
@@ -320,6 +320,32 @@ AVA, main varietal, type (Red/White/Rosé/etc.), tasting notes, tasting/publicat
       error: error instanceof Error ? error.message : String(error),
     });
   }
+});
+
+// ─── Webhook: receive live updates from WordPress ─────────────────────────────
+app.post('/api/webhook/review', (req, res) => {
+  const secret = process.env.WEBHOOK_SECRET;
+  if (secret && req.headers['x-webhook-secret'] !== secret) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const { action, review } = req.body as { action: 'upsert' | 'delete'; review: WPReview };
+
+  if (!action || !review?.id) {
+    res.status(400).json({ error: 'Missing action or review.id' });
+    return;
+  }
+
+  if (action === 'delete') {
+    dataClient.removeWine(String(review.id));
+    console.log(`[Webhook] Removed wine ${review.id}`);
+  } else {
+    dataClient.upsertWine(mapWPReview(review));
+    console.log(`[Webhook] Upserted wine ${review.id}: ${review.brand_name}`);
+  }
+
+  res.json({ ok: true, total: dataClient.getAllWines().length });
 });
 
 async function start() {
