@@ -354,9 +354,9 @@ function SidebarDualRange({
     loFocused.current = false;
     const loVal = parseInt(loDraft);
     const hiVal = parseInt(hiDraft);
-    if (!isNaN(loVal) && !isNaN(hiVal) && loVal > hiVal) {
-      setLoDraft(String(hiVal));
-      onLoText(String(hiVal));
+    if (!isNaN(loVal) && !isNaN(hiVal) && loVal >= hiVal) {
+      setLoDraft(String(hiVal - 1));
+      onLoText(String(hiVal - 1));
     } else {
       onLoText(loDraft);
     }
@@ -365,9 +365,9 @@ function SidebarDualRange({
     hiFocused.current = false;
     const loVal = parseInt(loDraft);
     const hiVal = parseInt(hiDraft);
-    if (!isNaN(loVal) && !isNaN(hiVal) && hiVal < loVal) {
-      setHiDraft(String(loVal));
-      onHiText(String(loVal));
+    if (!isNaN(loVal) && !isNaN(hiVal) && hiVal <= loVal) {
+      setHiDraft(String(loVal + 1));
+      onHiText(String(loVal + 1));
     } else {
       onHiText(hiDraft);
     }
