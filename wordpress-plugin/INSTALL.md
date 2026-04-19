@@ -21,7 +21,7 @@ Go to **WP Admin → Settings → Wine Agent API** and set:
 | Field | Value |
 |-------|-------|
 | **Search API Key** | Shared secret — must match `WEBHOOK_SECRET` in the EC2 server's `.env` |
-| **Search App URL** | Base URL of the EC2 server, e.g. `http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com` |
+| **Search App URL** | Base URL of the EC2 server, e.g. `http://<your-ec2-host>.compute.amazonaws.com` |
 
 Save settings. The proxy and webhook URL are derived automatically from the App URL.
 

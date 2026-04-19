@@ -11,16 +11,16 @@
 Connection info lives in `web/.env`:
 
 ```env
-EC2_HOST=ec2-35-90-20-204.us-west-2.compute.amazonaws.com
+EC2_HOST=<your-ec2-host>.compute.amazonaws.com
 EC2_USER=ec2-user
-EC2_KEY=/path/to/eec-or-keypair.pem
+EC2_KEY=/path/to/your-keypair.pem
 EC2_PATH=/home/ec2-user/wine-agent
 WEBHOOK_SECRET=<shared secret — must match WP plugin setting>
 ```
 
 The EC2 `.env` (never committed, lives only on the server) also needs:
 ```env
-WP_API_URL=https://northwestwinereport.com   # or CSV_PATH for CSV mode
+WP_API_URL=https://your-wordpress-site.com   # or CSV_PATH for CSV mode
 WP_API_KEY=<wordpress api key>
 WEBHOOK_SECRET=<same secret as above>
 ANTHROPIC_API_KEY=<optional, for AI chat>
@@ -69,8 +69,8 @@ zip -r wine-agent-api.zip wine-agent-api/ && rm -rf wine-agent-api
 
 ```bash
 EC2_USER=ec2-user
-EC2_HOST=ec2-35-90-20-204.us-west-2.compute.amazonaws.com
-EC2_KEY=~/Documents/eec-or-keypair.pem
+EC2_HOST=<your-ec2-host>.compute.amazonaws.com
+EC2_KEY=/path/to/your-keypair.pem
 EC2_PATH=/home/ec2-user/wine-agent
 
 # MCP tools
@@ -124,7 +124,7 @@ Go to **WP Admin → Settings → Wine Agent API**:
 | Setting | Value |
 |---------|-------|
 | Search API Key | Must match `WEBHOOK_SECRET` in EC2 `.env` |
-| Search App URL | `http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com` |
+| Search App URL | `http://<your-ec2-host>.compute.amazonaws.com` |
 
 The webhook URL and search proxy are derived automatically from the App URL.
 

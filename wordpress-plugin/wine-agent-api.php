@@ -353,7 +353,7 @@ function wine_agent_settings_page(): void {
                             name="wine_agent_app_url"
                             value="<?php echo esc_attr( $app_url ); ?>"
                             class="regular-text"
-                            placeholder="http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com"
+                            placeholder="http://your-ec2-host.compute.amazonaws.com"
                         />
                         <p class="description">Base URL of the search API server. Used for proxying search requests and sending webhooks on publish/trash.</p>
                     </td>
