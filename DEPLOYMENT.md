@@ -1,321 +1,142 @@
-# Deploying Wine Agent to EC2 with Nginx
+# Deployment Guide
 
-This guide covers deploying the Wine Agent webapp to your EC2 instance at `yoursite.com/wwr-search`.
+## Architecture summary
 
-## Architecture
+- **WordPress** serves the React app (JS/CSS bundled in the plugin zip) and proxies API calls to EC2
+- **EC2** runs the Express API server only — no static files served from EC2
+- Builds happen locally; assets ship via plugin zip upload (WP) and rsync (EC2)
 
-- **Frontend:** Static React files served by Nginx at `/wwr-search`
-- **Backend:** Express API running on port 3001 (PM2 managed)
-- **Nginx:** Proxies `/wwr-search/api/*` requests to Express server
+## Prerequisites
 
-## Prerequisites on EC2
+Connection info lives in `web/.env`:
 
-### 1. Install Node.js (if not already installed)
-
-```bash
-# Using NodeSource repository for latest LTS
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Verify installation
-node --version  # Should show v20.x
-npm --version
-```
-
-### 2. Install PM2 (Process Manager)
-
-```bash
-sudo npm install -g pm2
-```
-
-### 3. Build MCP Server
-
-```bash
-# On your local machine, build the MCP server first
-cd /Users/rich/src/wine-agent/mcp
-npm install
-npm run build
-```
-
-## Deployment Steps
-
-### Step 1: Upload Project to EC2
-
-```bash
-# On your local machine
-cd /Users/rich/src/wine-agent
-rsync -avz --exclude 'node_modules' --exclude '.git' \
-  ./ your-user@your-ec2-ip:/var/www/wine-agent/
-```
-
-Or use git:
-```bash
-# On EC2
-cd /var/www
-sudo git clone https://github.com/rich-estrin/wine-agent.git
-cd wine-agent
-```
-
-### Step 2: Set Up Backend on EC2
-
-```bash
-# On EC2
-cd /var/www/wine-agent
-
-# Install MCP server dependencies
-cd mcp
-npm install
-
-# Build TypeScript
-npm run build
-
-# Set up web app dependencies
-cd ../web
-npm install
-
-# Create .env file with your credentials
-sudo nano .env
-```
-
-Add your environment variables:
 ```env
-GOOGLE_SHEET_ID=your-sheet-id-here
-GOOGLE_SHEET_NAME=TN Db
-GOOGLE_SHEET_RANGE=A:Q
-GOOGLE_APPLICATION_CREDENTIALS=/var/www/wine-agent/mcp/credentials/service-account.json
+EC2_HOST=ec2-35-90-20-204.us-west-2.compute.amazonaws.com
+EC2_USER=ec2-user
+EC2_KEY=/path/to/eec-or-keypair.pem
+EC2_PATH=/home/ec2-user/wine-agent
+WEBHOOK_SECRET=<shared secret — must match WP plugin setting>
+```
+
+The EC2 `.env` (never committed, lives only on the server) also needs:
+```env
+WP_API_URL=https://northwestwinereport.com   # or CSV_PATH for CSV mode
+WP_API_KEY=<wordpress api key>
+WEBHOOK_SECRET=<same secret as above>
+ANTHROPIC_API_KEY=<optional, for AI chat>
 PORT=3001
-ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-**Important:** Upload your Google service account credentials:
+## Deploy procedure
+
+Use `/deploy` in Claude Code to run this automatically, or follow the steps manually.
+
+### 1. Build MCP tools
+
 ```bash
-# On your local machine
-scp /Users/rich/src/wine-agent/mcp/credentials/wine-agent-project-f7325e67212b.json \
-  your-user@your-ec2-ip:/var/www/wine-agent/mcp/credentials/
+cd mcp && npm run build
 ```
 
-### Step 3: Build Frontend
+### 2. Build the React app
 
 ```bash
-# On EC2
-cd /var/www/wine-agent/web
-
-# Build with base path for /wwr-search subdirectory
-VITE_BASE_PATH=/wwr-search npm run build
-
-# This creates /var/www/wine-agent/web/dist with your static files
+cd web && npm run build
 ```
 
-### Step 4: Start API Server with PM2
+No `VITE_BASE_PATH` needed — assets are served from WordPress, not from a subpath on EC2.
+
+### 3. Repackage the WordPress plugin zip
 
 ```bash
-cd /var/www/wine-agent/web
+cd wordpress-plugin
+rm -f wine-agent-api.zip
+mkdir -p wine-agent-api/assets
+cp wine-agent-api.php wine-agent-api/
+cp ../web/dist/.vite/manifest.json wine-agent-api/assets/
+cp ../web/dist/assets/* wine-agent-api/assets/
+zip -r wine-agent-api.zip wine-agent-api/ && rm -rf wine-agent-api
+```
+
+**Always bump the version** in the `wine-agent-api.php` plugin header before repackaging.
+
+### 4. Upload the plugin to WordPress
+
+1. Go to **WP Admin → Plugins → Add New → Upload Plugin**
+2. Upload `wordpress-plugin/wine-agent-api.zip`
+3. Click **Replace current with uploaded** and activate
+
+### 5. Deploy server files to EC2
+
+```bash
+EC2_USER=ec2-user
+EC2_HOST=ec2-35-90-20-204.us-west-2.compute.amazonaws.com
+EC2_KEY=~/Documents/eec-or-keypair.pem
+EC2_PATH=/home/ec2-user/wine-agent
+
+# MCP tools
+rsync -avz -e "ssh -i $EC2_KEY" mcp/dist/ $EC2_USER@$EC2_HOST:$EC2_PATH/mcp/dist/
+
+# API server source
+rsync -avz -e "ssh -i $EC2_KEY" web/server/ $EC2_USER@$EC2_HOST:$EC2_PATH/web/server/
+rsync -avz -e "ssh -i $EC2_KEY" web/package.json web/package-lock.json \
+  $EC2_USER@$EC2_HOST:$EC2_PATH/web/
+
+# Install production dependencies
+ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "cd $EC2_PATH/web && npm install --omit=dev --silent"
+
+# Wine data cache
+ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "mkdir -p $EC2_PATH/web/cache"
+rsync -avz -e "ssh -i $EC2_KEY" web/cache/wines.json \
+  $EC2_USER@$EC2_HOST:$EC2_PATH/web/cache/wines.json
+```
+
+### 6. Restart the API server
+
+```bash
+ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 restart wine-api --update-env"
+```
+
+## EC2 initial setup (first time only)
+
+```bash
+# Install Node.js 20
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo yum install -y nodejs
+
+# Install PM2
+sudo npm install -g pm2
+
+# Create app directory and .env
+mkdir -p ~/wine-agent/web/cache
+nano ~/wine-agent/web/.env   # add env vars from Prerequisites above
+
+# After first rsync deploy, start PM2
+cd ~/wine-agent/web
 pm2 start server/index.ts --name wine-api --interpreter tsx
-
-# Save PM2 process list
 pm2 save
-
-# Set PM2 to start on system boot
-pm2 startup
-# Follow the command it outputs
+pm2 startup   # follow the output command to persist across reboots
 ```
 
-Verify it's running:
-```bash
-pm2 status
-curl http://localhost:3001/api/meta  # Should return wine metadata
-```
+## WordPress plugin settings
 
-### Step 5: Configure Nginx
+Go to **WP Admin → Settings → Wine Agent API**:
 
-Create Nginx configuration:
+| Setting | Value |
+|---------|-------|
+| Search API Key | Must match `WEBHOOK_SECRET` in EC2 `.env` |
+| Search App URL | `http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com` |
 
-```bash
-sudo nano /etc/nginx/sites-available/wwr-search
-```
+The webhook URL and search proxy are derived automatically from the App URL.
 
-Add this configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name yoursite.com;  # Replace with your domain
-
-    # Existing WordPress configuration...
-    # (keep your existing root and php config)
-
-    # Wine app static files
-    location /wwr-search {
-        alias /var/www/wine-agent/web/dist;
-        try_files $uri $uri/ /wwr-search/index.html;
-
-        # Cache static assets
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
-    }
-
-    # Proxy API requests to Express
-    location /wwr-search/api {
-        rewrite ^/wwr-search/api/(.*) /api/$1 break;
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Enable the configuration:
-```bash
-# If using sites-enabled pattern
-sudo ln -s /etc/nginx/sites-available/wwr-search /etc/nginx/sites-enabled/
-
-# Test configuration
-sudo nginx -t
-
-# Reload Nginx
-sudo systemctl reload nginx
-```
-
-### Step 6: Test Deployment
-
-Visit `http://yoursite.com/wwr-search` in your browser!
-
-Test the API:
-```bash
-curl http://yoursite.com/wwr-search/api/meta
-curl http://yoursite.com/wwr-search/api/search?q=Pinot
-```
-
-## Optional: Set Up SSL (Recommended)
+## Maintenance
 
 ```bash
-# Install Certbot
-sudo apt-get install certbot python3-certbot-nginx
+# View live API logs
+ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 logs wine-api --lines 50"
 
-# Get SSL certificate
-sudo certbot --nginx -d yoursite.com
+# Restart API
+ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 restart wine-api"
 
-# Certbot will automatically update your Nginx config for HTTPS
+# Monitor
+ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 monit"
 ```
-
-## Maintenance Commands
-
-### Update the app:
-```bash
-cd /var/www/wine-agent
-git pull
-npm run build
-cd web
-npm install
-VITE_BASE_PATH=/wwr-search npm run build
-pm2 restart wine-api
-```
-
-### View API logs:
-```bash
-pm2 logs wine-api
-```
-
-### Monitor API:
-```bash
-pm2 monit
-```
-
-### Restart API:
-```bash
-pm2 restart wine-api
-```
-
-### Stop API:
-```bash
-pm2 stop wine-api
-```
-
-## Troubleshooting
-
-### API not starting:
-```bash
-# Check logs
-pm2 logs wine-api
-
-# Check if port 3001 is in use
-sudo netstat -tlnp | grep 3001
-
-# Test API directly
-curl http://localhost:3001/api/meta
-```
-
-### Nginx 502 Bad Gateway:
-```bash
-# Check if API is running
-pm2 status
-
-# Check Nginx error logs
-sudo tail -f /var/nginx/error.log
-
-# Verify proxy_pass URL
-sudo nginx -t
-```
-
-### Static files not loading:
-```bash
-# Check file permissions
-ls -la /var/www/wine-agent/web/dist
-
-# Make sure Nginx can read files
-sudo chmod -R 755 /var/www/wine-agent/web/dist
-```
-
-### Google Sheets API errors:
-```bash
-# Verify credentials file exists
-ls -la /var/www/wine-agent/credentials/
-
-# Check .env file
-cat /var/www/wine-agent/web/.env
-
-# Test credentials
-cd /var/www/wine-agent/web
-node -e "require('dotenv').config(); console.log(process.env.GOOGLE_APPLICATION_CREDENTIALS)"
-```
-
-## File Locations
-
-- **Frontend static files:** `/var/www/wine-agent/web/dist`
-- **API server:** `/var/www/wine-agent/web/server/index.ts`
-- **Environment config:** `/var/www/wine-agent/web/.env`
-- **Nginx config:** `/etc/nginx/sites-available/wwr-search`
-- **PM2 logs:** `~/.pm2/logs/`
-
-## Security Notes
-
-1. **Protect your .env file:**
-   ```bash
-   sudo chmod 600 /var/www/wine-agent/web/.env
-   ```
-
-2. **Set up firewall:**
-   ```bash
-   sudo ufw allow 80/tcp
-   sudo ufw allow 443/tcp
-   sudo ufw enable
-   ```
-
-3. **Keep Node.js updated:**
-   ```bash
-   sudo npm install -g n
-   sudo n lts
-   ```
-
-4. **Regular updates:**
-   ```bash
-   sudo apt-get update && sudo apt-get upgrade
-   ```

@@ -1,103 +1,44 @@
 # Wine Agent API Plugin — Installation Guide
 
-## 1. Install the Plugin
+## What this plugin does
 
-**Option A — Upload via WordPress admin:**
-1. Zip the `wordpress-plugin/` directory (or just `wine-agent-api.php`)
-2. Go to **Plugins > Add New > Upload Plugin**
-3. Upload the zip and click **Install Now**
-4. Click **Activate**
+- Embeds the wine search app on any page via the `[wine-search]` shortcode
+- Proxies browser search/meta requests through WordPress HTTPS to the EC2 API server (avoids mixed-content issues)
+- Dispatches a webhook to EC2 on every review publish, update, or trash action so the search index stays live
 
-**Option B — Copy file directly:**
-```bash
-cp wine-agent-api.php /path/to/wp-content/plugins/wine-agent-api/wine-agent-api.php
-```
-Then go to **Plugins** in the WordPress admin and activate **Wine Agent API**.
+## 1. Install the plugin
 
----
+1. Go to **WP Admin → Plugins → Add New → Upload Plugin**
+2. Upload `wine-agent-api.zip`
+3. Click **Replace current with uploaded** and then **Activate**
 
-## 2. Generate an API Key
+The zip includes the plugin PHP file and the built React JS/CSS assets.
 
-1. Go to **Settings > Wine Agent API**
-2. Click **Regenerate API Key**
-3. Copy the generated key — you'll need it in the next step
+## 2. Configure settings
 
----
+Go to **WP Admin → Settings → Wine Agent API** and set:
 
-## 3. Configure the Agent
+| Field | Value |
+|-------|-------|
+| **Search API Key** | Shared secret — must match `WEBHOOK_SECRET` in the EC2 server's `.env` |
+| **Search App URL** | Base URL of the EC2 server, e.g. `http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com` |
 
-Add the following to your `.env` file (in both `mcp/` and `web/` if running the web server):
+Save settings. The proxy and webhook URL are derived automatically from the App URL.
 
-```env
-WP_API_URL=https://your-wordpress-site.com
-WP_API_KEY=your-generated-key-here
-```
+## 3. Add the shortcode
 
-- `WP_API_URL` — your WordPress site root, no trailing slash
-- `WP_API_KEY` — must match the key set in Settings > Wine Agent API
+Add `[wine-search]` to any page or post. The app renders inside a `#wine-agent-root` div. No other configuration needed.
 
----
+## 4. Verify
 
-## 4. Build and Run
+- Open the page with the shortcode — the search app should load and display wines
+- Publish or update a review post — the EC2 server log should show `[Webhook] Upserted wine <id>`
+- Check **WP Admin → Settings → Wine Agent API → Endpoint** for the REST API URL to verify the plugin is active
 
-```bash
-cd mcp
-npm run build
-```
+## Updating the plugin
 
-Start the MCP server or web server as usual. On startup you should see:
+Whenever the frontend (React app) or plugin PHP changes:
 
-```
-Loaded 18000 wines from WordPress
-```
-
----
-
-## 5. Verify the Endpoint
-
-```bash
-curl -s \
-  -H "X-Wine-Agent-Key: your-generated-key-here" \
-  "https://your-wordpress-site.com/wp-json/wine-agent/v1/reviews?per_page=5" \
-  | jq '.[0]'
-```
-
-Expected response shape:
-```json
-{
-  "id": 123,
-  "brand_name": "Chateau Ste. Michelle",
-  "wine_name": "Cold Creek Riesling",
-  "designation": "Cold Creek",
-  "tasting_note": "...",
-  "rating": "*** 1/2",
-  "price": "$18",
-  "vintage": "2022",
-  "wine_type": "White",
-  "variety": "Riesling",
-  "region": "Columbia Valley",
-  "appellation": "Columbia Valley",
-  "publication_date": "2023-05-10 00:00:00"
-}
-```
-
----
-
-## Pagination (optional)
-
-The endpoint supports paginating large datasets:
-
-```
-GET /wp-json/wine-agent/v1/reviews?page=1&per_page=500
-GET /wp-json/wine-agent/v1/reviews?page=2&per_page=500
-```
-
-Maximum `per_page` is 1000. The agent fetches all pages automatically on startup.
-
-## Incremental Sync (optional)
-
-To fetch only reviews modified after a given date:
-
-```
-GET /wp-json/wine-agent/v1/reviews?modified_after=2024-01-01T00:00:00
-```
+1. Bump the version number in the `Plugin Name` header of `wine-agent-api.php`
+2. Rebuild the app and repackage the zip (see `DEPLOYMENT.md`)
+3. Upload the new zip via **WP Admin → Plugins → Add New → Upload Plugin → Replace current**
