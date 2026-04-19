@@ -617,7 +617,7 @@ export default function Sidebar({
             hasSelection={!!filters.region}
             defaultOpen={false}
           >
-            <FacetList
+            <VarietalCombobox
               options={meta.regions}
               value={filters.region}
               onChange={(v) => onChange({ ...filters, region: v })}
