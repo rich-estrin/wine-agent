@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Combobox,
   ComboboxInput,
@@ -340,6 +340,19 @@ function SidebarDualRange({
   const minPct = ((lo - sliderMin) / (sliderMax - sliderMin)) * 100;
   const maxPct = ((hi - sliderMin) / (sliderMax - sliderMin)) * 100;
 
+  // Local draft state so typing doesn't trigger searches mid-entry.
+  // Commits on blur or Enter; slider updates sync in when the field isn't focused.
+  const [loDraft, setLoDraft] = useState(loText);
+  const [hiDraft, setHiDraft] = useState(hiText);
+  const loFocused = useRef(false);
+  const hiFocused = useRef(false);
+
+  useEffect(() => { if (!loFocused.current) setLoDraft(loText); }, [loText]);
+  useEffect(() => { if (!hiFocused.current) setHiDraft(hiText); }, [hiText]);
+
+  const commitLo = () => { loFocused.current = false; onLoText(loDraft); };
+  const commitHi = () => { hiFocused.current = false; onHiText(hiDraft); };
+
   const inputClass =
     'font-cormorant text-[17px] text-ink bg-transparent border-b border-[rgba(26,20,16,0.15)] outline-none focus:border-[#7b2d3e] transition-colors w-12';
 
@@ -351,9 +364,11 @@ function SidebarDualRange({
           <input
             type="text"
             inputMode="numeric"
-            value={loText}
-            onChange={(e) => onLoText(e.target.value)}
-            onFocus={(e) => e.target.select()}
+            value={loDraft}
+            onChange={(e) => setLoDraft(e.target.value.replace(/\D/g, ''))}
+            onFocus={(e) => { loFocused.current = true; e.target.select(); }}
+            onBlur={commitLo}
+            onKeyDown={(e) => { if (e.key === 'Enter') { commitLo(); (e.target as HTMLInputElement).blur(); } }}
             className={inputClass}
           />
         </div>
@@ -362,9 +377,11 @@ function SidebarDualRange({
           <input
             type="text"
             inputMode="numeric"
-            value={hiText}
-            onChange={(e) => onHiText(e.target.value)}
-            onFocus={(e) => e.target.select()}
+            value={hiDraft}
+            onChange={(e) => setHiDraft(e.target.value.replace(/\D/g, ''))}
+            onFocus={(e) => { hiFocused.current = true; e.target.select(); }}
+            onBlur={commitHi}
+            onKeyDown={(e) => { if (e.key === 'Enter') { commitHi(); (e.target as HTMLInputElement).blur(); } }}
             className={`${inputClass} text-right`}
           />
         </div>
