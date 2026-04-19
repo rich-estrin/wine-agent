@@ -350,8 +350,28 @@ function SidebarDualRange({
   useEffect(() => { if (!loFocused.current) setLoDraft(loText); }, [loText]);
   useEffect(() => { if (!hiFocused.current) setHiDraft(hiText); }, [hiText]);
 
-  const commitLo = () => { loFocused.current = false; onLoText(loDraft); };
-  const commitHi = () => { hiFocused.current = false; onHiText(hiDraft); };
+  const commitLo = () => {
+    loFocused.current = false;
+    const loVal = parseInt(loDraft);
+    const hiVal = parseInt(hiDraft);
+    if (!isNaN(loVal) && !isNaN(hiVal) && loVal > hiVal) {
+      setLoDraft(String(hiVal));
+      onLoText(String(hiVal));
+    } else {
+      onLoText(loDraft);
+    }
+  };
+  const commitHi = () => {
+    hiFocused.current = false;
+    const loVal = parseInt(loDraft);
+    const hiVal = parseInt(hiDraft);
+    if (!isNaN(loVal) && !isNaN(hiVal) && hiVal < loVal) {
+      setHiDraft(String(loVal));
+      onHiText(String(loVal));
+    } else {
+      onHiText(hiDraft);
+    }
+  };
 
   const inputClass =
     'font-cormorant text-[17px] text-ink bg-transparent border-b border-[rgba(26,20,16,0.15)] outline-none focus:border-[#7b2d3e] transition-colors w-12';
