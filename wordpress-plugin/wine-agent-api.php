@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.7.0
+ * Version: 2.8.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -209,7 +209,6 @@ add_shortcode( 'wine-search', function () {
 
     if ( $js_file ) {
         wp_enqueue_script( 'wine-agent-app', plugins_url( $js_file, __FILE__ ), [], null, true );
-        wp_script_add_data( 'wine-agent-app', 'type', 'module' );
     }
     if ( $css_file ) {
         wp_enqueue_style( 'wine-agent-app', plugins_url( $css_file, __FILE__ ) );

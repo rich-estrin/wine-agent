@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => {
     base: process.env.VITE_BASE_PATH || '/',
     build: {
       manifest: true,
+      rollupOptions: {
+        output: {
+          format: 'iife',
+          name: 'WineAgent',
+        },
+      },
     },
     server: {
       port: 5173,
