@@ -4,6 +4,7 @@ import { parse } from 'csv-parse/sync';
 import type { Wine } from '../../mcp/src/types.js';
 
 const DEFAULT_CACHE_PATH = './cache/wines.json';
+const CACHE_VERSION = 3; // bump when parse/normalize logic changes
 
 // Canonical spellings for known data-entry typos
 const AVA_CORRECTIONS: Record<string, string> = {
@@ -19,14 +20,28 @@ function normalizeAva(raw: string): string {
   return AVA_CORRECTIONS[key] ?? raw.trim();
 }
 
-// Capitalize the first letter of every word (handles hyphens too)
+// Capitalize first letter of each word; unicode-safe (avoids uppercasing chars
+// after accented letters like ñ, é, ü which \b treats as word boundaries)
 function toTitleCase(s: string): string {
-  return s.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return s.trim().toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep, c) => sep + c.toUpperCase());
+}
+
+// State/province codes and compass abbreviations that should be fully uppercase
+const GEO_ABBREVIATIONS = new Set([
+  'bc', 'wa', 'or', 'id', 'ca', 'ab', 'mt', 'nv',
+  'sw', 'nw', 'se', 'ne',
+]);
+
+function normalizeRegion(raw: string): string {
+  return toTitleCase(raw.trim()).replace(/[A-Za-z]+/g, (word) =>
+    GEO_ABBREVIATIONS.has(word.toLowerCase()) ? word.toUpperCase() : word
+  );
 }
 
 interface CacheFile {
   fetchedAt: string;
   csvPath: string;
+  version?: number;
   wines: Wine[];
 }
 
@@ -44,7 +59,7 @@ export class CSVClient {
     // Invalidate cache if it was built from a different CSV path
     if (existsSync(this.cachePath)) {
       const cache: CacheFile = JSON.parse(readFileSync(this.cachePath, 'utf-8'));
-      if (cache.csvPath === this.csvPath) {
+      if (cache.csvPath === this.csvPath && cache.version === CACHE_VERSION) {
         this.wines = cache.wines;
         console.log(`Loaded ${this.wines.length} wines from cache (${this.cachePath})`);
         return;
@@ -72,6 +87,7 @@ export class CSVClient {
     const cache: CacheFile = {
       fetchedAt: new Date().toISOString(),
       csvPath: this.csvPath,
+      version: CACHE_VERSION,
       wines: this.wines,
     };
     writeFileSync(this.cachePath, JSON.stringify(cache));
@@ -100,7 +116,7 @@ export class CSVClient {
       price,
       rating: (row['Review Input => Rating'] ?? '').trim(),
       review: (row['Review Input => Review Content'] ?? '').trim(),
-      region: toTitleCase(row['Review Input => Home Region'] ?? ''),
+      region: normalizeRegion(row['Review Input => Home Region'] ?? ''),
       type: toTitleCase(row['Review Input => Wine Type'] ?? ''),
       mainVarietal: toTitleCase(varietalLabel),
       varietyStyle: toTitleCase(varietyStyle),
@@ -137,6 +153,7 @@ export class CSVClient {
     writeFileSync(this.cachePath, JSON.stringify({
       fetchedAt: new Date().toISOString(),
       csvPath: this.csvPath,
+      version: CACHE_VERSION,
       wines: this.wines,
     }));
   }

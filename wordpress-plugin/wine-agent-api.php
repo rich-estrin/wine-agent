@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 1.1.0
+ * Version: 2.5.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -20,7 +20,7 @@ add_action( 'rest_api_init', function () {
 } );
 
 function wine_agent_check_auth( WP_REST_Request $request ): bool {
-    $stored_key = get_option( 'wine_agent_api_key', '' );
+    $stored_key = get_option( 'wine_agent_search_key', '' );
     if ( empty( $stored_key ) ) {
         return false;
     }
@@ -105,11 +105,7 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
 // ─── Webhook: push review changes to the search app ──────────────────────────
 
 add_action( 'admin_init', function () {
-    register_setting( 'wine_agent_settings', 'wine_agent_webhook_url', [
-        'sanitize_callback' => 'esc_url_raw',
-        'default'           => '',
-    ] );
-    register_setting( 'wine_agent_settings', 'wine_agent_webhook_secret', [
+    register_setting( 'wine_agent_settings', 'wine_agent_search_key', [
         'sanitize_callback' => 'sanitize_text_field',
         'default'           => '',
     ] );
@@ -138,12 +134,14 @@ function wine_agent_build_review_payload( int $post_id ): array {
 }
 
 function wine_agent_send_webhook( string $action, int $post_id ): void {
-    $webhook_url    = get_option( 'wine_agent_webhook_url', '' );
-    $webhook_secret = get_option( 'wine_agent_webhook_secret', '' );
+    $app_url        = rtrim( get_option( 'wine_agent_app_url', '' ), '/' );
+    $search_key = get_option( 'wine_agent_search_key', '' );
 
-    if ( empty( $webhook_url ) ) {
+    if ( empty( $app_url ) ) {
         return;
     }
+
+    $webhook_url = $app_url . '/api/webhook/review';
 
     $payload = wp_json_encode( [
         'action' => $action,
@@ -155,7 +153,7 @@ function wine_agent_send_webhook( string $action, int $post_id ): void {
         'body'      => $payload,
         'headers'   => [
             'Content-Type'     => 'application/json',
-            'X-Webhook-Secret' => $webhook_secret,
+            'X-Webhook-Secret' => $search_key,
         ],
         'timeout'   => 10,
         'blocking'  => false, // fire-and-forget
@@ -194,38 +192,84 @@ add_action( 'admin_init', function () {
 } );
 
 add_shortcode( 'wine-search', function () {
-    $app_url = rtrim( get_option( 'wine_agent_app_url', '' ), '/' );
-    if ( empty( $app_url ) ) {
-        return '<p><em>Wine search: app URL not configured. Go to Settings → Wine Agent API and set the App URL.</em></p>';
+    // Read the Vite manifest bundled with the plugin (no HTTP calls needed).
+    $manifest_path = plugin_dir_path( __FILE__ ) . 'assets/manifest.json';
+    if ( ! file_exists( $manifest_path ) ) {
+        return '<p><em>Wine search: assets not found. Re-upload the plugin zip.</em></p>';
     }
-
-    // Load the Vite manifest to get the hashed asset filenames
-    $manifest_url = $app_url . '/assets/manifest.json';
-    $manifest     = @file_get_contents( $manifest_url );
-
-    if ( $manifest ) {
-        $assets = json_decode( $manifest, true );
-        $js_file  = $assets['src/main.tsx']['file'] ?? null;
-        $css_file = $assets['src/main.tsx']['css'][0] ?? null;
-    } else {
-        // Fallback: fetch index.html and parse asset URLs
-        $index_html = @file_get_contents( $app_url . '/index.html' );
-        preg_match( '/src="([^"]+\.js)"/', $index_html ?? '', $js_m );
-        preg_match( '/href="([^"]+\.css)"/', $index_html ?? '', $css_m );
-        $js_file  = $js_m[1]  ?? null;
-        $css_file = $css_m[1] ?? null;
-    }
+    $assets   = json_decode( file_get_contents( $manifest_path ), true );
+    $js_file  = $assets['index.html']['file'] ?? null;
+    $css_file = $assets['index.html']['css'][0] ?? null;
 
     if ( $js_file ) {
-        wp_enqueue_script( 'wine-agent-app', $app_url . '/' . ltrim( $js_file, '/' ), [], null, true );
+        wp_enqueue_script( 'wine-agent-app', plugins_url( $js_file, __FILE__ ), [], null, true );
         wp_script_add_data( 'wine-agent-app', 'type', 'module' );
     }
     if ( $css_file ) {
-        wp_enqueue_style( 'wine-agent-app', $app_url . '/' . ltrim( $css_file, '/' ) );
+        wp_enqueue_style( 'wine-agent-app', plugins_url( $css_file, __FILE__ ) );
     }
 
-    return '<div id="wine-agent-root"></div>';
+    // Inject the WP REST proxy base URL so the app calls WP, not EC2 directly.
+    $proxy_base = rest_url( 'wine-agent/v1' );
+    return '<div id="wine-agent-root"></div>' . "\n"
+         . '<script>window.__WINE_AGENT_API_BASE__ = ' . wp_json_encode( $proxy_base ) . ';</script>';
 } );
+
+// ─── Proxy endpoints: forward /search and /meta to the EC2 API ───────────────
+//
+// Allows the embedded React app to call HTTPS WP REST endpoints instead of
+// making direct HTTP requests to EC2 (which browsers block as mixed content).
+
+add_action( 'rest_api_init', function () {
+    $proxy_args = [
+        'permission_callback' => '__return_true',
+    ];
+
+    register_rest_route( 'wine-agent/v1', '/search', array_merge( $proxy_args, [
+        'methods'  => 'GET',
+        'callback' => 'wine_agent_proxy_search',
+    ] ) );
+
+    register_rest_route( 'wine-agent/v1', '/meta', array_merge( $proxy_args, [
+        'methods'  => 'GET',
+        'callback' => 'wine_agent_proxy_meta',
+    ] ) );
+} );
+
+function wine_agent_proxy_request( string $path, array $query_params = [] ): WP_REST_Response {
+    $app_url = rtrim( get_option( 'wine_agent_app_url', '' ), '/' );
+    if ( empty( $app_url ) ) {
+        return new WP_REST_Response( [ 'error' => 'App URL not configured' ], 503 );
+    }
+
+    $url = rtrim( $app_url, '/' ) . '/api/' . $path;
+    if ( ! empty( $query_params ) ) {
+        $url .= '?' . http_build_query( $query_params );
+    }
+
+    $secret  = get_option( 'wine_agent_search_key', '' );
+    $response = wp_remote_get( $url, [
+        'timeout' => 15,
+        'headers' => [ 'X-Wine-Agent-Key' => $secret ],
+    ] );
+    if ( is_wp_error( $response ) ) {
+        return new WP_REST_Response( [ 'error' => $response->get_error_message() ], 502 );
+    }
+
+    $code = wp_remote_retrieve_response_code( $response );
+    $body = json_decode( wp_remote_retrieve_body( $response ), true );
+    return new WP_REST_Response( $body, $code );
+}
+
+function wine_agent_proxy_search( WP_REST_Request $request ): WP_REST_Response {
+    nocache_headers();
+    return wine_agent_proxy_request( 'search', $request->get_query_params() );
+}
+
+function wine_agent_proxy_meta( WP_REST_Request $request ): WP_REST_Response {
+    nocache_headers();
+    return wine_agent_proxy_request( 'meta' );
+}
 
 // ─── Debug endpoint (temporary) ──────────────────────────────────────────────
 
@@ -256,11 +300,6 @@ add_action( 'admin_menu', function () {
     );
 } );
 
-add_action( 'admin_init', function () {
-    register_setting( 'wine_agent_settings', 'wine_agent_api_key', [
-        'sanitize_callback' => 'sanitize_text_field',
-    ] );
-} );
 
 function wine_agent_settings_page(): void {
     if ( ! current_user_can( 'manage_options' ) ) {
@@ -273,14 +312,12 @@ function wine_agent_settings_page(): void {
         && check_admin_referer( 'wine_agent_regenerate_key' )
     ) {
         $new_key = wp_generate_password( 40, false );
-        update_option( 'wine_agent_api_key', $new_key );
+        update_option( 'wine_agent_search_key', $new_key );
         echo '<div class="notice notice-success"><p>API key regenerated.</p></div>';
     }
 
-    $current_key    = get_option( 'wine_agent_api_key', '' );
-    $app_url        = get_option( 'wine_agent_app_url', '' );
-    $webhook_url    = get_option( 'wine_agent_webhook_url', '' );
-    $webhook_secret = get_option( 'wine_agent_webhook_secret', '' );
+    $search_key = get_option( 'wine_agent_search_key', '' );
+    $app_url    = get_option( 'wine_agent_app_url', '' );
     $endpoint       = rest_url( 'wine-agent/v1/reviews' );
     ?>
     <div class="wrap">
@@ -295,16 +332,16 @@ function wine_agent_settings_page(): void {
             <?php settings_fields( 'wine_agent_settings' ); ?>
             <table class="form-table">
                 <tr>
-                    <th scope="row"><label for="wine_agent_api_key">API Key</label></th>
+                    <th scope="row"><label for="wine_agent_search_key">Search API Key</label></th>
                     <td>
                         <input
                             type="text"
-                            id="wine_agent_api_key"
-                            name="wine_agent_api_key"
-                            value="<?php echo esc_attr( $current_key ); ?>"
+                            id="wine_agent_search_key"
+                            name="wine_agent_search_key"
+                            value="<?php echo esc_attr( $search_key ); ?>"
                             class="regular-text"
                         />
-                        <p class="description">Keep this secret. Used by the search app to authenticate requests.</p>
+                        <p class="description">Shared secret between this site and the search API server. Must match <code>WEBHOOK_SECRET</code> in the server's <code>.env</code>.</p>
                     </td>
                 </tr>
                 <tr>
@@ -316,36 +353,9 @@ function wine_agent_settings_page(): void {
                             name="wine_agent_app_url"
                             value="<?php echo esc_attr( $app_url ); ?>"
                             class="regular-text"
-                            placeholder="http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com/wwr-search"
+                            placeholder="http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com"
                         />
-                        <p class="description">Base URL of the hosted search app. Used by the <code>[wine-search]</code> shortcode to load JS/CSS assets.</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="wine_agent_webhook_url">Webhook URL</label></th>
-                    <td>
-                        <input
-                            type="url"
-                            id="wine_agent_webhook_url"
-                            name="wine_agent_webhook_url"
-                            value="<?php echo esc_attr( $webhook_url ); ?>"
-                            class="regular-text"
-                            placeholder="http://ec2-35-90-20-204.us-west-2.compute.amazonaws.com/wwr-search/api/webhook/review"
-                        />
-                        <p class="description">The search app endpoint that receives live review updates when posts are published or trashed.</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="wine_agent_webhook_secret">Webhook Secret</label></th>
-                    <td>
-                        <input
-                            type="text"
-                            id="wine_agent_webhook_secret"
-                            name="wine_agent_webhook_secret"
-                            value="<?php echo esc_attr( $webhook_secret ); ?>"
-                            class="regular-text"
-                        />
-                        <p class="description">Shared secret sent in the <code>X-Webhook-Secret</code> header. Must match <code>WEBHOOK_SECRET</code> in the app's <code>.env</code>.</p>
+                        <p class="description">Base URL of the search API server. Used for proxying search requests and sending webhooks on publish/trash.</p>
                     </td>
                 </tr>
             </table>

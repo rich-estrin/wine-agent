@@ -30,6 +30,7 @@ export function searchWines(wines: Wine[], params: SearchWinesParams): Wine[] {
       wine.region,
       wine.mainVarietal,
       wine.varietyStyle,
+      wine.vintage,
     ]
       .join(' ')
       .toLowerCase();

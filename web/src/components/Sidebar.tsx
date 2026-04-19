@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { Meta } from '../types';
 import AvaTreeFilter from './AvaTreeFilter';
@@ -94,10 +94,20 @@ function FacetGroup({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      setTimeout(() => contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+    }
+  };
+
   return (
     <div className="border-b border-warm-border">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={toggle}
         className="w-full flex items-center justify-between px-5 py-[13px] hover:bg-[rgba(0,0,0,0.03)] transition-colors text-left"
       >
         <span
@@ -111,7 +121,7 @@ function FacetGroup({
           className={`w-2.5 h-2.5 text-muted transition-transform flex-shrink-0 ${open ? '' : '-rotate-90'}`}
         />
       </button>
-      {open && <div className="px-5 pb-3.5 pt-1">{children}</div>}
+      {open && <div ref={contentRef} className="px-5 pb-3.5 pt-1">{children}</div>}
     </div>
   );
 }
@@ -166,16 +176,43 @@ function FacetList({
   value,
   onChange,
   maxVisible = 10,
+  searchable = false,
 }: {
   options: string[];
   value: string;
   onChange: (v: string) => void;
   maxVisible?: number;
+  searchable?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? options : options.slice(0, maxVisible);
+  const [filterText, setFilterText] = useState('');
+
+  const filtered = filterText
+    ? options.filter((o) => o.toLowerCase().includes(filterText.toLowerCase()))
+    : options;
+  const visible = showAll || filterText ? filtered : filtered.slice(0, maxVisible);
+
   return (
     <div>
+      {searchable && (
+        <div className="relative mb-2">
+          <input
+            type="text"
+            value={filterText}
+            onChange={(e) => { setFilterText(e.target.value); setShowAll(false); }}
+            placeholder="Filter…"
+            className="w-full pl-2.5 pr-6 py-[5px] text-[11px] text-ink bg-[rgba(0,0,0,0.04)] border border-[rgba(26,20,16,0.1)] rounded-[2px] outline-none focus:border-gold/40 placeholder:text-muted/50 transition-colors"
+          />
+          {filterText && (
+            <button
+              onClick={() => setFilterText('')}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
+            >
+              <XMarkIcon className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      )}
       {visible.map((opt) => (
         <FacetOption
           key={opt}
@@ -184,13 +221,16 @@ function FacetList({
           onSelect={() => onChange(value === opt ? '' : opt)}
         />
       ))}
-      {options.length > maxVisible && (
+      {!filterText && options.length > maxVisible && (
         <button
           onClick={() => setShowAll(!showAll)}
           className="mt-1 text-[10px] font-medium tracking-[0.08em] uppercase text-[rgba(184,146,74,0.65)] hover:text-[#b8924a] transition-colors"
         >
           {showAll ? 'Show less' : `+${options.length - maxVisible} more`}
         </button>
+      )}
+      {filterText && filtered.length === 0 && (
+        <p className="text-[11px] text-muted py-1">No matches</p>
       )}
     </div>
   );
@@ -240,6 +280,7 @@ function SidebarDualRange({
             inputMode="numeric"
             value={loText}
             onChange={(e) => onLoText(e.target.value)}
+            onFocus={(e) => e.target.select()}
             className={inputClass}
           />
         </div>
@@ -250,6 +291,7 @@ function SidebarDualRange({
             inputMode="numeric"
             value={hiText}
             onChange={(e) => onHiText(e.target.value)}
+            onFocus={(e) => e.target.select()}
             className={`${inputClass} text-right`}
           />
         </div>
@@ -477,29 +519,6 @@ export default function Sidebar({
       {meta && (
         <>
           <FacetGroup
-            label="Appellation"
-            hasSelection={!!filters.ava}
-            defaultOpen={true}
-          >
-            <AvaTreeFilter
-              value={filters.ava}
-              onChange={(v) => onChange({ ...filters, ava: v })}
-            />
-          </FacetGroup>
-
-          <FacetGroup
-            label="Region"
-            hasSelection={!!filters.region}
-            defaultOpen={false}
-          >
-            <FacetList
-              options={meta.regions}
-              value={filters.region}
-              onChange={(v) => onChange({ ...filters, region: v })}
-            />
-          </FacetGroup>
-
-          <FacetGroup
             label="Wine Type"
             hasSelection={!!filters.type}
             defaultOpen={true}
@@ -512,6 +531,29 @@ export default function Sidebar({
           </FacetGroup>
 
           <FacetGroup
+            label="Appellation"
+            hasSelection={!!filters.ava}
+            defaultOpen={true}
+          >
+            <AvaTreeFilter
+              value={filters.ava}
+              onChange={(v) => onChange({ ...filters, ava: v })}
+            />
+          </FacetGroup>
+
+          <FacetGroup
+            label="Home Region"
+            hasSelection={!!filters.region}
+            defaultOpen={false}
+          >
+            <FacetList
+              options={meta.regions}
+              value={filters.region}
+              onChange={(v) => onChange({ ...filters, region: v })}
+            />
+          </FacetGroup>
+
+          <FacetGroup
             label="Varietal"
             hasSelection={!!filters.mainVarietal}
             defaultOpen={false}
@@ -520,6 +562,7 @@ export default function Sidebar({
               options={meta.varietals}
               value={filters.mainVarietal}
               onChange={(v) => onChange({ ...filters, mainVarietal: v })}
+              searchable
             />
           </FacetGroup>
         </>

@@ -14,7 +14,6 @@ import Sidebar, {
 import WineList from './components/WineList';
 import WineDetail from './components/WineDetail';
 import Chat from './components/Chat';
-import Header from './components/Header';
 import BottomSheet from './components/BottomSheet';
 
 // ── App ────────────────────────────────────────────────────────────────────
@@ -145,7 +144,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#faf7f2] font-sans text-ink">
-      <Header />
 
       {/* Tab navigation — Chat hidden until ready to launch */}
 
@@ -155,7 +153,7 @@ export default function App() {
           {/* Page body: sidebar + main */}
           <div className="flex">
             {/* Desktop sidebar */}
-            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto">
+            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,146,74,0.2) transparent' }}>
               <Sidebar meta={meta} filters={filters} onChange={setFilters} />
             </aside>
 
@@ -164,7 +162,7 @@ export default function App() {
               {/* Search bar + desktop sort */}
               <div className="flex gap-2 mb-3">
                 <div className="flex-1">
-                  <SearchBar value={query} onChange={setQuery} />
+                  <SearchBar value={query} onSearch={setQuery} />
                 </div>
                 <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
                   <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>

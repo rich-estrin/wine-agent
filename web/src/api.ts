@@ -1,6 +1,10 @@
 import type { Wine, Meta } from './types';
 
-const BASE = './api';
+// When embedded in WordPress the plugin injects window.__WINE_AGENT_API_BASE__
+// pointing to its WP REST proxy. Falls back to relative path for standalone use.
+const BASE: string =
+  (typeof window !== 'undefined' && (window as any).__WINE_AGENT_API_BASE__) ||
+  './api';
 
 export interface SearchParams {
   q?: string;

@@ -32,7 +32,7 @@ export default function BottomSheet({
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[301] bg-cream rounded-t-2xl flex flex-col max-h-[88vh] transition-transform duration-[380ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`fixed bottom-0 left-0 right-0 z-[301] bg-[#faf7f2] rounded-t-2xl flex flex-col max-h-[88vh] transition-transform duration-[380ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
       >

@@ -144,6 +144,7 @@ export class SheetsClient {
       region: getValue('region'),
       type: getValue('type'),
       mainVarietal: getValue('mainVarietal'),
+      varietyStyle: getValue('varietyStyle'),
       tastingDate: getValue('tastingDate'),
       publicationDate: getValue('publicationDate'),
       setting: getValue('setting'),

@@ -136,6 +136,7 @@ export class WordPressClient {
       region: r.region,
       type: r.wine_type,
       mainVarietal: r.variety,
+      varietyStyle: '',
       publicationDate: r.publication_date,
       tastingDate: '',
       setting: '',

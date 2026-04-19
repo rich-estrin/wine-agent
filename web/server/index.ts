@@ -8,6 +8,7 @@ import { filterWines } from '../../mcp/dist/tools/filter.js';
 import { getWineDetails } from '../../mcp/dist/tools/get-wine.js';
 
 const app = express();
+app.disable('x-powered-by');
 app.use(express.json());
 
 const anthropic = new Anthropic({
@@ -19,6 +20,16 @@ const dataClient = process.env.WP_API_URL
   ? new WPClient(process.env.WP_API_URL, process.env.WP_API_KEY || '')
   : new CSVClient(process.env.CSV_PATH || '');
 
+// Middleware: validate X-Wine-Agent-Key on search/meta endpoints
+function requireApiKey(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const secret = process.env.WEBHOOK_SECRET;
+  if (secret && req.headers['x-wine-agent-key'] !== secret) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  next();
+}
+
 // Cache for filter dropdown values
 let metaCache: {
   varietals: string[];
@@ -28,7 +39,7 @@ let metaCache: {
 } | null = null;
 
 // Combined search + filter endpoint
-app.get('/api/search', (req, res) => {
+app.get('/api/search', requireApiKey, (req, res) => {
   try {
     const { q, limit, offset, sort_by, sort_order, ...filterParams } = req.query;
 
@@ -88,7 +99,7 @@ app.get('/api/search', (req, res) => {
 });
 
 // Filter dropdown metadata
-app.get('/api/meta', (_req, res) => {
+app.get('/api/meta', requireApiKey, (_req, res) => {
   try {
     if (!metaCache) {
       const wines = dataClient.getAllWines();
@@ -350,6 +361,8 @@ app.post('/api/webhook/review', (req, res) => {
     dataClient.upsertWine(mapWPReview(review));
     console.log(`[Webhook] Upserted wine ${review.id}: ${review.brand_name}`);
   }
+
+  metaCache = null; // force rebuild so filter dropdowns reflect the change
 
   res.json({ ok: true, total: dataClient.getAllWines().length });
 });
