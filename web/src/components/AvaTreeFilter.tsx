@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronRightIcon, ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { AVA_TREE, type AvaNode } from '../data/ava-tree';
 
-/** Returns nodes that match the query or have matching descendants. */
 function filterTree(nodes: AvaNode[], query: string): AvaNode[] {
   const q = query.toLowerCase();
   return nodes.flatMap((node) => {
@@ -34,25 +33,28 @@ function TreeNode({
   return (
     <div>
       <div
-        className={`flex items-center gap-1 py-1 rounded cursor-pointer select-none
-          ${isSelected ? 'bg-[#141617] text-[#deb77d]' : 'hover:bg-gray-100 text-gray-700'}`}
-        style={{ paddingLeft: `${8 + depth * 16}px`, paddingRight: '8px' }}
+        className={`flex items-center gap-1 py-[5px] rounded-[2px] cursor-pointer select-none transition-colors
+          ${isSelected
+            ? 'bg-[rgba(123,45,62,0.08)] text-wine'
+            : 'text-ink/65 hover:bg-[rgba(26,20,16,0.04)] hover:text-ink'
+          }`}
+        style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px' }}
         ref={isSelected ? (el) => el?.scrollIntoView({ block: 'nearest' }) : undefined}
         onClick={() => onSelect(isSelected ? '' : node.name)}
       >
         {hasChildren ? (
           <button
-            className="shrink-0 p-0.5 rounded hover:bg-black/10"
+            className="shrink-0 p-0.5 rounded hover:bg-black/5"
             onClick={(e) => { e.stopPropagation(); setExpanded(!isOpen); }}
           >
             <ChevronRightIcon
-              className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-90' : ''} ${isSelected ? 'text-[#deb77d]' : 'text-gray-400'}`}
+              className={`h-2.5 w-2.5 transition-transform ${isOpen ? 'rotate-90' : ''} ${isSelected ? 'text-wine' : 'text-muted'}`}
             />
           </button>
         ) : (
-          <span className="w-4 shrink-0" />
+          <span className="w-[18px] shrink-0" />
         )}
-        <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>{node.name}</span>
+        <span className={`text-[12px] ${isSelected ? 'font-medium' : ''}`}>{node.name}</span>
       </div>
       {isOpen && hasChildren && (
         <div>
@@ -110,38 +112,40 @@ export default function AvaTreeFilter({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className={`relative min-w-[160px] rounded-md border bg-white py-2 pl-3 pr-8 text-left text-sm focus:outline-none
-          ${value ? 'border-gray-300 text-gray-900' : 'border-gray-300 text-gray-400'}`}
+        className={`w-full flex items-center justify-between pl-3 pr-2.5 py-[7px] text-[12px] rounded-[3px] border transition-colors text-left
+          ${value
+            ? 'border-[rgba(26,20,16,0.15)] bg-[rgba(0,0,0,0.04)] text-ink'
+            : 'border-[rgba(26,20,16,0.1)] bg-[rgba(0,0,0,0.04)] text-muted/70 hover:text-muted'
+          }
+          focus:outline-none ${open ? 'border-gold/50' : ''}`}
       >
-        <span className="flex items-center gap-1">
-          <span className="truncate">{value || 'AVA'}</span>
+        <span className="truncate flex-1">{value || 'Select an AVA…'}</span>
+        <span className="flex items-center gap-1 flex-shrink-0 ml-1">
           {value && (
             <XMarkIcon
-              className="h-3.5 w-3.5 shrink-0 text-gray-400 hover:text-gray-700"
+              className="h-3 w-3 text-muted hover:text-ink"
               onClick={(e) => { e.stopPropagation(); onChange(''); }}
             />
           )}
-        </span>
-        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-          <ChevronUpDownIcon className="h-4 w-4 text-gray-400" />
+          <ChevronDownIcon className={`h-3 w-3 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
         </span>
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-64 rounded-md border border-gray-200 bg-white shadow-lg flex flex-col">
-          <div className="p-2 border-b border-gray-100">
+        <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[220px] rounded-[3px] border border-warm-border bg-white shadow-xl flex flex-col">
+          <div className="p-2 border-b border-warm-border">
             <input
               ref={inputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter AVAs…"
-              className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:border-gray-400 placeholder-gray-300"
+              className="w-full rounded-[2px] border border-[rgba(26,20,16,0.1)] bg-[rgba(0,0,0,0.03)] px-2.5 py-[5px] text-[11px] text-ink outline-none focus:border-gold/50 placeholder:text-muted/50 transition-colors"
             />
           </div>
-          <div className="overflow-y-auto max-h-72 py-1">
+          <div className="overflow-y-auto max-h-64 py-1 px-1">
             {visibleTree.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-gray-400">No matches</p>
+              <p className="px-3 py-2 text-[11px] text-muted italic">No matches</p>
             ) : (
               visibleTree.map((node) => (
                 <TreeNode

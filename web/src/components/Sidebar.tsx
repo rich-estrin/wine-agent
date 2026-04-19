@@ -1,4 +1,10 @@
 import { useState, useRef } from 'react';
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxOptions,
+  ComboboxOption,
+} from '@headlessui/react';
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { Meta } from '../types';
 import AvaTreeFilter from './AvaTreeFilter';
@@ -233,6 +239,71 @@ function FacetList({
         <p className="text-[11px] text-muted py-1">No matches</p>
       )}
     </div>
+  );
+}
+
+// ── Varietal combobox (single-select with type-to-filter) ────────────────────
+
+function VarietalCombobox({
+  options,
+  value,
+  onChange,
+}: {
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+
+  const filtered = query.trim()
+    ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  return (
+    <Combobox
+      value={value}
+      onChange={(v: string | null) => onChange(v ?? '')}
+      onClose={() => setQuery('')}
+      immediate
+    >
+      <div className="relative">
+        <ComboboxInput
+          className="w-full pl-3 pr-7 py-[7px] text-[12px] text-ink bg-[rgba(0,0,0,0.04)] border border-[rgba(26,20,16,0.1)] rounded-[3px] outline-none focus:border-gold/50 placeholder:text-muted/50 transition-colors"
+          displayValue={(v: string) => v}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search varietals…"
+        />
+        {value ? (
+          <button
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { onChange(''); setQuery(''); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
+          >
+            <XMarkIcon className="w-3 h-3" />
+          </button>
+        ) : (
+          <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted pointer-events-none" />
+        )}
+        <ComboboxOptions
+          anchor="bottom start"
+          className="z-[200] mt-1 w-[var(--input-width)] max-h-56 overflow-y-auto bg-white border border-warm-border rounded-[3px] shadow-xl [--anchor-gap:4px]"
+        >
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-[11px] text-muted italic">No matches</div>
+          ) : (
+            filtered.map((opt) => (
+              <ComboboxOption
+                key={opt}
+                value={opt}
+                className="px-3 py-[6px] text-[12px] cursor-pointer text-ink/70 data-[focus]:bg-[rgba(26,20,16,0.04)] data-[selected]:text-wine data-[selected]:font-medium transition-colors"
+              >
+                {opt}
+              </ComboboxOption>
+            ))
+          )}
+        </ComboboxOptions>
+      </div>
+    </Combobox>
   );
 }
 
@@ -558,11 +629,10 @@ export default function Sidebar({
             hasSelection={!!filters.mainVarietal}
             defaultOpen={false}
           >
-            <FacetList
+            <VarietalCombobox
               options={meta.varietals}
               value={filters.mainVarietal}
               onChange={(v) => onChange({ ...filters, mainVarietal: v })}
-              searchable
             />
           </FacetGroup>
         </>

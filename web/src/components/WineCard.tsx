@@ -148,7 +148,7 @@ export default function WineCard({
 
         {/* Review */}
         {wine.review && (
-          <p className="text-[13px] leading-[1.65] text-[#5a5044] font-light">
+          <p className="text-[13px] leading-[1.65] text-[#5a5044] font-light line-clamp-4">
             {wine.review}
           </p>
         )}
