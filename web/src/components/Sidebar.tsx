@@ -347,17 +347,28 @@ function SidebarDualRange({
   const loFocused = useRef(false);
   const hiFocused = useRef(false);
 
+  const [loError, setLoError] = useState(false);
+  const [hiError, setHiError] = useState(false);
+
   useEffect(() => { if (!loFocused.current) setLoDraft(loText); }, [loText]);
   useEffect(() => { if (!hiFocused.current) setHiDraft(hiText); }, [hiText]);
+
+  // Clear errors when the opposite field's draft changes and resolves the conflict
+  useEffect(() => {
+    if (loError && parseInt(loDraft) < parseInt(hiDraft)) setLoError(false);
+  }, [hiDraft]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (hiError && parseInt(hiDraft) > parseInt(loDraft)) setHiError(false);
+  }, [loDraft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commitLo = () => {
     loFocused.current = false;
     const loVal = parseInt(loDraft);
     const hiVal = parseInt(hiDraft);
     if (!isNaN(loVal) && !isNaN(hiVal) && loVal >= hiVal) {
-      setLoDraft(String(hiVal - 1));
-      onLoText(String(hiVal - 1));
+      setLoError(true);
     } else {
+      setLoError(false);
       onLoText(loDraft);
     }
   };
@@ -366,15 +377,16 @@ function SidebarDualRange({
     const loVal = parseInt(loDraft);
     const hiVal = parseInt(hiDraft);
     if (!isNaN(loVal) && !isNaN(hiVal) && hiVal <= loVal) {
-      setHiDraft(String(loVal + 1));
-      onHiText(String(loVal + 1));
+      setHiError(true);
     } else {
+      setHiError(false);
       onHiText(hiDraft);
     }
   };
 
-  const inputClass =
-    'font-cormorant text-[17px] text-ink bg-transparent border-b border-[rgba(26,20,16,0.15)] outline-none focus:border-[#7b2d3e] transition-colors w-12';
+  const baseInput = 'font-cormorant text-[17px] text-ink bg-transparent border-b outline-none transition-colors w-12';
+  const loInputClass = `${baseInput} ${loError ? 'border-red-400 focus:border-red-500' : 'border-[rgba(26,20,16,0.15)] focus:border-[#7b2d3e]'}`;
+  const hiInputClass = `${baseInput} text-right ${hiError ? 'border-red-400 focus:border-red-500' : 'border-[rgba(26,20,16,0.15)] focus:border-[#7b2d3e]'}`;
 
   return (
     <div>
@@ -386,10 +398,10 @@ function SidebarDualRange({
             inputMode="numeric"
             value={loDraft}
             onChange={(e) => setLoDraft(e.target.value.replace(/\D/g, ''))}
-            onFocus={(e) => { loFocused.current = true; e.target.select(); }}
+            onFocus={(e) => { loFocused.current = true; setLoError(false); e.target.select(); }}
             onBlur={commitLo}
             onKeyDown={(e) => { if (e.key === 'Enter') { commitLo(); (e.target as HTMLInputElement).blur(); } }}
-            className={inputClass}
+            className={loInputClass}
           />
         </div>
         <div className="flex items-baseline gap-0.5">
@@ -399,10 +411,10 @@ function SidebarDualRange({
             inputMode="numeric"
             value={hiDraft}
             onChange={(e) => setHiDraft(e.target.value.replace(/\D/g, ''))}
-            onFocus={(e) => { hiFocused.current = true; e.target.select(); }}
+            onFocus={(e) => { hiFocused.current = true; setHiError(false); e.target.select(); }}
             onBlur={commitHi}
             onKeyDown={(e) => { if (e.key === 'Enter') { commitHi(); (e.target as HTMLInputElement).blur(); } }}
-            className={`${inputClass} text-right`}
+            className={hiInputClass}
           />
         </div>
       </div>
