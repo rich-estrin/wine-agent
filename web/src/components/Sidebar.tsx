@@ -248,10 +248,12 @@ function VarietalCombobox({
   options,
   value,
   onChange,
+  placeholder = 'Search…',
 }: {
   options: string[];
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
 }) {
   const [query, setQuery] = useState('');
 
@@ -271,7 +273,7 @@ function VarietalCombobox({
           className="w-full pl-3 pr-7 py-[7px] text-[12px] text-ink bg-[rgba(0,0,0,0.04)] border border-[rgba(26,20,16,0.1)] rounded-[3px] outline-none focus:border-gold/50 placeholder:text-muted/50 transition-colors"
           displayValue={(v: string) => v}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search varietals…"
+          placeholder={placeholder}
         />
         {value ? (
           <button
@@ -621,6 +623,7 @@ export default function Sidebar({
               options={meta.regions}
               value={filters.region}
               onChange={(v) => onChange({ ...filters, region: v })}
+              placeholder="Search home regions…"
             />
           </FacetGroup>
 
@@ -633,6 +636,7 @@ export default function Sidebar({
               options={meta.varietals}
               value={filters.mainVarietal}
               onChange={(v) => onChange({ ...filters, mainVarietal: v })}
+              placeholder="Search varietals…"
             />
           </FacetGroup>
         </>
