@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.6.0
+ * Version: 2.7.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -200,6 +200,12 @@ add_shortcode( 'wine-search', function () {
     $assets   = json_decode( file_get_contents( $manifest_path ), true );
     $js_file  = $assets['index.html']['file'] ?? null;
     $css_file = $assets['index.html']['css'][0] ?? null;
+
+    // Dequeue WordPress's bundled React/ReactDOM (wp-element) so they don't
+    // conflict with the React 19 copy bundled inside our app JS.
+    wp_dequeue_script( 'react' );
+    wp_dequeue_script( 'react-dom' );
+    wp_dequeue_script( 'wp-element' );
 
     if ( $js_file ) {
         wp_enqueue_script( 'wine-agent-app', plugins_url( $js_file, __FILE__ ), [], null, true );
