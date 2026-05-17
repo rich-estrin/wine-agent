@@ -76,6 +76,129 @@
   cursor: pointer;
 }
 
+/* ── Shelf Talker — hidden on screen, printed on demand ── */
+#shelf-talker {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 3in 3.5in;
+    margin: 0;
+  }
+
+  /* Hide everything; reveal only the shelf talker */
+  body * {
+    visibility: hidden !important;
+  }
+  #shelf-talker,
+  #shelf-talker * {
+    visibility: visible !important;
+  }
+
+  #shelf-talker {
+    display: block !important;
+    position: fixed !important;
+    inset: 0;
+    width: 3in;
+    height: 3.5in;
+    overflow: hidden;
+  }
+
+  #shelf-talker-inner {
+    width: 3in;
+    height: 3.5in;
+    padding: 0.18in 0.2in;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  /* Score block */
+  .st-score-block {
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 4pt;
+  }
+  .st-score-number {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 58pt;
+    font-weight: 700;
+    line-height: 1;
+    color: #111;
+  }
+  .st-score-label {
+    font-family: 'DM Sans', Arial, sans-serif;
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #333;
+    margin-top: 1pt;
+  }
+
+  /* Star rating fallback */
+  .st-stars {
+    font-size: 18pt;
+    letter-spacing: 1pt;
+  }
+  .st-star-full  { color: #e07800; }
+  .st-star-half  { color: #e07800; opacity: 0.6; }
+  .st-star-empty { color: #ccc; }
+
+  /* Designation badge */
+  .st-badge-row {
+    text-align: center;
+    margin-bottom: 5pt;
+  }
+  .st-badge {
+    display: inline-block;
+    background: #5a7a6a;
+    color: #fff;
+    border-radius: 3pt;
+    padding: 2pt 7pt;
+    font-family: 'DM Sans', Arial, sans-serif;
+    font-size: 7.5pt;
+    font-weight: 600;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Wine title */
+  .st-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 13.5pt;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #111;
+    text-align: center;
+    margin-bottom: 5pt;
+  }
+
+  /* Review text */
+  .st-review {
+    font-family: Georgia, serif;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    color: #333;
+    text-align: center;
+    margin: 0 0 5pt 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Byline */
+  .st-byline {
+    font-family: Georgia, serif;
+    font-size: 8.5pt;
+    color: #111;
+    text-align: center;
+    margin-top: auto;
+  }
+}
+
 /* ── Card fade-up animation ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }

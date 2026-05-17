@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname } from 'path';
-import type { Wine } from '../../mcp/src/types.js';
+import type { Wine } from '../src/types.js';
 
 const DEFAULT_CACHE_PATH = './cache/wines.json';
 
@@ -69,6 +69,12 @@ export function mapWPReview(row: WPReview): Wine {
     purchasedProvided: '',
     temp:              '',
     hyperlink:         '',
+    specialDesignation: '',
+    alcohol:           '',
+    closure:           '',
+    stateProvince:     '',
+    source:            '',
+    reviewer:          '',
   };
 }
 

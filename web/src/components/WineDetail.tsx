@@ -2,6 +2,7 @@ import { Dialog, DialogPanel } from '@headlessui/react';
 import { XMarkIcon, ArrowTopRightOnSquareIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import type { Wine } from '../types';
 import { numericScore } from '../types';
+import ShelfTalker from './ShelfTalker';
 
 function parseStarRating(rating: string): number | null {
   if (!rating || !rating.includes('*')) return null;
@@ -69,6 +70,8 @@ export default function WineDetail({
   const hasPrice = !isNaN(priceNum) && wine?.price !== 'N/A';
 
   return (
+    <>
+    {wine && <ShelfTalker wine={wine} />}
     <Dialog open={wine !== null} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-ink/40 backdrop-blur-[2px]" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-3 md:p-6">
@@ -192,5 +195,6 @@ export default function WineDetail({
         </DialogPanel>
       </div>
     </Dialog>
+    </>
   );
 }
