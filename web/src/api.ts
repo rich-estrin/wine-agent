@@ -22,6 +22,8 @@ export interface SearchParams {
   vintageMax?: string;
   vintage?: string;
   publicationDate?: string;
+  stateProvince?: string;
+  specialDesignation?: string;
   limit?: number;
   offset?: number;
   sort_by?: string;

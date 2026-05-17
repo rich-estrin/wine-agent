@@ -34,6 +34,8 @@ let metaCache: {
   regions: string[];
   types: string[];
   avaList: string[];
+  stateProvinces: string[];
+  specialDesignations: string[];
 } | null = null;
 
 // Combined search + filter endpoint
@@ -110,6 +112,8 @@ app.get('/api/meta', requireApiKey, (_req, res) => {
         regions: unique(wines.map((w) => w.region)),
         types: unique(wines.map((w) => w.type)),
         avaList: unique(wines.map((w) => w.ava)),
+        stateProvinces: unique(wines.map((w) => w.stateProvince)),
+        specialDesignations: unique(wines.map((w) => w.specialDesignation)),
       };
     }
     res.json(metaCache);

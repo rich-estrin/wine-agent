@@ -52,21 +52,6 @@ function StarRow({ count }: { count: number }) {
   );
 }
 
-function PriceDisplay({ price }: { price: string }) {
-  if (!price || price === 'N/A') {
-    return <span className="text-sm text-muted">N/A</span>;
-  }
-  const stripped = price.replace(/[^\d.]/g, '');
-  const num = parseFloat(stripped);
-  if (isNaN(num)) return <span className="text-sm text-muted">{price}</span>;
-  return (
-    <span className="font-cormorant text-[22px] font-normal text-ink tracking-tight leading-none">
-      <span className="text-[22px] font-light text-muted">$</span>
-      {Math.round(num)}
-    </span>
-  );
-}
-
 export default function WineCard({
   wine,
   onClick,
@@ -78,16 +63,23 @@ export default function WineCard({
   const starCount = parseStarRating(wine.rating);
   const { gradient, text: badgeText } = typeBadge(wine.type);
 
+  const priceNum = parseFloat((wine.price ?? '').replace(/[^\d.]/g, ''));
+  const hasPrice = !isNaN(priceNum) && wine.price !== 'N/A';
+  const priceDisplay = hasPrice ? `$${Math.round(priceNum)}` : null;
+
+  // Line 2: varietyStyle · ava · stateProvince
+  const metaParts = [wine.varietyStyle, wine.ava, wine.stateProvince].filter(Boolean);
+
   return (
     <button
       onClick={onClick}
-      className={`wine-card-animate w-full text-left bg-white border border-warm-border rounded-[4px] px-4 py-[18px] md:px-5
+      className={`wine-card-animate w-full text-left bg-white border border-warm-border rounded-[4px] px-4 py-[14px] md:px-5
         grid gap-3 md:gap-4 items-start
         hover:shadow-[0_4px_18px_rgba(26,20,16,0.1)] hover:border-gold/40 hover:-translate-y-px
         transition-all duration-200
         ${starCount !== null
-          ? 'grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_auto]'
-          : 'grid-cols-[46px_1fr] md:grid-cols-[52px_1fr_auto]'}`}
+          ? 'grid-cols-[auto_1fr]'
+          : 'grid-cols-[46px_1fr] md:grid-cols-[52px_1fr]'}`}
     >
       {/* Score badge or star row */}
       {starCount !== null ? (
@@ -102,7 +94,7 @@ export default function WineCard({
               {scoreStr}
             </span>
           ) : (
-            <span className="font-cormorant text-[13px] font-light italic relative z-10 px-1 text-center leading-tight" style={{ color: badgeText, opacity: 0.6 }}>
+            <span className="font-cormorant text-[11px] font-light italic relative z-10 px-1 text-center leading-tight" style={{ color: badgeText, opacity: 0.6 }}>
               {wine.rating || '—'}
             </span>
           )}
@@ -111,52 +103,52 @@ export default function WineCard({
 
       {/* Body */}
       <div className="min-w-0">
-        {/* Winery + wine name + vintage */}
-        <div className="flex items-baseline flex-wrap gap-x-1.5 gap-y-0 mb-1">
-          <span className="font-cormorant text-[17px] md:text-[18px] font-medium text-ink leading-tight">
-            {wine.brandName}
-          </span>
-          {wine.wineName && (
-            <span className="font-cormorant text-[17px] md:text-[18px] font-light italic text-[#3d3028] leading-tight">
-              {wine.wineName}
+        {/* Line 1: Winery · Varietal Label · Designation · Vintage + price */}
+        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+          <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0">
+            <span className="font-cormorant text-[17px] md:text-[18px] font-semibold text-ink leading-tight">
+              {wine.brandName}
             </span>
-          )}
-          {wine.vintage && (
-            <span className="font-cormorant text-[17px] md:text-[18px] font-light text-muted">
-              {wine.vintage}
-            </span>
-          )}
-        </div>
-
-        {/* Meta row: varietal pill + region */}
-        <div className="flex items-center gap-1.5 flex-wrap mb-2">
-          {wine.mainVarietal && (
-            <span className="text-[10px] font-medium tracking-[0.07em] uppercase text-[#7b2d3e] bg-[rgba(123,45,62,0.07)] border border-[rgba(123,45,62,0.18)] px-2 py-[2px] rounded-full">
-              {wine.mainVarietal}
-            </span>
-          )}
-          {wine.ava && (
-            <span className="text-[12px] text-muted">{wine.ava}</span>
-          )}
-          {/* Mobile price inline */}
-          {wine.price && wine.price !== 'N/A' && (
-            <span className="md:hidden font-cormorant text-[15px] font-normal text-ink/70 ml-auto">
-              {wine.price}
+            {wine.mainVarietal && (
+              <span className="font-cormorant text-[16px] md:text-[17px] text-muted leading-tight">
+                {wine.mainVarietal}
+              </span>
+            )}
+            {wine.wineName && wine.wineName !== wine.mainVarietal && (
+              <span className="font-cormorant text-[16px] md:text-[17px] font-light italic text-[#5a5044] leading-tight">
+                {wine.wineName}
+              </span>
+            )}
+            {wine.vintage && (
+              <span className="font-cormorant text-[15px] md:text-[16px] font-light text-muted">
+                {wine.vintage}
+              </span>
+            )}
+          </div>
+          {priceDisplay && (
+            <span className="font-cormorant text-[17px] md:text-[18px] font-normal text-ink/80 flex-shrink-0 leading-tight">
+              {priceDisplay}
             </span>
           )}
         </div>
 
-        {/* Review */}
+        {/* Line 2: Varietal Style · Appellation · State/Province */}
+        {metaParts.length > 0 && (
+          <div className="flex items-center flex-wrap gap-x-1 mb-1.5">
+            {metaParts.map((part, i) => (
+              <span key={i} className="text-[11px] text-muted">
+                {part}{i < metaParts.length - 1 && <span className="ml-1 opacity-40">·</span>}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Review preview */}
         {wine.review && (
-          <p className="text-[13px] leading-[1.65] text-[#5a5044] font-light line-clamp-4">
+          <p className="text-[12px] leading-[1.65] text-[#6a6055] font-light line-clamp-2">
             {wine.review}
           </p>
         )}
-      </div>
-
-      {/* Price column — desktop only */}
-      <div className="hidden md:flex flex-col items-end pt-0.5 flex-shrink-0">
-        <PriceDisplay price={wine.price} />
       </div>
     </button>
   );

@@ -23,6 +23,8 @@ export interface Filters {
   vintageMin: string;
   vintageMax: string;
   dateRange: string;
+  stateProvince: string;
+  specialDesignation: string;
 }
 
 export const emptyFilters: Filters = {
@@ -37,6 +39,8 @@ export const emptyFilters: Filters = {
   vintageMin: '',
   vintageMax: '',
   dateRange: '',
+  stateProvince: '',
+  specialDesignation: '',
 };
 
 const dateRangeOptions = [
@@ -572,6 +576,8 @@ export function ActiveChips({
     const opt = dateRangeOptions.find((o) => o.value === filters.dateRange);
     chips.push({ label: opt?.label ?? filters.dateRange, clear: () => onChange({ ...filters, dateRange: '' }) });
   }
+  if (filters.stateProvince) chips.push({ label: filters.stateProvince, clear: () => onChange({ ...filters, stateProvince: '' }) });
+  if (filters.specialDesignation) chips.push({ label: filters.specialDesignation, clear: () => onChange({ ...filters, specialDesignation: '' }) });
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -607,6 +613,37 @@ function sortTypes(types: string[]): string[] {
   });
 }
 
+// Collapsible wrapper that reveals nested FacetGroups
+function AdvancedSection({
+  hasSelection,
+  children,
+}: {
+  hasSelection: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={!open ? 'border-b border-warm-border' : ''}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-5 py-[13px] hover:bg-[rgba(0,0,0,0.03)] transition-colors text-left"
+      >
+        <span
+          className={`text-[11px] font-medium tracking-[0.1em] uppercase transition-colors ${
+            hasSelection ? 'text-gold' : 'text-muted'
+          }`}
+        >
+          Advanced
+        </span>
+        <ChevronDownIcon
+          className={`w-2.5 h-2.5 text-muted transition-transform flex-shrink-0 ${open ? '' : '-rotate-90'}`}
+        />
+      </button>
+      {open && <div>{children}</div>}
+    </div>
+  );
+}
+
 // ── Main Sidebar component ───────────────────────────────────────────────────
 
 export default function Sidebar({
@@ -619,6 +656,11 @@ export default function Sidebar({
   onChange: (f: Filters) => void;
 }) {
   const hasFilters = Object.values(filters).some((v) => v !== '');
+  const hasAdvanced = !!(
+    filters.vintageMin || filters.vintageMax ||
+    filters.ava || filters.region ||
+    filters.dateRange || filters.specialDesignation
+  );
 
   return (
     <div className="flex flex-col">
@@ -637,72 +679,30 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Facet groups */}
+      {/* 1. Wine Type */}
       {meta && (
-        <>
-          <FacetGroup
-            label="Wine Type"
-            hasSelection={!!filters.type}
-            defaultOpen={true}
-          >
-            <FacetList
-              options={sortTypes(meta.types)}
-              value={filters.type}
-              onChange={(v) => onChange({ ...filters, type: v })}
-            />
-          </FacetGroup>
-
-          <FacetGroup
-            label="Appellation"
-            hasSelection={!!filters.ava}
-            defaultOpen={true}
-          >
-            <AvaTreeFilter
-              value={filters.ava}
-              onChange={(v) => onChange({ ...filters, ava: v })}
-            />
-          </FacetGroup>
-
-          <FacetGroup
-            label="Home Region"
-            hasSelection={!!filters.region}
-            defaultOpen={false}
-          >
-            <VarietalCombobox
-              options={meta.regions}
-              value={filters.region}
-              onChange={(v) => onChange({ ...filters, region: v })}
-              placeholder="Search home regions…"
-            />
-          </FacetGroup>
-
-          <FacetGroup
-            label="Varietal"
-            hasSelection={!!filters.mainVarietal}
-            defaultOpen={false}
-          >
-            <VarietalCombobox
-              options={meta.varietals}
-              value={filters.mainVarietal}
-              onChange={(v) => onChange({ ...filters, mainVarietal: v })}
-              placeholder="Search varietals…"
-            />
-          </FacetGroup>
-        </>
+        <FacetGroup label="Wine Type" hasSelection={!!filters.type} defaultOpen={true}>
+          <FacetList
+            options={sortTypes(meta.types)}
+            value={filters.type}
+            onChange={(v) => onChange({ ...filters, type: v })}
+          />
+        </FacetGroup>
       )}
 
-      <FacetGroup
-        label="Price"
-        hasSelection={!!(filters.priceMin || filters.priceMax)}
-        defaultOpen={true}
-      >
-        <SidebarPriceSlider
-          priceMin={filters.priceMin}
-          priceMax={filters.priceMax}
-          onChange={(min, max) => onChange({ ...filters, priceMin: min, priceMax: max })}
-        />
-      </FacetGroup>
+      {/* 2. Varietal */}
+      {meta && (
+        <FacetGroup label="Varietal" hasSelection={!!filters.mainVarietal} defaultOpen={false}>
+          <VarietalCombobox
+            options={meta.varietals}
+            value={filters.mainVarietal}
+            onChange={(v) => onChange({ ...filters, mainVarietal: v })}
+            placeholder="Search varietals…"
+          />
+        </FacetGroup>
+      )}
 
+      {/* 3. Score */}
       <FacetGroup
         label="Score"
         hasSelection={!!(filters.scoreMin || filters.scoreMax)}
@@ -715,37 +715,99 @@ export default function Sidebar({
         />
       </FacetGroup>
 
+      {/* 4. Price */}
       <FacetGroup
-        label="Vintage"
-        hasSelection={!!(filters.vintageMin || filters.vintageMax)}
-        defaultOpen={false}
+        label="Price"
+        hasSelection={!!(filters.priceMin || filters.priceMax)}
+        defaultOpen={true}
       >
-        <SidebarVintageSlider
-          vintageMin={filters.vintageMin}
-          vintageMax={filters.vintageMax}
-          onChange={(min, max) => onChange({ ...filters, vintageMin: min, vintageMax: max })}
+        <SidebarPriceSlider
+          priceMin={filters.priceMin}
+          priceMax={filters.priceMax}
+          onChange={(min, max) => onChange({ ...filters, priceMin: min, priceMax: max })}
         />
       </FacetGroup>
 
-      <FacetGroup
-        label="Review Date"
-        hasSelection={!!filters.dateRange}
-        defaultOpen={false}
-      >
-        {dateRangeOptions.map((opt) => (
-          <FacetOption
-            key={opt.value}
-            label={opt.label}
-            selected={filters.dateRange === opt.value}
-            onSelect={() =>
-              onChange({
-                ...filters,
-                dateRange: filters.dateRange === opt.value ? '' : opt.value,
-              })
-            }
+      {/* 5. State/Province */}
+      {meta && meta.stateProvinces.length > 0 && (
+        <FacetGroup label="State/Province" hasSelection={!!filters.stateProvince} defaultOpen={false}>
+          <FacetList
+            options={meta.stateProvinces}
+            value={filters.stateProvince}
+            onChange={(v) => onChange({ ...filters, stateProvince: v })}
           />
-        ))}
-      </FacetGroup>
+        </FacetGroup>
+      )}
+
+      {/* Advanced — Vintage, Appellation, Home Region, Review Date, Special Designation */}
+      <AdvancedSection hasSelection={hasAdvanced}>
+        <FacetGroup
+          label="Vintage"
+          hasSelection={!!(filters.vintageMin || filters.vintageMax)}
+          defaultOpen={false}
+        >
+          <SidebarVintageSlider
+            vintageMin={filters.vintageMin}
+            vintageMax={filters.vintageMax}
+            onChange={(min, max) => onChange({ ...filters, vintageMin: min, vintageMax: max })}
+          />
+        </FacetGroup>
+
+        <FacetGroup
+          label="Appellation"
+          hasSelection={!!filters.ava}
+          defaultOpen={false}
+        >
+          <AvaTreeFilter
+            value={filters.ava}
+            onChange={(v) => onChange({ ...filters, ava: v })}
+          />
+        </FacetGroup>
+
+        <FacetGroup
+          label="Home Region"
+          hasSelection={!!filters.region}
+          defaultOpen={false}
+        >
+          <VarietalCombobox
+            options={meta?.regions ?? []}
+            value={filters.region}
+            onChange={(v) => onChange({ ...filters, region: v })}
+            placeholder="Search home regions…"
+          />
+        </FacetGroup>
+
+        <FacetGroup
+          label="Review Date"
+          hasSelection={!!filters.dateRange}
+          defaultOpen={false}
+        >
+          {dateRangeOptions.map((opt) => (
+            <FacetOption
+              key={opt.value}
+              label={opt.label}
+              selected={filters.dateRange === opt.value}
+              onSelect={() =>
+                onChange({ ...filters, dateRange: filters.dateRange === opt.value ? '' : opt.value })
+              }
+            />
+          ))}
+        </FacetGroup>
+
+        {meta && meta.specialDesignations.length > 0 && (
+          <FacetGroup
+            label="Special Designation"
+            hasSelection={!!filters.specialDesignation}
+            defaultOpen={false}
+          >
+            <FacetList
+              options={meta.specialDesignations}
+              value={filters.specialDesignation}
+              onChange={(v) => onChange({ ...filters, specialDesignation: v })}
+            />
+          </FacetGroup>
+        )}
+      </AdvancedSection>
     </div>
   );
 }

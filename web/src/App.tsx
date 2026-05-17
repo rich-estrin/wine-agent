@@ -64,6 +64,8 @@ export default function App() {
     if (filters.scoreMax) params.scoreMax = filters.scoreMax;
     if (filters.vintageMin) params.vintageMin = filters.vintageMin;
     if (filters.vintageMax) params.vintageMax = filters.vintageMax;
+    if (filters.stateProvince) params.stateProvince = filters.stateProvince;
+    if (filters.specialDesignation) params.specialDesignation = filters.specialDesignation;
     if (filters.dateRange) {
       const dateFilter = getDateFilter(filters.dateRange);
       if (dateFilter) params.publicationDate = dateFilter;

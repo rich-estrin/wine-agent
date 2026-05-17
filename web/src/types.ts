@@ -42,4 +42,6 @@ export interface Meta {
   regions: string[];
   types: string[];
   avaList: string[];
+  stateProvinces: string[];
+  specialDesignations: string[];
 }
