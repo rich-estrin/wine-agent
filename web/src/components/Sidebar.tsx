@@ -291,8 +291,7 @@ function VarietalCombobox({
           <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted pointer-events-none" />
         )}
         <ComboboxOptions
-          anchor="bottom start"
-          className="z-[200] mt-1 w-[var(--input-width)] max-h-56 overflow-y-auto bg-white border border-warm-border rounded-[3px] shadow-xl [--anchor-gap:4px]"
+          className="absolute z-[200] top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-warm-border rounded-[3px] shadow-xl"
         >
           {filtered.length === 0 ? (
             <div className="px-3 py-2 text-[11px] text-muted italic">No matches</div>

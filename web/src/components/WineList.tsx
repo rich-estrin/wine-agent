@@ -24,7 +24,7 @@ export default function WineList({
 }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 gap-2.5">
         {Array.from({ length: 10 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -41,7 +41,7 @@ export default function WineList({
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+    <div className="grid grid-cols-1 gap-2.5">
       {wines.map((wine) => (
         <WineCard
           key={`${wine.id}-${wine.wineName}`}
