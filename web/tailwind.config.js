@@ -11,7 +11,7 @@ export default {
         'wine-light': '#a84458',
         gold: '#b8924a',
         'gold-light': '#d4a85c',
-        muted: '#8a7f72',
+        muted: '#706660',
         'warm-border': '#ddd5c4',
         'sidebar-bg': '#1e1812',
       },

@@ -86,12 +86,20 @@ export default function WineDetail({
                 >
                   <XMarkIcon className="w-4 h-4" />
                 </button>
-                <h2 className="font-cormorant text-[22px] md:text-[26px] font-bold text-ink leading-tight pr-8">
-                  {wine.brandName}
-                  {wine.wineName && <> {wine.wineName}</>}
-                  {wine.ava && <> {wine.ava}</>}
-                  {wine.vintage && <span className="font-semibold"> {wine.vintage}</span>}
-                </h2>
+                <div className="pr-8">
+                  <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted mb-1">
+                    {wine.brandName}
+                  </p>
+                  <h2 className="font-cormorant text-[20px] md:text-[24px] font-bold text-ink leading-tight">
+                    {wine.wineName || wine.mainVarietal}
+                    {wine.ava && (
+                      <span className="font-light text-[17px] md:text-[20px]"> {wine.ava}</span>
+                    )}
+                    {wine.vintage && (
+                      <span className="font-normal text-[17px] md:text-[19px] text-muted"> {wine.vintage}</span>
+                    )}
+                  </h2>
+                </div>
               </div>
 
               {/* Two-column body — scrolls inside the fixed-height panel */}
@@ -135,35 +143,35 @@ export default function WineDetail({
                 <div className="order-1 md:order-2 flex-1 min-w-0 px-6 md:px-7 py-5">
                   <p className="text-[13px] font-medium text-ink mb-4">Tasting Notes</p>
 
-                  {/* Rating + review card */}
+                  {/* Rating + review card — only shown when there's something to display */}
+                  {(scoreStr || starCount !== null || wine.review || wine.specialDesignation || wine.publicationDate) && (
                   <div className="bg-[rgba(26,20,16,0.03)] border border-warm-border rounded-[4px] p-4 md:p-5">
                     {/* Mobile: score+meta row on top, review below. Desktop: score+meta left, review right. */}
                     <div className="flex flex-col md:flex-row md:gap-6">
 
-                      {/* Score + meta — horizontal on mobile (score left, designation/date right) */}
+                      {/* Score + meta — only rendered when at least one piece of meta exists */}
+                      {(scoreStr || starCount !== null || wine.specialDesignation || wine.publicationDate) && (
                       <div className="flex-shrink-0 flex md:block items-start gap-4 pb-4 md:pb-0 border-b md:border-b-0 border-warm-border/60">
-                        {/* Score */}
-                        <div className="flex-shrink-0">
-                          {starCount !== null ? (
-                            <>
-                              <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-2">Rating</p>
-                              <StarRow count={starCount} />
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-1">Rating</p>
-                              {scoreStr ? (
+                        {/* Score — only when a rating exists */}
+                        {(scoreStr || starCount !== null) && (
+                          <div className="flex-shrink-0">
+                            {starCount !== null ? (
+                              <>
+                                <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-2">Rating</p>
+                                <StarRow count={starCount} />
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-1">Rating</p>
                                 <p className="font-cormorant text-[48px] font-bold leading-none" style={{ color: '#b52b2b' }}>
                                   {scoreStr}
                                 </p>
-                              ) : (
-                                <p className="font-cormorant text-[16px] italic text-muted">{wine.rating || '—'}</p>
-                              )}
-                            </>
-                          )}
-                        </div>
+                              </>
+                            )}
+                          </div>
+                        )}
 
-                        {/* Designation + Published: right of score on mobile, below score on desktop */}
+                        {/* Designation + Published */}
                         <div className="flex-1 md:flex-none">
                           {wine.specialDesignation && (
                             <div className="md:mt-3">
@@ -179,8 +187,9 @@ export default function WineDetail({
                           )}
                         </div>
                       </div>
+                      )}
 
-                      {/* Review text — full width on mobile */}
+                      {/* Review text */}
                       {wine.review && (
                         <p className="flex-1 min-w-0 pt-4 md:pt-0 text-[14px] leading-[1.75] text-[#5a5044] font-light">
                           {wine.review}
@@ -188,6 +197,7 @@ export default function WineDetail({
                       )}
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             </>

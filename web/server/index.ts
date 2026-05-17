@@ -112,7 +112,7 @@ app.get('/api/meta', requireApiKey, (_req, res) => {
         regions: unique(wines.map((w) => w.region)),
         types: unique(wines.map((w) => w.type)),
         avaList: unique(wines.map((w) => w.ava)),
-        stateProvinces: unique(wines.map((w) => w.stateProvince)),
+        stateProvinces: unique(wines.map((w) => w.stateProvince)).filter((v) => v !== 'America'),
         specialDesignations: unique(wines.map((w) => w.specialDesignation)),
       };
     }

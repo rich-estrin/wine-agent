@@ -639,6 +639,11 @@ function AdvancedSection({
           className={`w-2.5 h-2.5 text-muted transition-transform flex-shrink-0 ${open ? '' : '-rotate-90'}`}
         />
       </button>
+      {!open && (
+        <p className="px-5 pb-3 text-[10px] text-muted opacity-50 leading-none -mt-1">
+          Vintage · Appellation · Region…
+        </p>
+      )}
       {open && <div>{children}</div>}
     </div>
   );
@@ -690,16 +695,19 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* 2. Varietal */}
+      {/* 2. Varietal — always-visible combobox, no toggle needed */}
       {meta && (
-        <FacetGroup label="Varietal" hasSelection={!!filters.mainVarietal} defaultOpen={false}>
+        <div className="border-b border-warm-border px-5 py-[13px]">
+          <p className={`text-[11px] font-medium tracking-[0.1em] uppercase mb-2 ${filters.mainVarietal ? 'text-gold' : 'text-muted'}`}>
+            Varietal
+          </p>
           <VarietalCombobox
             options={meta.varietals}
             value={filters.mainVarietal}
             onChange={(v) => onChange({ ...filters, mainVarietal: v })}
             placeholder="Search varietals…"
           />
-        </FacetGroup>
+        </div>
       )}
 
       {/* 3. Score */}
@@ -764,18 +772,18 @@ export default function Sidebar({
           />
         </FacetGroup>
 
-        <FacetGroup
-          label="Home Region"
-          hasSelection={!!filters.region}
-          defaultOpen={false}
-        >
+        {/* Home Region — always-visible combobox */}
+        <div className="border-b border-warm-border px-5 py-[13px]">
+          <p className={`text-[11px] font-medium tracking-[0.1em] uppercase mb-2 ${filters.region ? 'text-gold' : 'text-muted'}`}>
+            Home Region
+          </p>
           <VarietalCombobox
             options={meta?.regions ?? []}
             value={filters.region}
             onChange={(v) => onChange({ ...filters, region: v })}
             placeholder="Search home regions…"
           />
-        </FacetGroup>
+        </div>
 
         <FacetGroup
           label="Review Date"
