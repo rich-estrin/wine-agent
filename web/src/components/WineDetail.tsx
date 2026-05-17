@@ -38,6 +38,14 @@ function StarRow({ count }: { count: number }) {
   );
 }
 
+function formatDate(raw: string): string {
+  if (!raw) return '';
+  const datePart = raw.split(/[\sT]/)[0];
+  const d = new Date(datePart + 'T00:00:00');
+  if (isNaN(d.getTime())) return datePart;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -64,11 +72,11 @@ export default function WineDetail({
     <Dialog open={wine !== null} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-ink/40 backdrop-blur-[2px]" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-3 md:p-6">
-        <DialogPanel className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-[6px] bg-cream shadow-2xl">
+        <DialogPanel className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-[6px] bg-cream shadow-2xl">
           {wine && (
             <>
               {/* Title */}
-              <div className="relative px-6 md:px-8 pt-7 pb-5 border-b border-warm-border">
+              <div className="relative px-6 md:px-8 pt-6 pb-4 border-b border-warm-border flex-shrink-0">
                 <button
                   onClick={onClose}
                   className="absolute top-4 right-4 p-1.5 rounded-full text-muted hover:text-ink hover:bg-warm-border/60 transition-colors"
@@ -83,10 +91,10 @@ export default function WineDetail({
                 </h2>
               </div>
 
-              {/* Two-column body */}
-              <div className="flex flex-col md:flex-row">
-                {/* Left: Additional details */}
-                <div className="w-full md:w-[240px] flex-shrink-0 px-6 md:px-7 py-5 border-b md:border-b-0 md:border-r border-warm-border">
+              {/* Two-column body — scrolls inside the fixed-height panel */}
+              <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto">
+                {/* Left: Additional details — below tasting notes on mobile */}
+                <div className="order-2 md:order-1 w-full md:w-[240px] flex-shrink-0 px-6 md:px-7 py-5 border-t md:border-t-0 md:border-r border-warm-border">
                   <p className="text-[13px] font-medium text-ink mb-4">Additional details</p>
                   <div className="space-y-3">
                     {hasPrice && <DetailRow label="Price" value={`$${Math.round(priceNum)}`} />}
@@ -120,53 +128,58 @@ export default function WineDetail({
                   )}
                 </div>
 
-                {/* Right: Tasting notes */}
-                <div className="flex-1 min-w-0 px-6 md:px-7 py-5">
+                {/* Right: Tasting notes — first on mobile */}
+                <div className="order-1 md:order-2 flex-1 min-w-0 px-6 md:px-7 py-5">
                   <p className="text-[13px] font-medium text-ink mb-4">Tasting Notes</p>
 
                   {/* Rating + review card */}
                   <div className="bg-[rgba(26,20,16,0.03)] border border-warm-border rounded-[4px] p-4 md:p-5">
-                    <div className="flex gap-5 md:gap-6">
-                      {/* Score + meta */}
-                      <div className="flex-shrink-0">
-                        {starCount !== null ? (
-                          <>
-                            <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-2">Rating</p>
-                            <StarRow count={starCount} />
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-1">Rating</p>
-                            {scoreStr ? (
-                              <p
-                                className="font-cormorant text-[48px] font-bold leading-none"
-                                style={{ color: '#b52b2b' }}
-                              >
-                                {scoreStr}
-                              </p>
-                            ) : (
-                              <p className="font-cormorant text-[16px] italic text-muted">{wine.rating || '—'}</p>
-                            )}
-                          </>
-                        )}
+                    {/* Mobile: score+meta row on top, review below. Desktop: score+meta left, review right. */}
+                    <div className="flex flex-col md:flex-row md:gap-6">
 
-                        {wine.specialDesignation && (
-                          <div className="mt-3">
-                            <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-0.5">Designation</p>
-                            <p className="text-[13px] font-medium text-ink">{wine.specialDesignation}</p>
-                          </div>
-                        )}
-                        {wine.publicationDate && (
-                          <div className="mt-3">
-                            <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-0.5">Published</p>
-                            <p className="text-[13px] text-ink">{wine.publicationDate}</p>
-                          </div>
-                        )}
+                      {/* Score + meta — horizontal on mobile (score left, designation/date right) */}
+                      <div className="flex-shrink-0 flex md:block items-start gap-4 pb-4 md:pb-0 border-b md:border-b-0 border-warm-border/60">
+                        {/* Score */}
+                        <div className="flex-shrink-0">
+                          {starCount !== null ? (
+                            <>
+                              <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-2">Rating</p>
+                              <StarRow count={starCount} />
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-1">Rating</p>
+                              {scoreStr ? (
+                                <p className="font-cormorant text-[48px] font-bold leading-none" style={{ color: '#b52b2b' }}>
+                                  {scoreStr}
+                                </p>
+                              ) : (
+                                <p className="font-cormorant text-[16px] italic text-muted">{wine.rating || '—'}</p>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {/* Designation + Published: right of score on mobile, below score on desktop */}
+                        <div className="flex-1 md:flex-none">
+                          {wine.specialDesignation && (
+                            <div className="md:mt-3">
+                              <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-0.5">Designation</p>
+                              <p className="text-[13px] font-medium text-ink">{wine.specialDesignation}</p>
+                            </div>
+                          )}
+                          {wine.publicationDate && (
+                            <div className="mt-3">
+                              <p className="text-[9px] font-medium tracking-[0.1em] uppercase text-muted mb-0.5">Published</p>
+                              <p className="text-[13px] text-ink">{formatDate(wine.publicationDate)}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Review text */}
+                      {/* Review text — full width on mobile */}
                       {wine.review && (
-                        <p className="flex-1 min-w-0 text-[14px] leading-[1.75] text-[#5a5044] font-light">
+                        <p className="flex-1 min-w-0 pt-4 md:pt-0 text-[14px] leading-[1.75] text-[#5a5044] font-light">
                           {wine.review}
                         </p>
                       )}
