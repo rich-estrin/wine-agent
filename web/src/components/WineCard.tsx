@@ -128,16 +128,9 @@ export default function WineCard({
           )}
         </div>
 
-        {/* Review preview */}
-        {wine.review && (
-          <p className="text-[12px] leading-[1.65] text-[#6a6055] font-light line-clamp-2 mb-0.5">
-            {wine.review}
-          </p>
-        )}
-
         {/* Line 2: Varietal Style · Appellation · State/Province — price right-aligned */}
         {showMetaRow && (
-          <div className="flex items-center gap-x-1 mb-0.5">
+          <div className="flex items-center gap-x-1 mb-1">
             <div className="flex items-center flex-wrap gap-x-1 flex-1 min-w-0">
               {metaParts.map((part, i) => (
                 <span key={i} className="text-[11px] text-muted">
@@ -151,6 +144,13 @@ export default function WineCard({
               </span>
             )}
           </div>
+        )}
+
+        {/* Review preview */}
+        {wine.review && (
+          <p className="text-[12px] leading-[1.65] text-[#6a6055] font-light line-clamp-2">
+            {wine.review}
+          </p>
         )}
       </div>
     </button>
