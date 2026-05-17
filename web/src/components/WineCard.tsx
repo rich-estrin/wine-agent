@@ -71,7 +71,6 @@ export default function WineCard({
   const varietyStylePart = wine.varietyStyle && wine.varietyStyle !== wine.mainVarietal
     ? wine.varietyStyle : null;
   const metaParts = [varietyStylePart, wine.ava, wine.stateProvince].filter(Boolean) as string[];
-  const showMetaRow = metaParts.length > 0 || !!priceDisplay;
 
   return (
     <button
@@ -106,43 +105,43 @@ export default function WineCard({
 
       {/* Body */}
       <div className="min-w-0">
-        {/* Line 1: Winery · Varietal · Designation · Vintage */}
-        <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0 mb-0.5">
-          <span className="font-cormorant text-[17px] md:text-[18px] font-semibold text-ink leading-tight">
-            {wine.brandName}
-          </span>
-          {wine.mainVarietal && (
-            <span className="font-cormorant text-[16px] md:text-[17px] text-muted leading-tight">
-              {wine.mainVarietal}
+        {/* Line 1: Winery · Varietal · Designation · Vintage + Price */}
+        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+          <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0">
+            <span className="font-cormorant text-[17px] md:text-[18px] font-semibold text-ink leading-tight">
+              {wine.brandName}
             </span>
-          )}
-          {wine.wineName && wine.wineName !== wine.mainVarietal && wine.wineName !== wine.varietyStyle && (
-            <span className="font-cormorant text-[16px] md:text-[17px] font-light italic text-[#5a5044] leading-tight">
-              {wine.wineName}
-            </span>
-          )}
-          {wine.vintage && (
-            <span className="font-cormorant text-[15px] md:text-[16px] font-light text-muted">
-              {wine.vintage}
+            {wine.mainVarietal && (
+              <span className="font-cormorant text-[16px] md:text-[17px] text-muted leading-tight">
+                {wine.mainVarietal}
+              </span>
+            )}
+            {wine.wineName && wine.wineName !== wine.mainVarietal && wine.wineName !== wine.varietyStyle && (
+              <span className="font-cormorant text-[16px] md:text-[17px] font-light italic text-[#5a5044] leading-tight">
+                {wine.wineName}
+              </span>
+            )}
+            {wine.vintage && (
+              <span className="font-cormorant text-[15px] md:text-[16px] font-light text-muted">
+                {wine.vintage}
+              </span>
+            )}
+          </div>
+          {priceDisplay && (
+            <span className="font-cormorant text-[17px] md:text-[18px] font-normal text-ink/80 flex-shrink-0 leading-tight">
+              {priceDisplay}
             </span>
           )}
         </div>
 
-        {/* Line 2: Varietal Style · Appellation · State/Province — price right-aligned */}
-        {showMetaRow && (
-          <div className="flex items-center gap-x-1 mb-1">
-            <div className="flex items-center flex-wrap gap-x-1 flex-1 min-w-0">
-              {metaParts.map((part, i) => (
-                <span key={i} className="text-[11px] text-muted">
-                  {part}{i < metaParts.length - 1 && <span className="ml-1 opacity-40">·</span>}
-                </span>
-              ))}
-            </div>
-            {priceDisplay && (
-              <span className="font-cormorant text-[16px] md:text-[17px] font-normal text-ink/80 flex-shrink-0 ml-2 leading-tight">
-                {priceDisplay}
+        {/* Line 2: Varietal Style · Appellation · State/Province */}
+        {metaParts.length > 0 && (
+          <div className="flex items-center flex-wrap gap-x-1 mb-1">
+            {metaParts.map((part, i) => (
+              <span key={i} className="text-[11px] text-muted">
+                {part}{i < metaParts.length - 1 && <span className="ml-1 opacity-40">·</span>}
               </span>
-            )}
+            ))}
           </div>
         )}
 
