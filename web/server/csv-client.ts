@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname } from 'path';
 import { parse } from 'csv-parse/sync';
-import type { Wine } from '../../mcp/src/types.js';
+import type { Wine } from '../src/types.js';
 
 const DEFAULT_CACHE_PATH = './cache/wines.json';
 const CACHE_VERSION = 4; // bump when parse/normalize logic changes

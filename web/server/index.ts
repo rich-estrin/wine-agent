@@ -3,9 +3,7 @@ import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { CSVClient } from './csv-client.js';
 import { WPClient, mapWPReview, type WPReview } from './wp-client.js';
-import { searchWines } from '../../mcp/dist/tools/search.js';
-import { filterWines } from '../../mcp/dist/tools/filter.js';
-import { getWineDetails } from '../../mcp/dist/tools/get-wine.js';
+import { searchWines, filterWines, getWineDetails } from './wine-search.js';
 
 const app = express();
 app.disable('x-powered-by');
