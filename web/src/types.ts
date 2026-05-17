@@ -17,6 +17,12 @@ export interface Wine {
   purchasedProvided: string;
   temp: string;
   hyperlink: string;
+  specialDesignation: string;
+  alcohol: string;
+  closure: string;
+  stateProvince: string;
+  source: string;
+  reviewer: string;
 }
 
 export function formatPrice(price: string): string {

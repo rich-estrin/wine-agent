@@ -4,7 +4,7 @@ import { parse } from 'csv-parse/sync';
 import type { Wine } from '../../mcp/src/types.js';
 
 const DEFAULT_CACHE_PATH = './cache/wines.json';
-const CACHE_VERSION = 3; // bump when parse/normalize logic changes
+const CACHE_VERSION = 4; // bump when parse/normalize logic changes
 
 // Canonical spellings for known data-entry typos
 const AVA_CORRECTIONS: Record<string, string> = {
@@ -126,6 +126,12 @@ export class CSVClient {
       purchasedProvided: '',
       temp: '',
       hyperlink: (row['Permalink'] ?? '').trim(),
+      specialDesignation: (row['Review Input => Special Designation'] ?? '').trim(),
+      alcohol: (row['Review Input => Alcohol Percentage'] ?? '').trim(),
+      closure: (row['Review Input => Closure'] ?? '').trim(),
+      stateProvince: toTitleCase(row['Review Input => State or Province'] ?? ''),
+      source: (row['Review Input => Source'] ?? '').trim(),
+      reviewer: (row['Review Input => Reviewer'] ?? '').trim(),
     };
   }
 
