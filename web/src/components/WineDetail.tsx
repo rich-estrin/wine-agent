@@ -87,16 +87,16 @@ export default function WineDetail({
                   <XMarkIcon className="w-4 h-4" />
                 </button>
                 <div className="pr-8">
-                  <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted mb-1">
+                  <p className="font-cormorant text-[22px] md:text-[26px] font-bold text-ink leading-tight">
                     {wine.brandName}
                   </p>
-                  <h2 className="font-cormorant text-[20px] md:text-[24px] font-bold text-ink leading-tight">
+                  <h2 className="font-cormorant text-[20px] md:text-[24px] font-normal text-ink leading-tight">
                     {wine.wineName || wine.mainVarietal}
                     {wine.ava && (
-                      <span className="font-light text-[17px] md:text-[20px]"> {wine.ava}</span>
+                      <span className="font-light text-[17px] md:text-[20px] text-[#5a5044]"> {wine.ava}</span>
                     )}
                     {wine.vintage && (
-                      <span className="font-normal text-[17px] md:text-[19px] text-muted"> {wine.vintage}</span>
+                      <span className="font-light text-[17px] md:text-[19px] text-muted"> {wine.vintage}</span>
                     )}
                   </h2>
                 </div>
