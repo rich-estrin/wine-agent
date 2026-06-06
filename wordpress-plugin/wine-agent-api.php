@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.12.0
+ * Version: 2.13.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -28,6 +28,23 @@ function wine_agent_check_auth( WP_REST_Request $request ): bool {
     return hash_equals( $stored_key, (string) $provided_key );
 }
 
+/**
+ * Normalize the "Published Date" ACF Date Picker value to ISO Y-m-d.
+ * ACF stores date pickers as Ymd (e.g. 20141230); other formats are parsed
+ * best-effort. Returns '' when empty/unparseable so callers can fall back.
+ */
+function wine_agent_format_acf_date( $raw ): string {
+    $raw = trim( (string) $raw );
+    if ( $raw === '' ) {
+        return '';
+    }
+    if ( preg_match( '/^\d{8}$/', $raw ) ) {
+        return substr( $raw, 0, 4 ) . '-' . substr( $raw, 4, 2 ) . '-' . substr( $raw, 6, 2 );
+    }
+    $ts = strtotime( $raw );
+    return $ts ? gmdate( 'Y-m-d', $ts ) : $raw;
+}
+
 function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
 
@@ -50,7 +67,8 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
         SELECT
             p.ID                                                   AS id,
             p.post_title                                           AS brand_name,
-            p.post_date                                            AS publication_date,
+            p.post_date                                            AS entry_date,
+            MAX( CASE WHEN pm.meta_key = 'publishedDate'  THEN pm.meta_value END ) AS published_date,
             MAX( CASE WHEN pm.meta_key = 'review_content' THEN pm.meta_value END ) AS tasting_note,
             MAX( CASE WHEN pm.meta_key = 'rating'         THEN pm.meta_value END ) AS rating,
             MAX( CASE WHEN pm.meta_key = 'price'          THEN pm.meta_value END ) AS price,
@@ -60,7 +78,13 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
             MAX( CASE WHEN pm.meta_key = 'variety_style'  THEN pm.meta_value END ) AS variety_style,
             MAX( CASE WHEN pm.meta_key = 'home_region'    THEN pm.meta_value END ) AS home_region,
             MAX( CASE WHEN pm.meta_key = 'appellation'    THEN pm.meta_value END ) AS appellation,
-            MAX( CASE WHEN pm.meta_key = 'varietal_label' THEN pm.meta_value END ) AS variety
+            MAX( CASE WHEN pm.meta_key = 'varietal_label' THEN pm.meta_value END ) AS variety,
+            MAX( CASE WHEN pm.meta_key = 'special_designation' THEN pm.meta_value END ) AS special_designation,
+            MAX( CASE WHEN pm.meta_key = 'alcohol_percentage'  THEN pm.meta_value END ) AS alcohol_percentage,
+            MAX( CASE WHEN pm.meta_key = 'closure'             THEN pm.meta_value END ) AS closure,
+            MAX( CASE WHEN pm.meta_key = 'state_or_province'   THEN pm.meta_value END ) AS state_or_province,
+            MAX( CASE WHEN pm.meta_key = 'source'              THEN pm.meta_value END ) AS source,
+            MAX( CASE WHEN pm.meta_key = 'reviewer'            THEN pm.meta_value END ) AS reviewer
         FROM {$wpdb->posts} p
         JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID
         WHERE p.post_type   = 'reviews'
@@ -91,7 +115,14 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
             'variety'          => (string) ( $row['variety'] ?: $row['variety_style'] ),
             'region'           => (string) $row['home_region'],
             'appellation'      => (string) $row['appellation'],
-            'publication_date' => (string) $row['publication_date'],
+            'publication_date' => wine_agent_format_acf_date( $row['published_date'] )
+                               ?: substr( (string) $row['entry_date'], 0, 10 ),
+            'special_designation' => (string) $row['special_designation'],
+            'alcohol'          => (string) $row['alcohol_percentage'],
+            'closure'          => (string) $row['closure'],
+            'state_or_province' => (string) $row['state_or_province'],
+            'source'           => (string) $row['source'],
+            'reviewer'         => (string) $row['reviewer'],
         ];
     }, $rows );
 
@@ -129,7 +160,14 @@ function wine_agent_build_review_payload( int $post_id ): array {
         'variety'          => (string) get_post_meta( $post_id, 'varietal_label', true ),
         'region'           => (string) get_post_meta( $post_id, 'home_region', true ),
         'appellation'      => (string) get_post_meta( $post_id, 'appellation', true ),
-        'publication_date' => $post->post_date,
+        'publication_date' => wine_agent_format_acf_date( get_post_meta( $post_id, 'publishedDate', true ) )
+                           ?: substr( (string) $post->post_date, 0, 10 ),
+        'special_designation' => (string) get_post_meta( $post_id, 'special_designation', true ),
+        'alcohol'          => (string) get_post_meta( $post_id, 'alcohol_percentage', true ),
+        'closure'          => (string) get_post_meta( $post_id, 'closure', true ),
+        'state_or_province' => (string) get_post_meta( $post_id, 'state_or_province', true ),
+        'source'           => (string) get_post_meta( $post_id, 'source', true ),
+        'reviewer'         => (string) get_post_meta( $post_id, 'reviewer', true ),
     ];
 }
 

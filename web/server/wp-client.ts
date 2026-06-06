@@ -21,6 +21,14 @@ function toTitleCase(s: string): string {
   return (s ?? '').trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// The plugin already returns ISO Y-m-d, but normalize defensively in case an
+// ACF date picker value arrives as raw Ymd (e.g. "20141230").
+function normalizePubDate(raw: string): string {
+  const v = (raw ?? '').trim();
+  if (/^\d{8}$/.test(v)) return `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}`;
+  return v;
+}
+
 export interface WPReview {
   id: number;
   brand_name: string;
@@ -36,6 +44,12 @@ export interface WPReview {
   region: string;
   appellation: string;
   publication_date: string;
+  special_designation: string;
+  alcohol: string;
+  closure: string;
+  state_or_province: string;
+  source: string;
+  reviewer: string;
 }
 
 export function mapWPReview(row: WPReview): Wine {
@@ -63,18 +77,18 @@ export function mapWPReview(row: WPReview): Wine {
     type:              toTitleCase(row.wine_type ?? ''),
     mainVarietal:      toTitleCase(variety),
     varietyStyle:      toTitleCase(varietyStyle),
-    publicationDate:   (row.publication_date ?? '').trim(),
+    publicationDate:   normalizePubDate(row.publication_date ?? ''),
     tastingDate:       '',
     setting:           '',
     purchasedProvided: '',
     temp:              '',
     hyperlink:         '',
-    specialDesignation: '',
-    alcohol:           '',
-    closure:           '',
-    stateProvince:     '',
-    source:            '',
-    reviewer:          '',
+    specialDesignation: (row.special_designation ?? '').trim(),
+    alcohol:           (row.alcohol ?? '').trim(),
+    closure:           (row.closure ?? '').trim(),
+    stateProvince:     toTitleCase(row.state_or_province ?? ''),
+    source:            (row.source ?? '').trim(),
+    reviewer:          (row.reviewer ?? '').trim(),
   };
 }
 
