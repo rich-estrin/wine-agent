@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.13.0
+ * Version: 2.13.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -84,7 +84,7 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
             MAX( CASE WHEN pm.meta_key = 'closure'             THEN pm.meta_value END ) AS closure,
             MAX( CASE WHEN pm.meta_key = 'state_or_province'   THEN pm.meta_value END ) AS state_or_province,
             MAX( CASE WHEN pm.meta_key = 'source'              THEN pm.meta_value END ) AS source,
-            MAX( CASE WHEN pm.meta_key = 'reviewer'            THEN pm.meta_value END ) AS reviewer
+            MAX( CASE WHEN pm.meta_key = 'reviewer_user'       THEN pm.meta_value END ) AS reviewer
         FROM {$wpdb->posts} p
         JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID
         WHERE p.post_type   = 'reviews'
@@ -167,7 +167,7 @@ function wine_agent_build_review_payload( int $post_id ): array {
         'closure'          => (string) get_post_meta( $post_id, 'closure', true ),
         'state_or_province' => (string) get_post_meta( $post_id, 'state_or_province', true ),
         'source'           => (string) get_post_meta( $post_id, 'source', true ),
-        'reviewer'         => (string) get_post_meta( $post_id, 'reviewer', true ),
+        'reviewer'         => (string) get_post_meta( $post_id, 'reviewer_user', true ),
     ];
 }
 
