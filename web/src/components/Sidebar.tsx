@@ -8,6 +8,7 @@ import {
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { Meta } from '../types';
 import AvaTreeFilter from './AvaTreeFilter';
+import RegionTreeFilter from './RegionTreeFilter';
 
 // ── Types & utilities (re-exported for App.tsx) ──────────────────────────────
 
@@ -771,18 +772,18 @@ export default function Sidebar({
           />
         </FacetGroup>
 
-        {/* Home Region — always-visible combobox */}
-        <div className="border-b border-warm-border px-5 py-[13px]">
-          <p className={`text-[11px] font-medium tracking-[0.1em] uppercase mb-2 ${filters.region ? 'text-gold' : 'text-muted'}`}>
-            Home Region
-          </p>
-          <VarietalCombobox
-            options={meta?.regions ?? []}
+        {/* Home Region — nested tree grouped by state */}
+        <FacetGroup
+          label="Home Region"
+          hasSelection={!!filters.region}
+          defaultOpen={false}
+        >
+          <RegionTreeFilter
+            regions={meta?.regions ?? []}
             value={filters.region}
             onChange={(v) => onChange({ ...filters, region: v })}
-            placeholder="Search home regions…"
           />
-        </div>
+        </FacetGroup>
 
         <FacetGroup
           label="Review Date"

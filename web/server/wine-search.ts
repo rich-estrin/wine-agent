@@ -1,6 +1,11 @@
 import type { Wine } from '../src/types.js';
 import { parsePrice, parseRating, parseDate, parseFilterValue, compareValues, sortWines } from './wine-utils.js';
 
+// Fields populated from single-select dropdowns / grouped trees. These match
+// exactly (case-insensitive) against a comma-separated OR list rather than by
+// substring, fixing e.g. varietal "Ca" matching every Cabernet.
+const EXACT_MATCH_FIELDS = new Set(['mainVarietal', 'type', 'region', 'stateProvince', 'specialDesignation']);
+
 export function searchWines(
   wines: Wine[],
   params: { query: string; limit?: number; sort_by?: string; sort_order?: 'asc' | 'desc' },
@@ -50,6 +55,15 @@ function matchesFilter(wine: Wine, key: string, filterValue: string): boolean {
   if (key === 'ava') {
     const allowed = filterValue.split(',').map((s) => s.trim().toLowerCase());
     return allowed.includes(wine.ava.toLowerCase());
+  }
+  // Dropdown-selected fields: exact, case-insensitive match against a
+  // comma-separated OR list (single selections are a 1-element list). This is
+  // what makes "Cabernet Sauvignon" not also match "Cabernet Franc", and lets
+  // grouped options (region by state, designation groups) match any member.
+  if (EXACT_MATCH_FIELDS.has(key)) {
+    const wineValue = ((wine[key as keyof Wine] as string) ?? '').toLowerCase();
+    const allowed = filterValue.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    return allowed.includes(wineValue);
   }
   if (key === 'vintageMin') {
     const v = parseInt(wine.vintage);

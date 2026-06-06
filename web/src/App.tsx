@@ -5,6 +5,8 @@ import type { SearchParams, ChatMessage } from './api';
 import { searchWines, fetchMeta, sendChatMessage } from './api';
 import SearchBar from './components/SearchBar';
 import { expandAva } from './data/ava-tree';
+import { expandRegion } from './data/region-tree';
+import { expandDesignation } from './data/designation-groups';
 import Sidebar, {
   type Filters,
   emptyFilters,
@@ -56,7 +58,7 @@ export default function App() {
     if (query.trim()) params.q = query.trim();
     if (filters.mainVarietal) params.mainVarietal = filters.mainVarietal;
     if (filters.ava) params.ava = expandAva(filters.ava).join(',');
-    if (filters.region) params.region = filters.region;
+    if (filters.region) params.region = expandRegion(filters.region, meta?.regions ?? []).join(',');
     if (filters.type) params.type = filters.type;
     if (filters.priceMin) params.priceMin = filters.priceMin;
     if (filters.priceMax) params.priceMax = filters.priceMax;
@@ -65,13 +67,13 @@ export default function App() {
     if (filters.vintageMin) params.vintageMin = filters.vintageMin;
     if (filters.vintageMax) params.vintageMax = filters.vintageMax;
     if (filters.stateProvince) params.stateProvince = filters.stateProvince;
-    if (filters.specialDesignation) params.specialDesignation = filters.specialDesignation;
+    if (filters.specialDesignation) params.specialDesignation = expandDesignation(filters.specialDesignation).join(',');
     if (filters.dateRange) {
       const dateFilter = getDateFilter(filters.dateRange);
       if (dateFilter) params.publicationDate = dateFilter;
     }
     return params;
-  }, [query, filters, sortBy, sortOrder]);
+  }, [query, filters, sortBy, sortOrder, meta]);
 
   // Handle chat message sending
   const handleChatSend = async (content: string) => {

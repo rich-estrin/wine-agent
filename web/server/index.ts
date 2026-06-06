@@ -4,6 +4,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CSVClient } from './csv-client.js';
 import { WPClient, mapWPReview, type WPReview } from './wp-client.js';
 import { searchWines, filterWines, getWineDetails } from './wine-search.js';
+import { designationGroupLabels } from '../src/data/designation-groups.js';
+
+// Known junk varietal values (data-entry typos) to keep out of the dropdown.
+const VARIETAL_EXCLUSIONS = new Set(['Ca']);
 
 const app = express();
 app.disable('x-powered-by');
@@ -108,12 +112,12 @@ app.get('/api/meta', requireApiKey, (_req, res) => {
           (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
       metaCache = {
-        varietals: unique(wines.map((w) => w.mainVarietal)),
+        varietals: unique(wines.map((w) => w.mainVarietal)).filter((v) => !VARIETAL_EXCLUSIONS.has(v)),
         regions: unique(wines.map((w) => w.region)),
         types: unique(wines.map((w) => w.type)),
         avaList: unique(wines.map((w) => w.ava)),
         stateProvinces: unique(wines.map((w) => w.stateProvince)),
-        specialDesignations: unique(wines.map((w) => w.specialDesignation)),
+        specialDesignations: designationGroupLabels(unique(wines.map((w) => w.specialDesignation))),
       };
     }
     res.json(metaCache);
