@@ -72,10 +72,10 @@ export default function WineDetail({
   return (
     <>
     {wine && <ShelfTalker wine={wine} />}
-    <Dialog open={wine !== null} onClose={onClose} className="relative z-50">
+    <Dialog open={wine !== null} onClose={onClose} className="relative" style={{ zIndex: 2147483000 }}>
       <div className="fixed inset-0 bg-ink/40 backdrop-blur-[2px]" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-3 md:p-6">
-        <DialogPanel className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-[6px] bg-cream shadow-2xl">
+        <DialogPanel className="w-full max-w-3xl max-h-[92dvh] flex flex-col rounded-[6px] bg-cream shadow-2xl">
           {wine && (
             <>
               {/* Title */}
