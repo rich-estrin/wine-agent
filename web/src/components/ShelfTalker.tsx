@@ -1,20 +1,13 @@
 import type { Wine } from '../types';
 import { numericScore } from '../types';
+import nwrLogo from '../assets/nwr-logo.svg?raw';
 
 function formatShelfDate(raw: string): string {
   if (!raw) return '';
   const datePart = raw.split(/[\sT]/)[0];
   const d = new Date(datePart + 'T00:00:00');
   if (isNaN(d.getTime())) return datePart;
-  return d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
-}
-
-function toInitials(name: string): string {
-  if (!name) return '';
-  const trimmed = name.trim();
-  // Already looks like initials (e.g. "S.S." or short single token)
-  if (trimmed.length <= 5 || !trimmed.includes(' ')) return trimmed;
-  return trimmed.split(/\s+/).map(p => p[0].toUpperCase() + '.').join('');
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 function parseStarRating(rating: string): number | null {
@@ -28,31 +21,38 @@ export default function ShelfTalker({ wine }: { wine: Wine }) {
   const scoreStr = numericScore(wine.rating ?? '');
   const starCount = parseStarRating(wine.rating ?? '');
 
+  // Title: brand + vintage + wine name (or varietal)
   const titleParts: string[] = [];
   if (wine.brandName) titleParts.push(wine.brandName);
   if (wine.vintage) titleParts.push(wine.vintage);
   const wineLabel = wine.wineName || wine.mainVarietal;
   if (wineLabel) titleParts.push(wineLabel);
-  if (wine.ava) titleParts.push(`(${wine.ava})`);
   const title = titleParts.join(' ');
 
-  const reviewer = toInitials(wine.reviewer ?? '');
+  // Origin line: "{Type} wine from {State}"
+  const type = (wine.type || '').trim();
+  const state = (wine.stateProvince || '').trim();
+  const originLine = type
+    ? `${type} wine${state ? ` from ${state}` : ''}`
+    : '';
+
+  const reviewer = (wine.reviewer ?? '').trim();
   const pubDate = wine.publicationDate ? formatShelfDate(wine.publicationDate) : '';
 
   return (
     <div id="shelf-talker" aria-hidden="true">
       <div id="shelf-talker-inner">
 
-        {/* Score */}
-        {scoreStr && (
-          <div className="st-score-block">
-            <div className="st-score-number">{scoreStr}</div>
-            <div className="st-score-label">POINTS</div>
-          </div>
-        )}
-
-        {starCount !== null && (
-          <div className="st-score-block">
+        {/* Header: logo + score */}
+        <div className="st-header">
+          <div className="st-logo" dangerouslySetInnerHTML={{ __html: nwrLogo }} />
+          {scoreStr && (
+            <div className="st-score">
+              <span className="st-score-number">{scoreStr}</span>
+              <span className="st-score-pts">pts</span>
+            </div>
+          )}
+          {scoreStr === '' && starCount !== null && (
             <div className="st-stars">
               {[1, 2, 3, 4, 5].map((i) => {
                 const fill = i <= starCount ? 1 : i - 0.5 <= starCount ? 0.5 : 0;
@@ -63,8 +63,15 @@ export default function ShelfTalker({ wine }: { wine: Wine }) {
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Title */}
+        {title && <div className="st-title">{title}</div>}
+
+        {/* Appellation + origin */}
+        {wine.ava && <div className="st-appellation">{wine.ava}</div>}
+        {originLine && <div className="st-origin">{originLine}</div>}
 
         {/* Designation badge */}
         {wine.specialDesignation && (
@@ -73,20 +80,15 @@ export default function ShelfTalker({ wine }: { wine: Wine }) {
           </div>
         )}
 
-        {/* Wine title */}
-        <div className="st-title">{title}</div>
+        {/* Review */}
+        {wine.review && <p className="st-review">{wine.review}</p>}
 
-        {/* Review text */}
-        {wine.review && (
-          <p className="st-review">{wine.review}</p>
-        )}
-
-        {/* Byline */}
+        {/* Footer: reviewer + date */}
         {(reviewer || pubDate) && (
           <div className="st-byline">
-            {reviewer && <strong>— {reviewer}</strong>}
-            {reviewer && pubDate && '  '}
-            {pubDate && <em>Published {pubDate}</em>}
+            {reviewer}
+            {reviewer && pubDate && ' · '}
+            {pubDate}
           </div>
         )}
 
