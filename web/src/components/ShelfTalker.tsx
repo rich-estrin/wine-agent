@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { Wine } from '../types';
 import { numericScore } from '../types';
 import nwrLogo from '../assets/nwr-logo.svg?raw';
@@ -39,7 +40,7 @@ export default function ShelfTalker({ wine }: { wine: Wine }) {
   const reviewer = (wine.reviewer ?? '').trim();
   const pubDate = wine.publicationDate ? formatShelfDate(wine.publicationDate) : '';
 
-  return (
+  return createPortal(
     <div id="shelf-talker" aria-hidden="true">
       <div id="shelf-talker-inner">
 
@@ -93,6 +94,7 @@ export default function ShelfTalker({ wine }: { wine: Wine }) {
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

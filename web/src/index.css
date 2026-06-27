@@ -87,19 +87,15 @@
     margin: 0;
   }
 
-  /* Hide everything; reveal only the shelf talker */
-  body * {
-    visibility: hidden !important;
-  }
-  #shelf-talker,
-  #shelf-talker * {
-    visibility: visible !important;
+  /* Remove every other element from the print flow so only the shelf
+     talker prints (visibility:hidden keeps layout boxes → blank pages). */
+  body > *:not(#shelf-talker) {
+    display: none !important;
   }
 
   #shelf-talker {
     display: block !important;
-    position: fixed !important;
-    inset: 0;
+    position: static;
     width: 3.5in;
     height: 5in;
     overflow: hidden;
