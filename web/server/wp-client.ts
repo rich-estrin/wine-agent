@@ -17,8 +17,11 @@ function normalizeAva(raw: string): string {
   return AVA_CORRECTIONS[key] ?? (raw ?? '').trim();
 }
 
+// Capitalize first letter of each word; unicode-safe (avoids uppercasing chars
+// after accented letters like è, ô, ñ which \b treats as word boundaries —
+// e.g. "mourvèdre" → "Mourvèdre", not "MourvèDre").
 function toTitleCase(s: string): string {
-  return (s ?? '').trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return (s ?? '').trim().toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep, c) => sep + c.toUpperCase());
 }
 
 // The plugin already returns ISO Y-m-d, but normalize defensively in case an
