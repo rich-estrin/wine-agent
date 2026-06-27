@@ -24,6 +24,19 @@ function toTitleCase(s: string): string {
   return (s ?? '').trim().toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep, c) => sep + c.toUpperCase());
 }
 
+// State/province codes and compass abbreviations that should stay uppercase
+// inside region names (e.g. "Seattle & NW (WA)", not "Seattle & Nw (wa)").
+const GEO_ABBREVIATIONS = new Set([
+  'bc', 'wa', 'or', 'id', 'ca', 'ab', 'mt', 'nv',
+  'sw', 'nw', 'se', 'ne',
+]);
+
+function normalizeRegion(raw: string): string {
+  return toTitleCase((raw ?? '').trim()).replace(/[A-Za-z]+/g, (word) =>
+    GEO_ABBREVIATIONS.has(word.toLowerCase()) ? word.toUpperCase() : word
+  );
+}
+
 // The plugin already returns ISO Y-m-d, but normalize defensively in case an
 // ACF date picker value arrives as raw Ymd (e.g. "20141230").
 function normalizePubDate(raw: string): string {
@@ -76,7 +89,7 @@ export function mapWPReview(row: WPReview): Wine {
     price,
     rating:            (row.rating ?? '').trim(),
     review:            (row.tasting_note ?? '').trim(),
-    region:            toTitleCase(row.region ?? ''),
+    region:            normalizeRegion(row.region ?? ''),
     type:              toTitleCase(row.wine_type ?? ''),
     mainVarietal:      toTitleCase(variety),
     varietyStyle:      toTitleCase(varietyStyle),
