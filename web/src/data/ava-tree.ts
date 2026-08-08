@@ -1,3 +1,5 @@
+import { fold } from '../lib/text';
+
 export interface AvaNode {
   name: string;
   children?: AvaNode[];
@@ -109,25 +111,61 @@ export const AVA_TREE: AvaNode[] = [
   },
 ];
 
-/** Returns the node's name plus all descendant names. */
-export function expandAva(name: string): string[] {
-  function findNode(nodes: AvaNode[], target: string): AvaNode | null {
-    for (const n of nodes) {
-      if (n.name === target) return n;
-      if (n.children) {
-        const found = findNode(n.children, target);
-        if (found) return found;
-      }
+function findNode(nodes: AvaNode[], target: string): AvaNode | null {
+  for (const n of nodes) {
+    if (n.name === target) return n;
+    if (n.children) {
+      const found = findNode(n.children, target);
+      if (found) return found;
     }
-    return null;
   }
+  return null;
+}
 
-  function collectNames(node: AvaNode): string[] {
-    const names = [node.name];
-    for (const child of node.children ?? []) names.push(...collectNames(child));
-    return names;
+function collectNames(node: AvaNode): string[] {
+  const names = [node.name];
+  for (const child of node.children ?? []) names.push(...collectNames(child));
+  return names;
+}
+
+/** Appellations present in the data that this Pacific Northwest taxonomy has no
+ *  node for. Without this bucket they would be unreachable through the filter. */
+export const OTHER_AVA_LABEL = 'Other appellations';
+
+/** Appellations in `available` that the tree doesn't cover. */
+function orphanAvas(available: string[]): string[] {
+  const known = new Set(AVA_TREE.flatMap(collectNames).map(fold));
+  return [...new Set(available.map((a) => a.trim()).filter(Boolean))]
+    .filter((a) => !known.has(fold(a)))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+/** Prune the taxonomy to the appellations actually present, keeping a parent
+ *  whenever any descendant survives, and append the leftovers as their own
+ *  group. Passing an empty list returns the full tree unpruned. */
+export function buildAvaTree(available: string[]): AvaNode[] {
+  if (available.length === 0) return AVA_TREE;
+  const present = new Set(available.map(fold));
+
+  const prune = (nodes: AvaNode[]): AvaNode[] =>
+    nodes.flatMap((node) => {
+      const children = prune(node.children ?? []);
+      if (children.length === 0 && !present.has(fold(node.name))) return [];
+      return [children.length ? { ...node, children } : { name: node.name }];
+    });
+
+  const tree = prune(AVA_TREE);
+  const orphans = orphanAvas(available);
+  if (orphans.length) {
+    tree.push({ name: OTHER_AVA_LABEL, children: orphans.map((name) => ({ name })) });
   }
+  return tree;
+}
 
+/** Returns the node's name plus all descendant names — the values to match a
+ *  selection against. */
+export function expandAva(name: string, available: string[] = []): string[] {
+  if (name === OTHER_AVA_LABEL) return orphanAvas(available);
   const node = findNode(AVA_TREE, name);
   return node ? collectNames(node) : [name];
 }

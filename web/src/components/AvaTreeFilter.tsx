@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronRightIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { AVA_TREE, type AvaNode } from '../data/ava-tree';
+import { buildAvaTree, type AvaNode } from '../data/ava-tree';
+import { foldIncludes } from '../lib/text';
 
 function filterTree(nodes: AvaNode[], query: string): AvaNode[] {
-  const q = query.toLowerCase();
+  const q = query;
   return nodes.flatMap((node) => {
-    if (node.name.toLowerCase().includes(q)) return [node];
+    if (foldIncludes(node.name, q)) return [node];
     const filteredChildren = filterTree(node.children ?? [], q);
     if (filteredChildren.length > 0) return [{ ...node, children: filteredChildren }];
     return [];
@@ -77,9 +78,13 @@ function TreeNode({
 export default function AvaTreeFilter({
   value,
   onChange,
+  available = [],
 }: {
   value: string;
   onChange: (v: string) => void;
+  /** Appellations present under the other active filters. The tree is pruned
+   *  to these, so choosing a state narrows what this offers. */
+  available?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -101,7 +106,8 @@ export default function AvaTreeFilter({
     if (open) setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
 
-  const visibleTree = search ? filterTree(AVA_TREE, search) : AVA_TREE;
+  const tree = useMemo(() => buildAvaTree(available), [available]);
+  const visibleTree = search ? filterTree(tree, search) : tree;
 
   const handleSelect = useCallback((name: string) => {
     onChange(name);
