@@ -197,12 +197,12 @@ export default function App() {
           {/* Page body: sidebar + main */}
           <div className="flex">
             {/* Desktop sidebar */}
-            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,146,74,0.2) transparent' }}>
+            <aside data-testid="sidebar-desktop" className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,146,74,0.2) transparent' }}>
               <Sidebar meta={meta} filters={filters} onChange={setFilters} />
             </aside>
 
             {/* Main content */}
-            <main className="flex-1 min-w-0 px-5 md:px-7 py-5 md:py-6">
+            <main data-testid="results" className="flex-1 min-w-0 px-5 md:px-7 py-5 md:py-6">
               {/* Search bar + desktop sort */}
               <div className="flex gap-2 mb-3">
                 <div className="flex-1">
@@ -279,7 +279,7 @@ export default function App() {
                   )}
                 </div>
                 {totalResults !== null && !loading && (
-                  <span className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
+                  <span data-testid="result-count" className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
                     {totalResults.toLocaleString()} wines found
                   </span>
                 )}

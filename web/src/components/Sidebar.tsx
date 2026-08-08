@@ -111,6 +111,10 @@ const VINTAGE_MAX = new Date().getFullYear();
 
 // ── Shared sub-components ───────────────────────────────────────────────────
 
+/** Facet label → a stable test id, e.g. "State/Province/Region" → "state-province-region". */
+const slug = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+
 function FacetGroup({
   label,
   hasSelection,
@@ -134,7 +138,7 @@ function FacetGroup({
   };
 
   return (
-    <div className="border-b border-warm-border">
+    <div className="border-b border-warm-border" data-testid={`facet-${slug(label)}`}>
       <button
         onClick={toggle}
         className="w-full flex items-center justify-between px-5 py-[13px] hover:bg-[rgba(0,0,0,0.03)] transition-colors text-left"
@@ -641,6 +645,7 @@ export function ActiveChips({
         <button
           key={chip.key}
           onClick={chip.clear}
+          data-testid="active-chip"
           className="inline-flex items-center gap-[5px] px-2.5 py-[3px] text-[10px] font-medium tracking-[0.06em] uppercase text-white bg-[#7b2d3e] border border-[rgba(123,45,62,0.6)] rounded-full hover:bg-[#a84458] transition-colors"
         >
           {chip.label}
