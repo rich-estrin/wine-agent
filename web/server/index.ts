@@ -3,8 +3,10 @@ import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { CSVClient } from './csv-client.js';
 import { WPClient, mapWPReview, type WPReview } from './wp-client.js';
-import { searchWines, filterWines, getWineDetails } from './wine-search.js';
+import { searchWines, filterWines, getWineDetails, matchesFilter } from './wine-search.js';
+import { sortWines } from './wine-utils.js';
 import { designationGroupLabels } from '../src/data/designation-groups.js';
+import type { Wine } from '../src/types.js';
 
 // Known junk varietal values (data-entry typos) to keep out of the dropdown.
 const VARIETAL_EXCLUSIONS = new Set(['Ca']);
@@ -32,66 +34,39 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
   next();
 }
 
-// Cache for filter dropdown values
-let metaCache: {
-  varietals: string[];
-  regions: string[];
-  types: string[];
-  avaList: string[];
-  stateProvinces: string[];
-  specialDesignations: string[];
-} | null = null;
+/** Pull the filter params out of a query string, dropping blanks. */
+function collectFilters(params: Record<string, unknown>): Record<string, string> {
+  const filters: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string' && value.trim()) filters[key] = value;
+  }
+  return filters;
+}
 
 // Combined search + filter endpoint
 app.get('/api/search', requireApiKey, (req, res) => {
   try {
     const { q, limit, offset, sort_by, sort_order, ...filterParams } = req.query;
+    const query = typeof q === 'string' ? q.trim() : '';
+    const filters = collectFilters(filterParams);
+
+    const sortOrd = sort_order === 'asc' ? 'asc' : 'desc';
+    let sortBy = typeof sort_by === 'string' && sort_by ? sort_by : query ? 'relevance' : 'rating';
+    // Relevance has nothing to rank without a query — don't leave the order arbitrary.
+    if (sortBy === 'relevance' && !query) sortBy = 'rating';
 
     let results = dataClient.getAllWines();
 
-    // Step 1: Full-text search if query provided
-    if (q && typeof q === 'string' && q.trim()) {
-      results = searchWines(results, {
-        query: q,
-        limit: Infinity,
-        sort_order: 'desc',
-      });
-    }
+    // Full-text search returns relevance-ordered results.
+    if (query) results = searchWines(results, { query, limit: Infinity });
 
-    // Step 2: Apply filters if any filter params provided
-    const filters: Record<string, string> = {};
-    for (const [key, value] of Object.entries(filterParams)) {
-      if (typeof value === 'string' && value.trim()) {
-        filters[key] = value;
-      }
-    }
     if (Object.keys(filters).length > 0) {
-      results = filterWines(results, {
-        filters,
-        limit: Infinity,
-        sort_order: 'desc',
-      });
+      results = filterWines(results, { filters, limit: Infinity });
     }
 
-    // Step 3: Sort
-    const sortBy = typeof sort_by === 'string' ? sort_by : 'rating';
-    const sortOrd =
-      typeof sort_order === 'string' &&
-      (sort_order === 'asc' || sort_order === 'desc')
-        ? sort_order
-        : 'desc';
+    // Anything other than relevance replaces the ranking.
+    if (sortBy !== 'relevance') results = sortWines(results, sortBy, sortOrd);
 
-    // Use filterWines with empty filters just for sorting
-    if (sortBy) {
-      results = filterWines(results, {
-        filters: {},
-        limit: Infinity,
-        sort_by: sortBy,
-        sort_order: sortOrd,
-      });
-    }
-
-    // Step 4: Apply limit + offset
     const finalLimit = limit ? parseInt(limit as string) : 20;
     const finalOffset = offset ? parseInt(offset as string) : 0;
     res.json({ wines: results.slice(finalOffset, finalOffset + finalLimit), total: results.length });
@@ -102,25 +77,68 @@ app.get('/api/search', requireApiKey, (req, res) => {
   }
 });
 
-// Filter dropdown metadata
-app.get('/api/meta', requireApiKey, (_req, res) => {
+// ─── Filter dropdown metadata (faceted) ───────────────────────────────────────
+// Each facet's options are computed from the wines matching every OTHER active
+// filter, so choosing Wine Type = Red narrows the Varietal list and choosing a
+// state narrows Appellation and Home Region. A facet never narrows itself —
+// otherwise you could never change a selection you had already made.
+//
+// Because the options come from the rows themselves, this respects the data
+// rather than a taxonomy: a white Cabernet Franc in the data means Cabernet
+// Franc appears under Wine Type = White.
+const FACETS: { key: string; controls: string; field: keyof Wine }[] = [
+  { key: 'varietals',           controls: 'mainVarietal',       field: 'mainVarietal' },
+  { key: 'regions',             controls: 'region',             field: 'region' },
+  { key: 'types',               controls: 'type',               field: 'type' },
+  { key: 'avaList',             controls: 'ava',                field: 'ava' },
+  { key: 'stateProvinces',      controls: 'stateProvince',      field: 'stateProvince' },
+  { key: 'specialDesignations', controls: 'specialDesignation', field: 'specialDesignation' },
+];
+
+const unique = (values: string[]) =>
+  [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
+
+// Keyed by the active filter set. Cleared wholesale by the webhook.
+let metaCache = new Map<string, Record<string, string[]>>();
+
+function buildMeta(filters: Record<string, string>): Record<string, string[]> {
+  const wines = dataClient.getAllWines();
+  const result: Record<string, string[]> = {};
+
+  for (const facet of FACETS) {
+    const others = Object.entries(filters).filter(([key]) => key !== facet.controls);
+    const pool = others.length
+      ? wines.filter((w) => others.every(([key, val]) => matchesFilter(w, key, val)))
+      : wines;
+
+    const values = unique(pool.map((w) => (w[facet.field] as string) ?? ''));
+    result[facet.key] =
+      facet.key === 'varietals'
+        ? values.filter((v) => !VARIETAL_EXCLUSIONS.has(v))
+        : facet.key === 'specialDesignations'
+        ? designationGroupLabels(values)
+        : values;
+  }
+
+  return result;
+}
+
+app.get('/api/meta', requireApiKey, (req, res) => {
   try {
-    if (!metaCache) {
-      const wines = dataClient.getAllWines();
-      const unique = (values: string[]) =>
-        [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort(
-          (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
-        );
-      metaCache = {
-        varietals: unique(wines.map((w) => w.mainVarietal)).filter((v) => !VARIETAL_EXCLUSIONS.has(v)),
-        regions: unique(wines.map((w) => w.region)),
-        types: unique(wines.map((w) => w.type)),
-        avaList: unique(wines.map((w) => w.ava)),
-        stateProvinces: unique(wines.map((w) => w.stateProvince)),
-        specialDesignations: designationGroupLabels(unique(wines.map((w) => w.specialDesignation))),
-      };
+    const filters = collectFilters(req.query as Record<string, unknown>);
+    const cacheKey = JSON.stringify(Object.entries(filters).sort());
+
+    let meta = metaCache.get(cacheKey);
+    if (!meta) {
+      meta = buildMeta(filters);
+      // Distinct filter combinations are unbounded; keep the map from growing
+      // forever without tracking access order.
+      if (metaCache.size > 200) metaCache.clear();
+      metaCache.set(cacheKey, meta);
     }
-    res.json(metaCache);
+    res.json(meta);
   } catch (error) {
     res
       .status(500)
@@ -368,7 +386,7 @@ app.post('/api/webhook/review', (req, res) => {
     console.log(`[Webhook] Upserted wine ${review.id}: ${review.brand_name}`);
   }
 
-  metaCache = null; // force rebuild so filter dropdowns reflect the change
+  metaCache.clear(); // force rebuild so filter dropdowns reflect the change
 
   res.json({ ok: true, total: dataClient.getAllWines().length });
 });
