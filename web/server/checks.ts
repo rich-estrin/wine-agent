@@ -1,6 +1,8 @@
 import { searchWines, filterWines, matchesFilter } from './wine-search.js';
 import { sortWines } from './wine-utils.js';
 import type { Wine } from '../src/types.js';
+import { highlightRanges } from '../src/lib/highlight.js';
+import { foldWords } from '../src/lib/text.js';
 
 const base: Wine = {
   id: '', brandName: '', wineName: '', ava: '', vintage: '', price: '', rating: '',
@@ -66,6 +68,14 @@ check('type OR list (multi-select)', ids(filterWines(wines, { filters: { type: '
 check('varietal exact, not prefix',  ids(filterWines(wines, { filters: { mainVarietal: 'Merlot' }, limit: 99 })), ['6']);
 check('varietal matches unaccented', matchesFilter(wines[4], 'mainVarietal', 'Semillon'), true);
 check('vintage single year 2022',    ids(filterWines(wines, { filters: { vintageMin: '2022', vintageMax: '2022' }, limit: 99 })), ['5']);
+
+console.log('\n── N1: highlight offsets survive accent folding ──');
+const hl = (text: string, q: string) => highlightRanges(text, foldWords(q)).map(([a, b]) => text.slice(a, b));
+check('accented text, plain query', hl('Notes of Sémillon and citrus.', 'semillon'), ['Sémillon']);
+check('plain text, accented query', hl('Notes of Semillon here.', 'Sémillon'), ['Semillon']);
+check('earlier accents do not shift', hl('Gård and Itä make Sémillon.', 'semillon'), ['Sémillon']);
+check('overlapping hits merge',       hl('Cabernet Sauvignon', 'cabernet cabernet sauv'), ['Cabernet', 'Sauv']);
+check('single characters ignored',    hl('a bit of oak', 'a'), []);
 
 console.log(failures === 0 ? '\nAll checks passed.\n' : `\n${failures} FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);

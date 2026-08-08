@@ -3,6 +3,7 @@ import { XMarkIcon, ArrowTopRightOnSquareIcon, PrinterIcon } from '@heroicons/re
 import type { Wine } from '../types';
 import { numericScore } from '../types';
 import ShelfTalker from './ShelfTalker';
+import Highlight from '../lib/highlight';
 
 function parseStarRating(rating: string): number | null {
   if (!rating || !rating.includes('*')) return null;
@@ -59,9 +60,13 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 export default function WineDetail({
   wine,
   onClose,
+  query = '',
 }: {
   wine: Wine | null;
   onClose: () => void;
+  /** Active search text — marked in the tasting note so you can see why a
+   *  wine matched. */
+  query?: string;
 }) {
   const scoreStr = wine ? numericScore(wine.rating ?? '') : null;
   const starCount = wine ? parseStarRating(wine.rating ?? '') : null;
@@ -192,7 +197,7 @@ export default function WineDetail({
                       {/* Review text */}
                       {wine.review && (
                         <p className="flex-1 min-w-0 pt-4 md:pt-0 text-[14px] leading-[1.75] text-[#5a5044] font-light">
-                          {wine.review}
+                          <Highlight text={wine.review} query={query} />
                         </p>
                       )}
                     </div>

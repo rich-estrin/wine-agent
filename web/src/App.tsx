@@ -309,7 +309,7 @@ export default function App() {
 
       {/* Chat tab — hidden until ready to launch */}
 
-      <WineDetail wine={selectedWine} onClose={() => setSelectedWine(null)} />
+      <WineDetail wine={selectedWine} onClose={() => setSelectedWine(null)} query={query} />
     </div>
   );
 }
