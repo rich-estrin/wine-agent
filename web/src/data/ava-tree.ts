@@ -132,12 +132,23 @@ function collectNames(node: AvaNode): string[] {
  *  node for. Without this bucket they would be unreachable through the filter. */
 export const OTHER_AVA_LABEL = 'Other appellations';
 
-/** Appellations in `available` that the tree doesn't cover. */
+/** Appellations in `available` that the tree doesn't cover.
+ *
+ *  De-duplicates on the folded form, not the raw string: the source data spells
+ *  the same appellation inconsistently (which is what AVA_CORRECTIONS exists to
+ *  patch), so "Rioja" and "rioja" must collapse to one option rather than two
+ *  that filter identically. The first spelling seen is the one displayed. */
 function orphanAvas(available: string[]): string[] {
   const known = new Set(AVA_TREE.flatMap(collectNames).map(fold));
-  return [...new Set(available.map((a) => a.trim()).filter(Boolean))]
-    .filter((a) => !known.has(fold(a)))
-    .sort((a, b) => a.localeCompare(b));
+  const seen = new Map<string, string>();
+  for (const raw of available) {
+    const name = (raw ?? '').trim();
+    if (!name) continue;
+    const key = fold(name);
+    if (known.has(key) || seen.has(key)) continue;
+    seen.set(key, name);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
 /** Prune the taxonomy to the appellations actually present, keeping a parent
