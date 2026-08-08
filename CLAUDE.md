@@ -10,13 +10,13 @@ wine-agent/
 │   ├── src/                # React app (Vite + TypeScript + Tailwind)
 │   ├── server/             # Express API server
 │   │   ├── index.ts        # API server (port 3001)
+│   │   ├── wine-search.ts  # search + filter over the loaded wines
+│   │   ├── wine-utils.ts   # value parsing and sorting
+│   │   ├── relevance.ts    # tiered relevance scoring
+│   │   ├── checks.ts       # `npm run check` behaviour checks
 │   │   ├── csv-client.ts   # WP CSV export loader with disk cache
 │   │   └── wp-client.ts    # WordPress REST API loader with disk cache
 │   └── cache/              # wines.json cache (gitignored)
-├── mcp/                    # MCP server (Claude Desktop only, separate concern)
-│   └── src/
-│       ├── index.ts        # MCP server entry
-│       └── tools/          # search.ts, filter.ts, get-wine.ts
 └── wordpress-plugin/       # wine-agent-api.php + wine-agent-api.zip
 ```
 
@@ -30,14 +30,10 @@ npm run dev:all       # Start both API server (tsx watch) and Vite dev server
 npm run dev:server    # API server only (port 3001)
 npm run dev           # Vite only (port 5173)
 npm run build         # Production build (also validates TypeScript)
+npm run check         # Search, sort, filter and highlight behaviour checks
 ```
 
 The Vite dev server proxies `/api/*` to `localhost:3001` — both must run together.
-
-If `mcp/src/tools/` changes, rebuild before starting the web server:
-```bash
-cd mcp && npm run build
-```
 
 ## Data Source
 
@@ -74,9 +70,7 @@ The cache is invalidated automatically when the source path/URL changes. Both cl
 Connection info lives in `web/.env` (`EC2_HOST`, `EC2_USER`, `EC2_KEY`, `EC2_PATH`, `EC2_BASE_PATH`). Use `/deploy` skill to build and push. Manual equivalent:
 
 ```bash
-cd mcp && npm run build
-cd ../web && VITE_BASE_PATH=/wwr-search npm run build
-rsync -az -e "ssh -i $EC2_KEY" mcp/dist/       $EC2_USER@$EC2_HOST:$EC2_PATH/mcp/dist/
+cd web && VITE_BASE_PATH=/wwr-search npm run build
 rsync -az -e "ssh -i $EC2_KEY" web/dist/        $EC2_USER@$EC2_HOST:$EC2_PATH/web/dist/
 rsync -az -e "ssh -i $EC2_KEY" web/server/      $EC2_USER@$EC2_HOST:$EC2_PATH/web/server/
 rsync -az -e "ssh -i $EC2_KEY" web/cache/wines.json $EC2_USER@$EC2_HOST:$EC2_PATH/web/cache/wines.json
@@ -104,11 +98,24 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 - `POST /api/chat` — **disabled (503)**; full implementation preserved in comment
 
 ### Search/Filter Logic
-- Full-text search: linear `String.includes()` scan via `mcp/src/tools/search.ts`
-- Filtering: `mcp/src/tools/filter.ts` — special-cased keys before generic field lookup
+- All text comparison goes through `fold()` in `src/lib/text.ts` — strips accents
+  and case, so "Ita" finds "Itä" and "semillon" finds "Sémillon"
+- Full-text search: `server/wine-search.ts` scores each wine via
+  `server/relevance.ts` — a whole-word hit on `brandName` outranks `wineName`,
+  then appellation/region, then the tasting note, with mid-word substrings last.
+  Results come back relevance-ordered; `sort_by=relevance` leaves that order alone
+- Filtering: `server/wine-search.ts` — special-cased keys before generic field lookup.
+  Dropdown fields match a comma-separated OR list, which is what backs multi-select
+- Sorting: `server/wine-utils.ts` — wines with no price/vintage/date sort **last in
+  both directions** (`parse*OrNull` returns null rather than a sentinel number)
 - AVA filter: comma-separated list of expanded descendants via `expandAva()` in `ava-tree.ts`
 - Price slider: non-linear (piecewise) — 0–25% → $0–$15, 25–75% → $15–$100, 75–100% → $100–$300
-- The web app imports `mcp/dist/tools/` directly at runtime — it does **not** call the MCP server
+- Filter options are faceted: `/api/meta` takes the same filters as `/api/search`
+  and derives each facet from the wines matching every *other* active filter, so
+  Wine Type narrows Varietal and State narrows Appellation and Home Region. A facet
+  never narrows itself
+- `AVA_TREE` is a fixed PNW taxonomy; `buildAvaTree(available)` prunes it to the
+  appellations present and buckets the rest under "Other appellations"
 
 ## Design System
 
@@ -133,7 +140,9 @@ CSS classes `.sidebar-slider` (gold thumb, dark context) and `.score-slider` (li
 
 ## Key Conventions
 
-- Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`)
+- Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
+  Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
+  the combobox and tree pickers stay single-select `string`
 - `FilterPanel.tsx` is unused — superseded by `Sidebar.tsx`
 - Never commit `web/.env` or `web/cache/`
 - `WPReview` interface and `mapWPReview()` are exported from `wp-client.ts` and shared with the webhook endpoint in `index.ts`
