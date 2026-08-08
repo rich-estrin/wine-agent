@@ -302,7 +302,6 @@ function VarietalCombobox({
   placeholder?: string;
 }) {
   const [query, setQuery] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = query.trim()
     ? options.filter((o) => foldIncludes(o, query))
@@ -317,37 +316,25 @@ function VarietalCombobox({
       {({ open }) => (
         <div className="relative">
           <ComboboxInput
-            ref={inputRef}
             className="w-full pl-3 pr-7 py-[7px] text-[12px] text-ink bg-[rgba(0,0,0,0.04)] border border-[rgba(26,20,16,0.1)] rounded-[3px] outline-none focus:border-gold/50 placeholder:text-muted/50 transition-colors"
             displayValue={(v: string) => v}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={placeholder}
           />
-          {value ? (
-            // Clearing the selection reopens the list, so the next choice is one
-            // click away instead of needing a click outside to reset the field.
-            <button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onChange('');
-                setQuery('');
-                if (!open) inputRef.current?.focus();
-                inputRef.current?.click();
-              }}
-              aria-label="Clear varietal"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
-            >
+          {/* One ComboboxButton in both states, so it always toggles the list:
+              a second click on the arrow closes it, and clearing a selection
+              leaves the list open ready for the next choice. */}
+          <ComboboxButton
+            onClick={() => { if (value) { onChange(''); setQuery(''); } }}
+            aria-label={value ? 'Clear varietal' : 'Toggle varietal list'}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
+          >
+            {value ? (
               <XMarkIcon className="w-3 h-3" />
-            </button>
-          ) : (
-            // A real button, so a second click on the arrow closes the list.
-            <ComboboxButton
-              aria-label="Toggle varietal list"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
-            >
+            ) : (
               <ChevronDownIcon className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-            </ComboboxButton>
-          )}
+            )}
+          </ComboboxButton>
           <ComboboxOptions
             className="absolute z-[200] top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-warm-border rounded-[3px] shadow-xl"
           >
