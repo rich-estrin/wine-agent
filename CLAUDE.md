@@ -13,7 +13,6 @@ wine-agent/
 │   │   ├── wine-search.ts  # search + filter over the loaded wines
 │   │   ├── wine-utils.ts   # value parsing and sorting
 │   │   ├── relevance.ts    # tiered relevance scoring
-│   │   ├── checks.ts       # `npm run check` behaviour checks
 │   │   ├── csv-client.ts   # WP CSV export loader with disk cache
 │   │   └── wp-client.ts    # WordPress REST API loader with disk cache
 │   └── cache/              # wines.json cache (gitignored)
@@ -30,10 +29,17 @@ npm run dev:all       # Start both API server (tsx watch) and Vite dev server
 npm run dev:server    # API server only (port 3001)
 npm run dev           # Vite only (port 5173)
 npm run build         # Production build (also validates TypeScript)
-npm run check         # Search, sort, filter and highlight behaviour checks
+npm run dev:fixture   # Standalone: static fixture data, no .env or WordPress needed
+npm test              # Unit tests (Vitest)
+npm run test:e2e      # End-to-end tests (Playwright, desktop + mobile)
+npm run screenshots   # Write UI screenshots to e2e/screenshots/ for review
 ```
 
 The Vite dev server proxies `/api/*` to `localhost:3001` — both must run together.
+
+`npm run dev:fixture` runs the whole app against `web/fixtures/wines.json` with no
+credentials and no cache writes — the quickest way to poke at the UI, and what the
+test suites run against.
 
 ## Data Source
 
@@ -41,6 +47,7 @@ WordPress is the source of truth. Two access modes, selected by `web/.env`:
 
 | Mode | Env var set | Client used |
 |---|---|---|
+| **Fixture** | `WINE_FIXTURE` | `FixtureClient` — static JSON, in-memory only, never writes the cache |
 | **WP CSV export** | `CSV_PATH` | `CSVClient` — parses export, caches to `web/cache/wines.json` |
 | **WP REST API** | `WP_API_URL` + `WP_API_KEY` | `WPClient` — fetches paginated, caches to `web/cache/wines.json` |
 
@@ -137,6 +144,32 @@ Defined in `web/tailwind.config.js`. Fonts loaded via Google Fonts in `web/index
 | `font-sans` | DM Sans | UI chrome, labels, body |
 
 CSS classes `.sidebar-slider` (gold thumb, dark context) and `.score-slider` (light context) are defined in `index.css` for dual-range inputs. Opacity modifiers (e.g. `bg-wine/40`) do **not** work with hex custom colors — use `rgba()` arbitrary values or inline styles instead.
+
+## Testing
+
+```
+web/
+├── fixtures/            # wines.json — the standalone/test dataset (committed)
+├── test/factory.ts      # makeWine() helper for unit tests
+├── e2e/                 # Playwright specs + helpers.ts
+└── **/*.test.ts         # Vitest unit tests, beside the code they cover
+```
+
+- **Unit tests** (`npm test`) cover text folding, relevance scoring, sorting,
+  filtering, the AVA/region/designation trees, both importers, and the API
+  routes via `createApp()` over an ephemeral port
+- **End-to-end tests** (`npm run test:e2e`) run against the fixture app at two
+  viewports. `e2e/helpers.ts` has the shared locators — use `withResults()`
+  rather than a sleep, since the app debounces and fires a second search on load
+- `server/app.ts` exports `createApp(dataClient)`; `server/index.ts` only picks a
+  data source and listens. That split is what lets tests exercise real routes
+- Tests locate elements by `data-testid`: `sidebar-desktop`, `filter-sheet`,
+  `results`, `result-count`, `wine-card`, `wine-card-brand`, `wine-detail`,
+  `active-chip`, and `facet-<slug>` per filter group
+- Playwright uses the Chromium from `npx playwright install chromium`; set
+  `PLAYWRIGHT_CHROMIUM_PATH` to override when the sandbox ships a different build
+- Screenshots are written for review, not pixel-compared — baselines drift
+  across machines and become noise
 
 ## Key Conventions
 
