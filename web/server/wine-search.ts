@@ -25,7 +25,20 @@ export function searchWines(
     const score = scoreWine(wine, terms);
     if (score !== null) scored.push({ wine, score });
   }
-  scored.sort((a, b) => b.score - a.score);
+  // Equal relevance means the query says nothing about which wine comes first —
+  // a winery's own bottlings all score identically on its name. Fall back to the
+  // browsing default, best-rated first, rather than to load order. Unrated wines
+  // go last, matching how every other sort treats a missing value.
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const aRating = parseRatingOrNull(a.wine.rating);
+    const bRating = parseRatingOrNull(b.wine.rating);
+    if (aRating === null || bRating === null) {
+      if (aRating === bRating) return 0;
+      return aRating === null ? 1 : -1;
+    }
+    return bRating - aRating;
+  });
   let results = scored.map((s) => s.wine);
 
   // Any explicit sort other than relevance replaces the ranking. Array.sort is

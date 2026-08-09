@@ -65,7 +65,9 @@ describe('searchWines — ranking', () => {
   });
 
   it('returns results relevance-ordered when no sort is given', () => {
-    expect(search('cabernet')[0]).toBe('kiona'); // whole word in wineName beats the rest
+    // wineName and mainVarietal share a tier, so all three Cabernets score the
+    // same here — which means the rating tie-break decides, best first.
+    expect(search('cabernet')).toEqual(['woodward', 'fidelitas', 'kiona']);
   });
 
   it('honours an explicit sort, replacing the ranking', () => {
@@ -80,6 +82,34 @@ describe('searchWines — ranking', () => {
 
   it('applies the limit', () => {
     expect(searchWines(wines, { query: 'cabernet', limit: 1 })).toHaveLength(1);
+  });
+});
+
+describe('searchWines — ties within one relevance tier', () => {
+  // A winery's own bottlings all score identically on its name, so the query
+  // says nothing about their order. Fall back to the browsing default.
+  const cellar = [
+    makeWine({ id: 'low',  brandName: 'Itä', wineName: 'Pinot Noir', rating: '88' }),
+    makeWine({ id: 'high', brandName: 'Itä', wineName: 'Sémillon',   rating: '93' }),
+    makeWine({ id: 'mid',  brandName: 'Itä', wineName: 'Syrah',      rating: '90' }),
+  ];
+
+  it('orders equally relevant wines by rating, best first', () => {
+    expect(ids(searchWines(cellar, { query: 'ita', limit: 99 }))).toEqual(['high', 'mid', 'low']);
+  });
+
+  it('puts unrated wines last rather than first', () => {
+    const withUnrated = [makeWine({ id: 'none', brandName: 'Itä', wineName: 'Rosé', rating: '' }), ...cellar];
+    expect(ids(searchWines(withUnrated, { query: 'ita', limit: 99 }))).toEqual(['high', 'mid', 'low', 'none']);
+  });
+
+  it('never lets the tie-break outrank relevance itself', () => {
+    // The vineyard mention is lower-tier, so it stays last despite a top score.
+    const mixed = [
+      makeWine({ id: 'other', brandName: 'Neighbour', review: 'Fruit from Itä.', rating: '99' }),
+      ...cellar,
+    ];
+    expect(ids(searchWines(mixed, { query: 'ita', limit: 99 }))).toEqual(['high', 'mid', 'low', 'other']);
   });
 });
 
