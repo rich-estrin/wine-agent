@@ -683,10 +683,24 @@ function AdvancedSection({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // The Advanced group lives at the bottom of the panel, so opening it usually
+  // reveals its children below the fold. Scroll them into view — in the desktop
+  // sidebar and the mobile sheet alike, since scrollIntoView walks whichever
+  // ancestor actually scrolls.
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      setTimeout(() => contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    }
+  };
+
   return (
     <div className={!open ? 'border-b border-warm-border' : ''}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={toggle}
         className="w-full flex items-center justify-between px-5 py-[13px] hover:bg-[rgba(0,0,0,0.03)] transition-colors text-left"
       >
         <span
@@ -705,7 +719,7 @@ function AdvancedSection({
           Vintage · Appellation · Region…
         </p>
       )}
-      {open && <div>{children}</div>}
+      {open && <div ref={contentRef}>{children}</div>}
     </div>
   );
 }
