@@ -3,7 +3,7 @@ import WineCard from './WineCard';
 
 function SkeletonCard() {
   return (
-    <div className="w-full bg-white border border-warm-border rounded-[4px] px-4 py-[14px] md:px-5 grid grid-cols-[46px_1fr] md:grid-cols-[52px_1fr] gap-3 md:gap-4 animate-pulse">
+    <div data-testid="skeleton-card" className="w-full bg-white border border-warm-border rounded-[4px] px-4 py-[14px] md:px-5 grid grid-cols-[46px_1fr] md:grid-cols-[52px_1fr] gap-3 md:gap-4 animate-pulse">
       <div className="w-[46px] h-[46px] md:w-[52px] md:h-[52px] rounded-[3px] bg-warm-border/70" />
       <div className="space-y-2.5 py-1">
         <div className="h-[14px] bg-warm-border/70 rounded w-3/5" />
@@ -16,13 +16,19 @@ function SkeletonCard() {
 export default function WineList({
   wines,
   loading,
+  firstLoad,
   onSelect,
 }: {
   wines: Wine[];
   loading: boolean;
+  // The very first load, before any result set has settled. Skeletons are only
+  // shown then — on later transitions we keep the current view rather than
+  // swapping to skeletons, which would flash (most visibly when moving between
+  // two empty result sets).
+  firstLoad: boolean;
   onSelect: (wine: Wine) => void;
 }) {
-  if (loading) {
+  if (loading && firstLoad) {
     return (
       <div className="grid grid-cols-1 gap-2.5">
         {Array.from({ length: 10 }).map((_, i) => (

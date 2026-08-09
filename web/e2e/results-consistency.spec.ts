@@ -163,6 +163,42 @@ test.describe('clearing a filter', () => {
   });
 });
 
+test.describe('loading between settled results', () => {
+  // Switching between two filters that both return nothing (the fixture has no
+  // wines in the last 3 or 6 months) used to flash a grid of skeleton cards:
+  // the empty list was replaced by skeletons while the second request was in
+  // flight, then went empty again. Skeletons belong to the first load only —
+  // once there's a settled answer, a transition must not throw it away.
+  test('switching between two empty filters never flashes skeleton cards', async ({ page }) => {
+    const panel = await openFilters(page);
+    await panel.getByRole('button', { name: /^Advanced$/ }).click();
+
+    const m3 = panel.getByRole('radio', { name: 'Last 3 months', exact: true });
+    await openFacet(panel, 'Review Date', m3);
+
+    // Settle on the empty last-3-months set.
+    await withResults(page, () => m3.click(), (p) => !!p.get('publicationDate'));
+    await expect(page.getByText(/No wines found/)).toBeVisible();
+
+    // Hold the next search in flight so the loading window is observable.
+    await page.route('**/api/search*', async (route) => {
+      await new Promise((r) => setTimeout(r, 700));
+      await route.continue();
+    });
+
+    await panel.getByRole('radio', { name: 'Last 6 months', exact: true }).click();
+
+    // Through the debounce and into the in-flight request, the empty state must
+    // hold — no skeleton grid. Snapshot the count (no auto-retry, which would
+    // just wait out the flash) at a moment the request is provably in flight.
+    await page.waitForTimeout(450);
+    expect(await page.getByTestId('skeleton-card').count()).toBe(0);
+    await expect(page.getByText(/No wines found/)).toBeVisible();
+
+    await expect(resultCount(page)).toHaveText('0 wines found');
+  });
+});
+
 test.describe('infinite scroll', () => {
   // The regression this file was written for. The app used to fire a second
   // first-page search when the unfiltered facet list arrived. If the reader had
