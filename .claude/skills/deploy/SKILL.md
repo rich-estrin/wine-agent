@@ -1,17 +1,17 @@
 ---
 name: deploy
 description: Deploy the wine-agent app to AWS EC2 + WordPress. Use when the user says /deploy, "deploy", "ship it", "push to server", or "build and deploy".
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Deploy the wine-agent app
 
 There are **two delivery targets**, and most deploys touch both:
 
-- **Backend (EC2)** — the Express API at `/api/*`. Receives `web/server/`, `web/src/data/`, and the `web/cache/wines.json` data cache.
+- **Backend (EC2)** — the Express API at `/api/*`. Receives `web/server/`, the shared `web/src/` modules the server imports (`src/data/`, `src/lib/`, `src/types.ts`), and the `web/cache/wines.json` data cache.
 - **Frontend (WordPress plugin)** — end users load the React app via the `[wine-search]` shortcode, which serves the JS **bundled inside the plugin zip**. EC2 does **not** serve static assets. So shipping UI changes means rebuilding the frontend, repackaging the plugin zip, and uploading it to WordPress.
 
-There is **no `mcp/` directory** — the server is self-contained in `web/server/` (it imports `./wine-search.js` and `../src/data/*.js`). Ignore any older instructions referencing `mcp/`.
+There is **no `mcp/` directory** — the server is self-contained in `web/server/`. Besides its own files it imports a few modules from `web/src/` (currently `../src/data/*.js`, `../src/lib/text.js`, and `../src/types.js`), so those must ship too or the server won't boot. Ignore any older instructions referencing `mcp/`.
 
 Read connection info from `web/.env`: `EC2_HOST`, `EC2_USER`, `EC2_KEY`, `EC2_PATH`, `EC2_BASE_PATH`.
 
@@ -42,11 +42,14 @@ Read connection info from `web/.env`: `EC2_HOST`, `EC2_USER`, `EC2_KEY`, `EC2_PA
 
 ## B. Backend deploy (when server logic or data changed)
 
-5. **Deploy server source + shared data modules** (never deploy `web/.env` — EC2 has its own):
+5. **Deploy server source + the shared `src/` modules it imports** (never deploy `web/.env` — EC2 has its own). All four paths are required: the server imports from `src/data/`, `src/lib/`, and `src/types.ts`, and a missing one is a boot-time `ERR_MODULE_NOT_FOUND`.
    ```bash
-   rsync -az -e "ssh -i ${EC2_KEY}" /Users/rich/src/wine-agent/web/server/   ${EC2_USER}@${EC2_HOST}:${EC2_PATH}/web/server/
-   rsync -az -e "ssh -i ${EC2_KEY}" /Users/rich/src/wine-agent/web/src/data/ ${EC2_USER}@${EC2_HOST}:${EC2_PATH}/web/src/data/
+   rsync -az -e "ssh -i ${EC2_KEY}" /Users/rich/src/wine-agent/web/server/    ${EC2_USER}@${EC2_HOST}:${EC2_PATH}/web/server/
+   rsync -az -e "ssh -i ${EC2_KEY}" /Users/rich/src/wine-agent/web/src/data/   ${EC2_USER}@${EC2_HOST}:${EC2_PATH}/web/src/data/
+   rsync -az -e "ssh -i ${EC2_KEY}" /Users/rich/src/wine-agent/web/src/lib/    ${EC2_USER}@${EC2_HOST}:${EC2_PATH}/web/src/lib/
+   rsync -az -e "ssh -i ${EC2_KEY}" /Users/rich/src/wine-agent/web/src/types.ts ${EC2_USER}@${EC2_HOST}:${EC2_PATH}/web/src/types.ts
    ```
+   If the server ever grows a new `../src/...` import, add its path here. Quick check: `grep -rhoE "from '\.\./src/[^']+'" web/server/*.ts | sort -u` lists everything the server pulls from `src/`.
 
 6. **Deploy deps only if package files changed:**
    ```bash
