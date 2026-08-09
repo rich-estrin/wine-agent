@@ -316,7 +316,6 @@ export default function App() {
               <WineList
                 wines={wines}
                 loading={loading}
-                firstLoad={totalResults === null}
                 onSelect={setSelectedWine}
               />
               <div ref={sentinelRef} className="h-1" />

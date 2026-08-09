@@ -16,19 +16,18 @@ function SkeletonCard() {
 export default function WineList({
   wines,
   loading,
-  firstLoad,
   onSelect,
 }: {
   wines: Wine[];
   loading: boolean;
-  // The very first load, before any result set has settled. Skeletons are only
-  // shown then — on later transitions we keep the current view rather than
-  // swapping to skeletons, which would flash (most visibly when moving between
-  // two empty result sets).
-  firstLoad: boolean;
   onSelect: (wine: Wine) => void;
 }) {
-  if (loading && firstLoad) {
+  // Show the skeleton whenever a fetch is in flight — a new search or filter
+  // clears the old results immediately rather than letting them linger until
+  // the replacement lands. `loading` is set inside the search debounce, so a
+  // slider drag (which keeps resetting the debounce) doesn't flash skeletons
+  // mid-drag; it only appears once the query settles and the request fires.
+  if (loading) {
     return (
       <div className="grid grid-cols-1 gap-2.5">
         {Array.from({ length: 10 }).map((_, i) => (

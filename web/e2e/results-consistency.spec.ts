@@ -163,39 +163,29 @@ test.describe('clearing a filter', () => {
   });
 });
 
-test.describe('loading between settled results', () => {
-  // Switching between two filters that both return nothing (the fixture has no
-  // wines in the last 3 or 6 months) used to flash a grid of skeleton cards:
-  // the empty list was replaced by skeletons while the second request was in
-  // flight, then went empty again. Skeletons belong to the first load only —
-  // once there's a settled answer, a transition must not throw it away.
-  test('switching between two empty filters never flashes skeleton cards', async ({ page }) => {
-    const panel = await openFilters(page);
-    await panel.getByRole('button', { name: /^Advanced$/ }).click();
+test.describe('loading feedback on a new search', () => {
+  // A new search or filter should clear the old results at once and show the
+  // skeleton while the replacement loads, rather than leaving stale rows on
+  // screen until the response lands.
+  test('a new search shows the skeleton and clears the old results', async ({ page }) => {
+    // Settle on a non-empty result set first, so this is not the first load.
+    const first = await search(page, 'cabernet');
+    expect(first).toBeGreaterThan(0);
+    const before = await resultBrands(page);
+    expect(before.length).toBeGreaterThan(0);
 
-    const m3 = panel.getByRole('radio', { name: 'Last 3 months', exact: true });
-    await openFacet(panel, 'Review Date', m3);
-
-    // Settle on the empty last-3-months set.
-    await withResults(page, () => m3.click(), (p) => !!p.get('publicationDate'));
-    await expect(page.getByText(/No wines found/)).toBeVisible();
-
-    // Hold the next search in flight so the loading window is observable.
+    // Hold the next request in flight so the loading window is observable.
     await page.route('**/api/search*', async (route) => {
-      await new Promise((r) => setTimeout(r, 700));
+      await new Promise((r) => setTimeout(r, 800));
       await route.continue();
     });
 
-    await panel.getByRole('radio', { name: 'Last 6 months', exact: true }).click();
+    await searchBox(page).fill('syrah');
+    await searchBox(page).press('Enter');
 
-    // Through the debounce and into the in-flight request, the empty state must
-    // hold — no skeleton grid. Snapshot the count (no auto-retry, which would
-    // just wait out the flash) at a moment the request is provably in flight.
-    await page.waitForTimeout(450);
-    expect(await page.getByTestId('skeleton-card').count()).toBe(0);
-    await expect(page.getByText(/No wines found/)).toBeVisible();
-
-    await expect(resultCount(page)).toHaveText('0 wines found');
+    // The skeleton appears and the old cabernet rows are gone while loading.
+    await expect(page.getByTestId('skeleton-card').first()).toBeVisible({ timeout: 3_000 });
+    expect(await page.getByTestId('wine-card').count()).toBe(0);
   });
 });
 
