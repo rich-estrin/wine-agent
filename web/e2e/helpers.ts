@@ -2,10 +2,11 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 /** Open the app and wait until it has stopped fetching.
  *
- *  The app issues TWO searches on load — once on mount, then again when the
- *  unfiltered facet list arrives and changes the params callback identity.
- *  Without waiting for both, the next withResults() can match that second
- *  request and return before the interaction under test has taken effect. */
+ *  The app used to issue TWO searches on load — once on mount, then again when
+ *  the unfiltered facet list arrived and changed the params callback identity.
+ *  It now issues one (see results-consistency.spec.ts, which holds that line),
+ *  but settling here is still the right precondition: the facet request lands
+ *  separately, and a test that starts measuring mid-flight is a flake. */
 export async function gotoApp(page: Page): Promise<void> {
   await page.goto('/');
   await expect(resultCount(page)).toBeVisible();
@@ -101,10 +102,10 @@ export const searchBox = (page: Page) =>
 /** Perform `action`, then wait for the search it triggers to land in the DOM.
  *
  *  The app debounces by 300ms and re-renders asynchronously, so neither a fixed
- *  sleep nor "the count is visible" is enough. It also fires a second search on
- *  load once the unfiltered facet list arrives, so simply waiting for "the next
- *  /api/search" can catch a stale one — hence the `match` predicate, which ties
- *  the wait to the request this action was supposed to produce.
+ *  sleep nor "the count is visible" is enough. The `match` predicate ties the
+ *  wait to the request this action was supposed to produce, rather than to
+ *  whichever /api/search happens to land next — keep it: it is what makes a
+ *  failure read as "the wrong search ran" instead of a timeout.
  */
 export async function withResults(
   page: Page,
@@ -120,7 +121,30 @@ export async function withResults(
   await action();
   const { total } = (await (await responded).json()) as { total: number };
   await expect(resultCount(page)).toHaveText(`${total.toLocaleString('en-US')} wines found`);
+  await expectCountMatchesRows(page, total);
   return total;
+}
+
+/** The app pages at 40; a first page renders min(total, PAGE_SIZE) cards. */
+export const PAGE_SIZE = 40;
+
+/** The count line and the rendered list must agree.
+ *
+ *  Asserting the count alone is not enough: a response that lands out of order
+ *  can append its rows to a newer result set, leaving the count correct and the
+ *  list holding wines that don't match the query at all.
+ *
+ *  The list holds a prefix of the results — one page, or more once the reader
+ *  has scrolled — so the invariant is a range, never an exact number. What it
+ *  must never do is exceed the total. */
+export async function expectCountMatchesRows(page: Page, total: number): Promise<void> {
+  const atLeast = Math.min(total, PAGE_SIZE);
+  await expect(async () => {
+    const rows = await page.getByTestId('wine-card').count();
+    const detail = `rendered ${rows} cards for a result set of ${total}`;
+    expect(rows, detail).toBeGreaterThanOrEqual(atLeast);
+    expect(rows, detail).toBeLessThanOrEqual(total);
+  }).toPass({ timeout: 5_000 });
 }
 
 /** Run a search and wait for its results to render. */

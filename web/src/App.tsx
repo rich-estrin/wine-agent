@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import type { Wine, Meta } from './types';
 import type { SearchParams, ChatMessage } from './api';
@@ -45,6 +45,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'search' | 'chat'>('search');
   const [sheetOpen, setSheetOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Bumped on every reset. Both fetches capture it and drop their response if it
+  // has moved on, so a page-2 request issued for an earlier query can never
+  // append its rows to the results of a newer one.
+  const generation = useRef(0);
   const PAGE_SIZE = 40;
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
@@ -99,6 +103,15 @@ export default function App() {
     return params;
   }, [query, buildFilterParams, sortBy, sortOrder]);
 
+  // Effects key off the *values* of the query, not the callback's identity.
+  // buildFilterParams closes over `allMeta`, which arrives a beat after mount
+  // and only affects the expanded appellation/region lists — without this, that
+  // arrival re-ran the search even though the request was byte-for-byte the
+  // same, resetting a list the reader had already paged past.
+  const searchKey = useMemo(() => JSON.stringify(buildParams(0)), [buildParams]);
+  const buildParamsRef = useRef(buildParams);
+  buildParamsRef.current = buildParams;
+
   // Sorting by rating is the right default for browsing, but the wrong one the
   // moment there's a query — it discards the ranking the search just computed.
   useEffect(() => {
@@ -145,11 +158,14 @@ export default function App() {
     setOffset(0);
     setHasMore(true);
     setInitialLoad(false);
+    generation.current += 1;
+    const gen = generation.current;
 
     const timer = setTimeout(() => {
       setLoading(true);
-      searchWines(buildParams(0))
+      searchWines(buildParamsRef.current(0))
         .then(({ wines: batch, total }) => {
+          if (gen !== generation.current) return;
           setWines(batch);
           setTotalResults(total);
           setHasMore(batch.length === PAGE_SIZE);
@@ -159,7 +175,7 @@ export default function App() {
     }, initialLoad ? 0 : 300);
 
     return () => clearTimeout(timer);
-  }, [buildParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // IntersectionObserver — load next page when sentinel scrolls into view
   useEffect(() => {
@@ -169,9 +185,11 @@ export default function App() {
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
           const nextOffset = offset + PAGE_SIZE;
+          const gen = generation.current;
           setLoadingMore(true);
-          searchWines(buildParams(nextOffset))
+          searchWines(buildParamsRef.current(nextOffset))
             .then(({ wines: batch }) => {
+              if (gen !== generation.current) return;
               setWines((prev) => [...prev, ...batch]);
               setOffset(nextOffset);
               setHasMore(batch.length === PAGE_SIZE);
@@ -184,7 +202,7 @@ export default function App() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loading, loadingMore, offset, buildParams]);
+  }, [hasMore, loading, loadingMore, offset, searchKey]);
 
   return (
     <div className="min-h-screen bg-[#faf7f2] font-sans text-ink">
