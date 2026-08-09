@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
   gotoApp, search, searchBox, resultCount, resultBrands,
-  expectCountMatchesRows, totalResults, PAGE_SIZE } from './helpers';
+  expectCountMatchesRows, totalResults, PAGE_SIZE,
+  openFilters, openFacet, facetOption, withResults } from './helpers';
 
 // A tester hit a state where the count read "2 wines found" while the list
 // rendered five cards, three of which could not match the query at all. The
@@ -103,6 +104,62 @@ test.describe('out-of-order responses', () => {
     await page.waitForTimeout(1500);
     await expectCountMatchesRows(page, await totalResults(page));
     expect((await resultBrands(page)).sort()).toEqual([...ITA_MATCHES].sort());
+  });
+});
+
+test.describe('clearing a filter', () => {
+  // A tester selected State/Province → British Columbia (5 wines), then
+  // unchecked it. With only 5 cards on screen the infinite-scroll sentinel is
+  // already in view, so unchecking — which optimistically sets hasMore=true —
+  // triggered a page-2 request for the now-unfiltered query that was appended
+  // to the 5 stale BC rows, mixing wines that no longer matched.
+  test('unchecking a short filter restores the full list without mixing stale rows', async ({ page }) => {
+    const panel = await openFilters(page);
+    const bc = facetOption(panel, 'British Columbia');
+    await openFacet(panel, 'State/Province/Region', bc);
+
+    // The clean-slate first page, to compare against after we clear the filter.
+    const cleanFirstPage = await resultBrands(page);
+
+    // Down to the 5 British Columbia wines.
+    const filtered = await withResults(
+      page,
+      () => bc.click(),
+      (p) => p.get('stateProvince') === 'British Columbia',
+    );
+    expect(filtered).toBe(5);
+
+    // Back to a clean slate.
+    const total = await withResults(
+      page,
+      () => bc.click(),
+      (p) => !p.get('stateProvince'),
+    );
+
+    // Let any stray page-2 append land before asserting.
+    await page.waitForTimeout(800);
+    await expectCountMatchesRows(page, total);
+
+    // The list must be exactly the clean first page again — not those rows with
+    // a page of freshly-fetched wines appended below the stale BC rows.
+    expect(await resultBrands(page)).toEqual(cleanFirstPage);
+  });
+
+  test('every wine stays reachable after clearing a short filter', async ({ page }) => {
+    const panel = await openFilters(page);
+    const bc = facetOption(panel, 'British Columbia');
+    await openFacet(panel, 'State/Province/Region', bc);
+
+    await withResults(page, () => bc.click(), (p) => p.get('stateProvince') === 'British Columbia');
+    const total = await withResults(page, () => bc.click(), (p) => !p.get('stateProvince'));
+    await page.waitForTimeout(800);
+
+    // offset must not have been corrupted by a stray append — paging should
+    // still walk the whole list.
+    await expect(async () => {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await expect(page.getByTestId('wine-card')).toHaveCount(total, { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
   });
 });
 

@@ -49,6 +49,12 @@ export default function App() {
   // has moved on, so a page-2 request issued for an earlier query can never
   // append its rows to the results of a newer one.
   const generation = useRef(0);
+  // The generation whose first page is currently on screen. Until it catches up
+  // to `generation`, the results shown belong to a superseded query — paging
+  // must not run, or it would append a page of the new query onto the stale
+  // rows (and corrupt `offset`). This bites when the old list is short enough
+  // that the scroll sentinel is already in view when the query changes.
+  const loadedGen = useRef(0);
   const PAGE_SIZE = 40;
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
@@ -166,6 +172,7 @@ export default function App() {
       searchWines(buildParamsRef.current(0))
         .then(({ wines: batch, total }) => {
           if (gen !== generation.current) return;
+          loadedGen.current = gen;
           setWines(batch);
           setTotalResults(total);
           setHasMore(batch.length === PAGE_SIZE);
@@ -183,6 +190,9 @@ export default function App() {
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       (entries) => {
+        // Don't page while the on-screen results belong to a superseded query —
+        // wait for this generation's first page to land and set the baseline.
+        if (loadedGen.current !== generation.current) return;
         if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
           const nextOffset = offset + PAGE_SIZE;
           const gen = generation.current;
