@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronRightIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { buildRegionTree, type RegionNode } from '../data/region-tree';
+import { foldIncludes } from '../lib/text';
 
 function filterTree(nodes: RegionNode[], query: string): RegionNode[] {
-  const q = query.toLowerCase();
+  const q = query;
   return nodes.flatMap((node) => {
-    if (node.name.toLowerCase().includes(q)) return [node];
+    if (foldIncludes(node.name, q)) return [node];
     const filteredChildren = filterTree(node.children ?? [], q);
     if (filteredChildren.length > 0) return [{ ...node, children: filteredChildren }];
     return [];

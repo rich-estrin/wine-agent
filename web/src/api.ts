@@ -42,8 +42,17 @@ export async function searchWines(params: SearchParams): Promise<{ wines: Wine[]
   return res.json();
 }
 
-export async function fetchMeta(): Promise<Meta> {
-  const res = await fetch(`${BASE}/meta`);
+/** Filter dropdown options. Passing the active filters returns faceted
+ *  options — each list narrowed by every OTHER filter — so Wine Type narrows
+ *  Varietal and State narrows Appellation. Called with no arguments it returns
+ *  the full unnarrowed lists. */
+export async function fetchMeta(filters: SearchParams = {}): Promise<Meta> {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== '') searchParams.set(key, String(value));
+  }
+  const qs = searchParams.toString();
+  const res = await fetch(`${BASE}/meta${qs ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error(`Meta failed: ${res.statusText}`);
   return res.json();
 }

@@ -75,6 +75,7 @@ export default function WineCard({
   return (
     <button
       onClick={onClick}
+      data-testid="wine-card"
       className={`wine-card-animate w-full text-left bg-white border border-warm-border rounded-[4px] px-4 py-[14px] md:px-5
         grid gap-3 md:gap-4 items-start
         hover:shadow-[0_6px_24px_rgba(26,20,16,0.13)] hover:border-[rgba(184,146,74,0.45)] hover:-translate-y-px
@@ -108,7 +109,7 @@ export default function WineCard({
         {/* Line 1: Winery · Varietal · Designation · Vintage + Price */}
         <div className="flex items-baseline justify-between gap-2 mb-0.5">
           <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0">
-            <span className="font-cormorant text-[17px] md:text-[18px] font-semibold text-ink leading-tight">
+            <span data-testid="wine-card-brand" className="font-cormorant text-[17px] md:text-[18px] font-semibold text-ink leading-tight">
               {wine.brandName}
             </span>
             {wine.mainVarietal && (

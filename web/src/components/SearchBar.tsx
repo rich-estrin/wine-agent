@@ -33,7 +33,7 @@ export default function SearchBar({
           if (e.key === 'Enter') commit(draft);
           if (e.key === 'Escape') clear();
         }}
-        placeholder="Search winery, varietal, vintage… (press Enter)"
+        placeholder="Search winery, varietal… (press Enter)"
         className="w-full pl-10 pr-8 py-2.5 font-cormorant font-light text-[15px] text-ink bg-white border border-warm-border rounded-[3px] placeholder:italic placeholder-muted/60 focus:outline-none focus:border-gold/60 transition-colors"
       />
       {draft && (

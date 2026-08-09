@@ -11,6 +11,8 @@ import Sidebar, {
   type Filters,
   emptyFilters,
   getDateFilter,
+  hasAnyFilter,
+  countActiveFilters,
   ActiveChips,
 } from './components/Sidebar';
 import WineList from './components/WineList';
@@ -22,11 +24,18 @@ import BottomSheet from './components/BottomSheet';
 
 export default function App() {
   const [wines, setWines] = useState<Wine[]>([]);
+  // `meta` drives the sidebar and is narrowed by the active filters. `allMeta`
+  // is the unnarrowed set, used to expand a tree selection (a state group into
+  // its regions) — expanding against a narrowed list would feed the narrowing
+  // back into itself.
   const [meta, setMeta] = useState<Meta | null>(null);
+  const [allMeta, setAllMeta] = useState<Meta | null>(null);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [sortBy, setSortBy] = useState('rating');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Once someone picks a sort by hand we stop switching it for them.
+  const sortChosen = useRef(false);
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -40,40 +49,71 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [totalResults, setTotalResults] = useState<number | null>(null);
-  const activeFilterCount = Object.values(filters).filter((v) => v !== '').length;
+  const activeFilterCount = countActiveFilters(filters);
 
-  // Fetch meta on mount
+  // Unnarrowed options, fetched once. Seeds the sidebar so it isn't empty
+  // while the first faceted request is in flight.
   useEffect(() => {
-    fetchMeta().then(setMeta).catch(console.error);
+    fetchMeta()
+      .then((m) => { setAllMeta(m); setMeta((current) => current ?? m); })
+      .catch(console.error);
   }, []);
 
-  // Build search params from current state
-  const buildParams = useCallback((pageOffset = 0): SearchParams => {
-    const params: SearchParams = {
-      limit: PAGE_SIZE,
-      offset: pageOffset,
-      sort_by: sortBy,
-      sort_order: sortOrder,
-    };
-    if (query.trim()) params.q = query.trim();
+  // Filters only — the parts of the query that narrow the result set. Shared by
+  // the search request and the faceted options request so the two can't drift.
+  const buildFilterParams = useCallback((): SearchParams => {
+    const params: SearchParams = {};
     if (filters.mainVarietal) params.mainVarietal = filters.mainVarietal;
-    if (filters.ava) params.ava = expandAva(filters.ava).join(',');
-    if (filters.region) params.region = expandRegion(filters.region, meta?.regions ?? []).join(',');
-    if (filters.type) params.type = filters.type;
+    if (filters.ava) params.ava = expandAva(filters.ava, allMeta?.avaList ?? []).join(',');
+    if (filters.region) params.region = expandRegion(filters.region, allMeta?.regions ?? []).join(',');
+    if (filters.type.length) params.type = filters.type.join(',');
     if (filters.priceMin) params.priceMin = filters.priceMin;
     if (filters.priceMax) params.priceMax = filters.priceMax;
     if (filters.scoreMin) params.scoreMin = filters.scoreMin;
     if (filters.scoreMax) params.scoreMax = filters.scoreMax;
     if (filters.vintageMin) params.vintageMin = filters.vintageMin;
     if (filters.vintageMax) params.vintageMax = filters.vintageMax;
-    if (filters.stateProvince) params.stateProvince = filters.stateProvince;
-    if (filters.specialDesignation) params.specialDesignation = expandDesignation(filters.specialDesignation).join(',');
+    if (filters.stateProvince.length) params.stateProvince = filters.stateProvince.join(',');
+    if (filters.specialDesignation.length) {
+      params.specialDesignation = [
+        ...new Set(filters.specialDesignation.flatMap(expandDesignation)),
+      ].join(',');
+    }
     if (filters.dateRange) {
       const dateFilter = getDateFilter(filters.dateRange);
       if (dateFilter) params.publicationDate = dateFilter;
     }
     return params;
-  }, [query, filters, sortBy, sortOrder, meta]);
+  }, [filters, allMeta]);
+
+  // Build search params from current state
+  const buildParams = useCallback((pageOffset = 0): SearchParams => {
+    const params: SearchParams = {
+      ...buildFilterParams(),
+      limit: PAGE_SIZE,
+      offset: pageOffset,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    };
+    if (query.trim()) params.q = query.trim();
+    return params;
+  }, [query, buildFilterParams, sortBy, sortOrder]);
+
+  // Sorting by rating is the right default for browsing, but the wrong one the
+  // moment there's a query — it discards the ranking the search just computed.
+  useEffect(() => {
+    if (sortChosen.current) return;
+    setSortBy(query.trim() ? 'relevance' : 'rating');
+  }, [query]);
+
+  // Re-derive the filter options whenever the filters change, so each facet
+  // offers only what the others leave available.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchMeta(buildFilterParams()).then(setMeta).catch(console.error);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [buildFilterParams]);
 
   // Handle chat message sending
   const handleChatSend = async (content: string) => {
@@ -157,12 +197,12 @@ export default function App() {
           {/* Page body: sidebar + main */}
           <div className="flex">
             {/* Desktop sidebar */}
-            <aside className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,146,74,0.2) transparent' }}>
+            <aside data-testid="sidebar-desktop" className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,146,74,0.2) transparent' }}>
               <Sidebar meta={meta} filters={filters} onChange={setFilters} />
             </aside>
 
             {/* Main content */}
-            <main className="flex-1 min-w-0 px-5 md:px-7 py-5 md:py-6">
+            <main data-testid="results" className="flex-1 min-w-0 px-5 md:px-7 py-5 md:py-6">
               {/* Search bar + desktop sort */}
               <div className="flex gap-2 mb-3">
                 <div className="flex-1">
@@ -172,20 +212,25 @@ export default function App() {
                   <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => { sortChosen.current = true; setSortBy(e.target.value); }}
                     className="text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] outline-none cursor-pointer"
                   >
+                    {query.trim() && <option value="relevance">Relevance</option>}
                     <option value="rating">Rating</option>
                     <option value="price">Price</option>
                     <option value="vintage">Vintage</option>
-                    <option value="publicationDate">Date</option>
+                    <option value="publicationDate">Review Date</option>
                   </select>
-                  <button
-                    onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
-                  >
-                    {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
-                  </button>
+                  {/* Relevance has only one meaningful order, so the direction
+                      toggle would be a control that does nothing. */}
+                  {sortBy !== 'relevance' && (
+                    <button
+                      onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                      className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
+                    >
+                      {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -206,32 +251,35 @@ export default function App() {
                 <div className="ml-auto flex items-center gap-1.5">
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => { sortChosen.current = true; setSortBy(e.target.value); }}
                     className="text-[11px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2 py-[6px] outline-none cursor-pointer"
                   >
+                    {query.trim() && <option value="relevance">Relevance</option>}
                     <option value="rating">Rating</option>
                     <option value="price">Price</option>
                     <option value="vintage">Vintage</option>
-                    <option value="publicationDate">Date</option>
+                    <option value="publicationDate">Review Date</option>
                   </select>
-                  <button
-                    onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
-                  >
-                    {sortOrder === 'desc' ? '↓' : '↑'}
-                  </button>
+                  {sortBy !== 'relevance' && (
+                    <button
+                      onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                      className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
+                    >
+                      {sortOrder === 'desc' ? '↓' : '↑'}
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Active filter pills + result count */}
               <div className="mb-4 pb-3 border-b border-warm-border flex items-end justify-between gap-3">
                 <div className="flex-1">
-                  {Object.values(filters).some((v) => v !== '') && (
+                  {hasAnyFilter(filters) && (
                     <ActiveChips filters={filters} onChange={setFilters} />
                   )}
                 </div>
                 {totalResults !== null && !loading && (
-                  <span className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
+                  <span data-testid="result-count" className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
                     {totalResults.toLocaleString()} wines found
                   </span>
                 )}
@@ -261,7 +309,7 @@ export default function App() {
 
       {/* Chat tab — hidden until ready to launch */}
 
-      <WineDetail wine={selectedWine} onClose={() => setSelectedWine(null)} />
+      <WineDetail wine={selectedWine} onClose={() => setSelectedWine(null)} query={query} />
     </div>
   );
 }

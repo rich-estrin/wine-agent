@@ -1,381 +1,43 @@
 import 'dotenv/config';
-import express from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import { CSVClient } from './csv-client.js';
-import { WPClient, mapWPReview, type WPReview } from './wp-client.js';
-import { searchWines, filterWines, getWineDetails } from './wine-search.js';
-import { designationGroupLabels } from '../src/data/designation-groups.js';
+import { WPClient } from './wp-client.js';
+import { FixtureClient } from './fixture-client.js';
+import { createApp, type DataClient } from './app.js';
 
-// Known junk varietal values (data-entry typos) to keep out of the dropdown.
-const VARIETAL_EXCLUSIONS = new Set(['Ca']);
-
-const app = express();
-app.disable('x-powered-by');
-app.use(express.json());
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-});
-
-// Data source: WP REST API when WP_API_URL is set, otherwise WP CSV export
-const dataClient = process.env.WP_API_URL
-  ? new WPClient(process.env.WP_API_URL, process.env.WP_API_KEY || '')
-  : new CSVClient(process.env.CSV_PATH || '');
-
-// Middleware: validate X-Wine-Agent-Key on search/meta endpoints
-function requireApiKey(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const secret = process.env.WEBHOOK_SECRET;
-  if (secret && req.headers['x-wine-agent-key'] !== secret) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
+// Data source, in precedence order:
+//   WINE_FIXTURE  → static JSON, no cache, no credentials (standalone + tests)
+//   WP_API_URL    → WordPress REST API, cached to cache/wines.json
+//   CSV_PATH      → WP CSV export, cached to cache/wines.json
+function selectDataClient(): { client: DataClient & { initialize(): void | Promise<void> }; label: string } {
+  if (process.env.WINE_FIXTURE) {
+    return {
+      client: new FixtureClient(process.env.WINE_FIXTURE),
+      label: `fixture ${process.env.WINE_FIXTURE}`,
+    };
   }
-  next();
+  if (process.env.WP_API_URL) {
+    return {
+      client: new WPClient(process.env.WP_API_URL, process.env.WP_API_KEY || ''),
+      label: `WordPress REST API ${process.env.WP_API_URL}`,
+    };
+  }
+  return {
+    client: new CSVClient(process.env.CSV_PATH || ''),
+    label: `CSV export ${process.env.CSV_PATH}`,
+  };
 }
-
-// Cache for filter dropdown values
-let metaCache: {
-  varietals: string[];
-  regions: string[];
-  types: string[];
-  avaList: string[];
-  stateProvinces: string[];
-  specialDesignations: string[];
-} | null = null;
-
-// Combined search + filter endpoint
-app.get('/api/search', requireApiKey, (req, res) => {
-  try {
-    const { q, limit, offset, sort_by, sort_order, ...filterParams } = req.query;
-
-    let results = dataClient.getAllWines();
-
-    // Step 1: Full-text search if query provided
-    if (q && typeof q === 'string' && q.trim()) {
-      results = searchWines(results, {
-        query: q,
-        limit: Infinity,
-        sort_order: 'desc',
-      });
-    }
-
-    // Step 2: Apply filters if any filter params provided
-    const filters: Record<string, string> = {};
-    for (const [key, value] of Object.entries(filterParams)) {
-      if (typeof value === 'string' && value.trim()) {
-        filters[key] = value;
-      }
-    }
-    if (Object.keys(filters).length > 0) {
-      results = filterWines(results, {
-        filters,
-        limit: Infinity,
-        sort_order: 'desc',
-      });
-    }
-
-    // Step 3: Sort
-    const sortBy = typeof sort_by === 'string' ? sort_by : 'rating';
-    const sortOrd =
-      typeof sort_order === 'string' &&
-      (sort_order === 'asc' || sort_order === 'desc')
-        ? sort_order
-        : 'desc';
-
-    // Use filterWines with empty filters just for sorting
-    if (sortBy) {
-      results = filterWines(results, {
-        filters: {},
-        limit: Infinity,
-        sort_by: sortBy,
-        sort_order: sortOrd,
-      });
-    }
-
-    // Step 4: Apply limit + offset
-    const finalLimit = limit ? parseInt(limit as string) : 20;
-    const finalOffset = offset ? parseInt(offset as string) : 0;
-    res.json({ wines: results.slice(finalOffset, finalOffset + finalLimit), total: results.length });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-// Filter dropdown metadata
-app.get('/api/meta', requireApiKey, (_req, res) => {
-  try {
-    if (!metaCache) {
-      const wines = dataClient.getAllWines();
-      const unique = (values: string[]) =>
-        [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort(
-          (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
-        );
-      metaCache = {
-        varietals: unique(wines.map((w) => w.mainVarietal)).filter((v) => !VARIETAL_EXCLUSIONS.has(v)),
-        regions: unique(wines.map((w) => w.region)),
-        types: unique(wines.map((w) => w.type)),
-        avaList: unique(wines.map((w) => w.ava)),
-        stateProvinces: unique(wines.map((w) => w.stateProvince)),
-        specialDesignations: designationGroupLabels(unique(wines.map((w) => w.specialDesignation))),
-      };
-    }
-    res.json(metaCache);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-// Wine detail lookup
-app.get('/api/wine/:name', (req, res) => {
-  try {
-    const exactMatch = req.query.exact_match === 'true';
-    const results = getWineDetails(dataClient.getAllWines(), {
-      wine_name: req.params.name,
-      exact_match: exactMatch,
-    });
-    res.json(results);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-// Tool definitions for Anthropic API
-const tools: Anthropic.Tool[] = [
-  {
-    name: 'search_wines',
-    description:
-      'Search wines by full-text query across wine names, brands, reviews, regions, AVAs, and varietals',
-    input_schema: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Search term(s) to find in wine data',
-        },
-        limit: {
-          type: 'number',
-          description: 'Maximum number of results to return (default: 20)',
-        },
-        sort_by: {
-          type: 'string',
-          description: 'Column to sort by (e.g., rating, price, vintage)',
-        },
-        sort_order: {
-          type: 'string',
-          enum: ['asc', 'desc'],
-          description: 'Sort direction (default: desc)',
-        },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'filter_wines',
-    description:
-      'Filter wines by specific criteria with comparison operators. Use for queries with specific requirements (price, rating, region, varietal, etc.)',
-    input_schema: {
-      type: 'object',
-      properties: {
-        filters: {
-          type: 'object',
-          description:
-            'Key-value pairs for filtering. Use column names as keys (mainVarietal, type, region, ava, brandName, price, rating, vintage, publicationDate, tastingDate). For numeric/date columns, use operators like ">4", "<50", ">=2012"',
-        },
-        limit: {
-          type: 'number',
-          description: 'Maximum number of results (default: 20)',
-        },
-        sort_by: {
-          type: 'string',
-          description: 'Column to sort by',
-        },
-        sort_order: {
-          type: 'string',
-          enum: ['asc', 'desc'],
-          description: 'Sort direction',
-        },
-      },
-      required: ['filters'],
-    },
-  },
-  {
-    name: 'get_wine_details',
-    description:
-      'Get detailed information about a specific wine by name. Use when user asks for a specific wine.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        wine_name: {
-          type: 'string',
-          description: 'Name or partial name of the wine to find',
-        },
-        exact_match: {
-          type: 'boolean',
-          description:
-            'If true, requires exact match. If false (default), allows partial matches',
-        },
-      },
-      required: ['wine_name'],
-    },
-  },
-];
-
-// Chat endpoint — disabled until ready to launch
-app.post('/api/chat', (_req, res) => {
-  res.status(503).json({ error: 'Chat is not available yet.' });
-});
-
-/* CHAT IMPLEMENTATION — re-enable by wiring back to app.post('/api/chat', ...) above
-async function chatHandler(req: any, res: any) {
-  try {
-    const { messages } = req.body;
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'Messages array required' });
-    }
-
-    // System prompt for the wine assistant
-    const systemPrompt = `You are a wine expert assistant with access to a database of 3,240+ wine reviews.
-You can search, filter, and provide detailed information about wines.
-
-When users ask about wines:
-- Use search_wines for text queries (e.g., "cherry oak", "Napa Valley", "Quilceda Creek")
-- Use filter_wines for specific criteria (price, rating, region, varietal, vintage)
-- Use get_wine_details for specific wine names
-- Provide natural, conversational responses with wine recommendations
-- When showing wines, include brand, name, rating, price, and brief tasting notes
-- Limit results to top 10 most relevant wines unless user asks for more
-
-Available wine data: brand, name, vintage, price, rating (0-5 stars), region,
-AVA, main varietal, type (Red/White/Rosé/etc.), tasting notes, tasting/publication dates.`;
-
-    // Convert messages to Anthropic format
-    const anthropicMessages: Anthropic.MessageParam[] = messages.map(
-      (msg: { role: string; content: string }) => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      })
-    );
-
-    let response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: systemPrompt,
-      tools,
-      messages: anthropicMessages,
-    });
-
-    // Handle tool use in a loop
-    while (response.stop_reason === 'tool_use') {
-      const toolUse = response.content.find(
-        (block) => block.type === 'tool_use'
-      );
-      if (!toolUse || toolUse.type !== 'tool_use') break;
-
-      console.log(`[Tool Call] ${toolUse.name}:`, JSON.stringify(toolUse.input));
-
-      // Execute the tool
-      let toolResult: any;
-      const wines = dataClient.getAllWines();
-
-      try {
-        switch (toolUse.name) {
-          case 'search_wines':
-            toolResult = searchWines(wines, toolUse.input as any);
-            break;
-          case 'filter_wines':
-            toolResult = filterWines(wines, toolUse.input as any);
-            break;
-          case 'get_wine_details':
-            toolResult = getWineDetails(wines, toolUse.input as any);
-            break;
-          default:
-            toolResult = { error: `Unknown tool: ${toolUse.name}` };
-        }
-      } catch (error) {
-        toolResult = {
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-
-      console.log(`[Tool Result] Found ${toolResult.length || 0} wines`);
-
-      // Continue conversation with tool result
-      anthropicMessages.push({
-        role: 'assistant',
-        content: response.content,
-      });
-
-      anthropicMessages.push({
-        role: 'user',
-        content: [
-          {
-            type: 'tool_result',
-            tool_use_id: toolUse.id,
-            content: JSON.stringify(toolResult.slice(0, 20)), // Limit to 20 wines in tool result
-          },
-        ],
-      });
-
-      response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
-        system: systemPrompt,
-        tools,
-        messages: anthropicMessages,
-      });
-    }
-
-    // Extract final text response
-    const textContent = response.content.find((block) => block.type === 'text');
-    const finalMessage =
-      textContent && textContent.type === 'text' ? textContent.text : '';
-
-    res.json({ message: finalMessage });
-  } catch (error) {
-    console.error('[Chat Error]', error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-END CHAT IMPLEMENTATION */
-
-// ─── Webhook: receive live updates from WordPress ─────────────────────────────
-app.post('/api/webhook/review', (req, res) => {
-  const secret = process.env.WEBHOOK_SECRET;
-  if (secret && req.headers['x-webhook-secret'] !== secret) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-
-  const { action, review } = req.body as { action: 'upsert' | 'delete'; review: WPReview };
-
-  if (!action || !review?.id) {
-    res.status(400).json({ error: 'Missing action or review.id' });
-    return;
-  }
-
-  if (action === 'delete') {
-    dataClient.removeWine(String(review.id));
-    console.log(`[Webhook] Removed wine ${review.id}`);
-  } else {
-    dataClient.upsertWine(mapWPReview(review));
-    console.log(`[Webhook] Upserted wine ${review.id}: ${review.brand_name}`);
-  }
-
-  metaCache = null; // force rebuild so filter dropdowns reflect the change
-
-  res.json({ ok: true, total: dataClient.getAllWines().length });
-});
 
 async function start() {
-  dataClient.initialize();
-  console.log(`Loaded ${dataClient.getAllWines().length} wines`);
+  const { client, label } = selectDataClient();
+  await client.initialize();
+
+  // Fixture mode is for local work and tests, so it deliberately ignores
+  // WEBHOOK_SECRET — otherwise a stray .env would 401 every request.
+  const secret = process.env.WINE_FIXTURE ? undefined : process.env.WEBHOOK_SECRET;
+  const app = createApp(client, { secret });
+
+  console.log(`Data source: ${label}`);
+  console.log(`Loaded ${client.getAllWines().length} wines`);
 
   const PORT = parseInt(process.env.PORT || '3001');
   app.listen(PORT, () => {

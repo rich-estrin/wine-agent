@@ -1,22 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Combobox,
+  ComboboxButton,
   ComboboxInput,
   ComboboxOptions,
   ComboboxOption,
 } from '@headlessui/react';
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { Meta } from '../types';
+import { foldIncludes } from '../lib/text';
 import AvaTreeFilter from './AvaTreeFilter';
 import RegionTreeFilter from './RegionTreeFilter';
 
 // ── Types & utilities (re-exported for App.tsx) ──────────────────────────────
 
+// Facets drawn as checkbox lists hold a list of selections; the server already
+// treats these fields as a comma-separated OR list. The combobox and the two
+// tree pickers stay single-select and so stay plain strings.
 export interface Filters {
   mainVarietal: string;
   ava: string;
   region: string;
-  type: string;
+  type: string[];
   priceMin: string;
   priceMax: string;
   scoreMin: string;
@@ -24,15 +29,15 @@ export interface Filters {
   vintageMin: string;
   vintageMax: string;
   dateRange: string;
-  stateProvince: string;
-  specialDesignation: string;
+  stateProvince: string[];
+  specialDesignation: string[];
 }
 
 export const emptyFilters: Filters = {
   mainVarietal: '',
   ava: '',
   region: '',
-  type: '',
+  type: [],
   priceMin: '',
   priceMax: '',
   scoreMin: '',
@@ -40,9 +45,22 @@ export const emptyFilters: Filters = {
   vintageMin: '',
   vintageMax: '',
   dateRange: '',
-  stateProvince: '',
-  specialDesignation: '',
+  stateProvince: [],
+  specialDesignation: [],
 };
+
+/** True when any filter is set — arrays count as set only when non-empty. */
+export function hasAnyFilter(filters: Filters): boolean {
+  return countActiveFilters(filters) > 0;
+}
+
+/** Number of active filters, counting each selection in a multi-select. */
+export function countActiveFilters(filters: Filters): number {
+  return Object.values(filters).reduce<number>(
+    (n, v) => n + (Array.isArray(v) ? v.length : v !== '' ? 1 : 0),
+    0,
+  );
+}
 
 const dateRangeOptions = [
   { label: 'Last 3 months', value: '3m' },
@@ -93,6 +111,10 @@ const VINTAGE_MAX = new Date().getFullYear();
 
 // ── Shared sub-components ───────────────────────────────────────────────────
 
+/** Facet label → a stable test id, e.g. "State/Province/Region" → "state-province-region". */
+const slug = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+
 function FacetGroup({
   label,
   hasSelection,
@@ -116,7 +138,7 @@ function FacetGroup({
   };
 
   return (
-    <div className="border-b border-warm-border">
+    <div className="border-b border-warm-border" data-testid={`facet-${slug(label)}`}>
       <button
         onClick={toggle}
         className="w-full flex items-center justify-between px-5 py-[13px] hover:bg-[rgba(0,0,0,0.03)] transition-colors text-left"
@@ -137,38 +159,52 @@ function FacetGroup({
   );
 }
 
+// A checkbox promises "pick as many as you like"; a radio promises "pick one".
+// Facets that accept multiple selections draw checkboxes, the ones that accept
+// a single value (Review Date) draw radios, so the control never over-promises.
 function FacetOption({
   label,
   selected,
   onSelect,
+  shape = 'checkbox',
 }: {
   label: string;
   selected: boolean;
   onSelect: () => void;
+  shape?: 'checkbox' | 'radio';
 }) {
+  const radio = shape === 'radio';
   return (
     <button
       onClick={onSelect}
+      role={radio ? 'radio' : 'checkbox'}
+      aria-checked={selected}
       className="flex items-center gap-2.5 w-full text-left py-[5px] group"
     >
       <div
-        className="w-[14px] h-[14px] rounded-[2px] flex items-center justify-center flex-shrink-0 transition-all"
+        className={`w-[14px] h-[14px] flex items-center justify-center flex-shrink-0 transition-all ${
+          radio ? 'rounded-full' : 'rounded-[2px]'
+        }`}
         style={
-          selected
+          selected && !radio
             ? { background: '#7b2d3e', border: '1px solid #a84458' }
             : { border: '1px solid #7b2d3e' }
         }
       >
         {selected && (
-          <div
-            style={{
-              width: 7,
-              height: 4,
-              borderLeft: '1.5px solid white',
-              borderBottom: '1.5px solid white',
-              transform: 'rotate(-45deg) translateY(-1px)',
-            }}
-          />
+          radio ? (
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#7b2d3e' }} />
+          ) : (
+            <div
+              style={{
+                width: 7,
+                height: 4,
+                borderLeft: '1.5px solid white',
+                borderBottom: '1.5px solid white',
+                transform: 'rotate(-45deg) translateY(-1px)',
+              }}
+            />
+          )
         )}
       </div>
       <span
@@ -182,6 +218,9 @@ function FacetOption({
   );
 }
 
+// Multi-select list. Selections that no longer appear in `options` — because
+// another filter narrowed this one — are still listed and still shown as
+// checked, so a choice already made is never silently dropped.
 function FacetList({
   options,
   value,
@@ -190,18 +229,24 @@ function FacetList({
   searchable = false,
 }: {
   options: string[];
-  value: string;
-  onChange: (v: string) => void;
+  value: string[];
+  onChange: (v: string[]) => void;
   maxVisible?: number;
   searchable?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [filterText, setFilterText] = useState('');
 
+  const orphaned = value.filter((v) => !options.includes(v));
+  const allOptions = orphaned.length ? [...orphaned, ...options] : options;
+
   const filtered = filterText
-    ? options.filter((o) => o.toLowerCase().includes(filterText.toLowerCase()))
-    : options;
+    ? allOptions.filter((o) => foldIncludes(o, filterText))
+    : allOptions;
   const visible = showAll || filterText ? filtered : filtered.slice(0, maxVisible);
+
+  const toggle = (opt: string) =>
+    onChange(value.includes(opt) ? value.filter((v) => v !== opt) : [...value, opt]);
 
   return (
     <div>
@@ -228,16 +273,16 @@ function FacetList({
         <FacetOption
           key={opt}
           label={opt}
-          selected={value === opt}
-          onSelect={() => onChange(value === opt ? '' : opt)}
+          selected={value.includes(opt)}
+          onSelect={() => toggle(opt)}
         />
       ))}
-      {!filterText && options.length > maxVisible && (
+      {!filterText && allOptions.length > maxVisible && (
         <button
           onClick={() => setShowAll(!showAll)}
           className="mt-1 text-[10px] font-medium tracking-[0.08em] uppercase text-[rgba(184,146,74,0.65)] hover:text-[#b8924a] transition-colors"
         >
-          {showAll ? 'Show less' : `+${options.length - maxVisible} more`}
+          {showAll ? 'Show less' : `+${allOptions.length - maxVisible} more`}
         </button>
       )}
       {filterText && filtered.length === 0 && (
@@ -263,7 +308,7 @@ function VarietalCombobox({
   const [query, setQuery] = useState('');
 
   const filtered = query.trim()
-    ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase()))
+    ? options.filter((o) => foldIncludes(o, query))
     : options;
 
   return (
@@ -271,44 +316,48 @@ function VarietalCombobox({
       value={value}
       onChange={(v: string | null) => onChange(v ?? '')}
       onClose={() => setQuery('')}
-      immediate
     >
-      <div className="relative">
-        <ComboboxInput
-          className="w-full pl-3 pr-7 py-[7px] text-[12px] text-ink bg-[rgba(0,0,0,0.04)] border border-[rgba(26,20,16,0.1)] rounded-[3px] outline-none focus:border-gold/50 placeholder:text-muted/50 transition-colors"
-          displayValue={(v: string) => v}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
-        />
-        {value ? (
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => { onChange(''); setQuery(''); }}
+      {({ open }) => (
+        <div className="relative">
+          <ComboboxInput
+            className="w-full pl-3 pr-7 py-[7px] text-[12px] text-ink bg-[rgba(0,0,0,0.04)] border border-[rgba(26,20,16,0.1)] rounded-[3px] outline-none focus:border-gold/50 placeholder:text-muted/50 transition-colors"
+            displayValue={(v: string) => v}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={placeholder}
+          />
+          {/* One ComboboxButton in both states, so it always toggles the list:
+              a second click on the arrow closes it, and clearing a selection
+              leaves the list open ready for the next choice. */}
+          <ComboboxButton
+            onClick={() => { if (value) { onChange(''); setQuery(''); } }}
+            aria-label={value ? 'Clear varietal' : 'Toggle varietal list'}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
           >
-            <XMarkIcon className="w-3 h-3" />
-          </button>
-        ) : (
-          <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted pointer-events-none" />
-        )}
-        <ComboboxOptions
-          className="absolute z-[200] top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-warm-border rounded-[3px] shadow-xl"
-        >
-          {filtered.length === 0 ? (
-            <div className="px-3 py-2 text-[11px] text-muted italic">No matches</div>
-          ) : (
-            filtered.map((opt) => (
-              <ComboboxOption
-                key={opt}
-                value={opt}
-                className="px-3 py-[6px] text-[12px] cursor-pointer text-ink/70 data-[focus]:bg-[rgba(26,20,16,0.04)] data-[selected]:text-wine data-[selected]:font-medium transition-colors"
-              >
-                {opt}
-              </ComboboxOption>
-            ))
-          )}
-        </ComboboxOptions>
-      </div>
+            {value ? (
+              <XMarkIcon className="w-3 h-3" />
+            ) : (
+              <ChevronDownIcon className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+            )}
+          </ComboboxButton>
+          <ComboboxOptions
+            className="absolute z-[200] top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-warm-border rounded-[3px] shadow-xl"
+          >
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2 text-[11px] text-muted italic">No matches</div>
+            ) : (
+              filtered.map((opt) => (
+                <ComboboxOption
+                  key={opt}
+                  value={opt}
+                  className="px-3 py-[6px] text-[12px] cursor-pointer text-ink/70 data-[focus]:bg-[rgba(26,20,16,0.04)] data-[selected]:text-wine data-[selected]:font-medium transition-colors"
+                >
+                  {opt}
+                </ComboboxOption>
+              ))
+            )}
+          </ComboboxOptions>
+        </div>
+      )}
     </Combobox>
   );
 }
@@ -359,17 +408,17 @@ function SidebarDualRange({
 
   // Clear errors when the opposite field's draft changes and resolves the conflict
   useEffect(() => {
-    if (loError && parseInt(loDraft) < parseInt(hiDraft)) setLoError(false);
+    if (loError && parseInt(loDraft) <= parseInt(hiDraft)) setLoError(false);
   }, [hiDraft]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (hiError && parseInt(hiDraft) > parseInt(loDraft)) setHiError(false);
+    if (hiError && parseInt(hiDraft) >= parseInt(loDraft)) setHiError(false);
   }, [loDraft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commitLo = () => {
     loFocused.current = false;
     const loVal = parseInt(loDraft);
     const hiVal = parseInt(hiDraft);
-    if (!isNaN(loVal) && !isNaN(hiVal) && loVal >= hiVal) {
+    if (!isNaN(loVal) && !isNaN(hiVal) && loVal > hiVal) {
       setLoError(true);
     } else {
       setLoError(false);
@@ -380,7 +429,7 @@ function SidebarDualRange({
     hiFocused.current = false;
     const loVal = parseInt(loDraft);
     const hiVal = parseInt(hiDraft);
-    if (!isNaN(loVal) && !isNaN(hiVal) && hiVal <= loVal) {
+    if (!isNaN(loVal) && !isNaN(hiVal) && hiVal < loVal) {
       setHiError(true);
     } else {
       setHiError(false);
@@ -433,7 +482,7 @@ function SidebarDualRange({
           min={sliderMin}
           max={sliderMax}
           value={lo}
-          onChange={(e) => onLo(Math.min(parseInt(e.target.value), hi - 1))}
+          onChange={(e) => onLo(Math.min(parseInt(e.target.value), hi))}
           className="sidebar-slider"
           style={{ zIndex: zLo }}
         />
@@ -442,7 +491,7 @@ function SidebarDualRange({
           min={sliderMin}
           max={sliderMax}
           value={hi}
-          onChange={(e) => onHi(Math.max(parseInt(e.target.value), lo + 1))}
+          onChange={(e) => onHi(Math.max(parseInt(e.target.value), lo))}
           className="sidebar-slider"
           style={{ zIndex: 4 }}
         />
@@ -550,41 +599,53 @@ export function ActiveChips({
   filters: Filters;
   onChange: (f: Filters) => void;
 }) {
-  const chips: { label: string; clear: () => void }[] = [];
-  if (filters.mainVarietal) chips.push({ label: filters.mainVarietal, clear: () => onChange({ ...filters, mainVarietal: '' }) });
-  if (filters.ava) chips.push({ label: filters.ava, clear: () => onChange({ ...filters, ava: '' }) });
-  if (filters.region) chips.push({ label: filters.region, clear: () => onChange({ ...filters, region: '' }) });
-  if (filters.type) chips.push({ label: filters.type, clear: () => onChange({ ...filters, type: '' }) });
+  const chips: { key: string; label: string; clear: () => void }[] = [];
+
+  // One chip per selection, so each can be removed on its own.
+  const multi = (key: 'type' | 'stateProvince' | 'specialDesignation') =>
+    filters[key].forEach((v) =>
+      chips.push({
+        key: `${key}:${v}`,
+        label: v,
+        clear: () => onChange({ ...filters, [key]: filters[key].filter((x) => x !== v) }),
+      }),
+    );
+
+  if (filters.mainVarietal) chips.push({ key: 'mainVarietal', label: filters.mainVarietal, clear: () => onChange({ ...filters, mainVarietal: '' }) });
+  if (filters.ava) chips.push({ key: 'ava', label: filters.ava, clear: () => onChange({ ...filters, ava: '' }) });
+  if (filters.region) chips.push({ key: 'region', label: filters.region, clear: () => onChange({ ...filters, region: '' }) });
+  multi('type');
   if (filters.priceMin || filters.priceMax) {
     const label = filters.priceMin && filters.priceMax
       ? `$${filters.priceMin}–$${filters.priceMax}`
       : filters.priceMin ? `$${filters.priceMin}+` : `Up to $${filters.priceMax}`;
-    chips.push({ label, clear: () => onChange({ ...filters, priceMin: '', priceMax: '' }) });
+    chips.push({ key: 'price', label, clear: () => onChange({ ...filters, priceMin: '', priceMax: '' }) });
   }
   if (filters.scoreMin || filters.scoreMax) {
     const min = filters.scoreMin || String(SCORE_MIN);
     const max = filters.scoreMax || String(SCORE_MAX);
-    chips.push({ label: `Score ${min}–${max}`, clear: () => onChange({ ...filters, scoreMin: '', scoreMax: '' }) });
+    chips.push({ key: 'score', label: `Score ${min}–${max}`, clear: () => onChange({ ...filters, scoreMin: '', scoreMax: '' }) });
   }
   if (filters.vintageMin || filters.vintageMax) {
     const label = filters.vintageMin && filters.vintageMax
       ? `${filters.vintageMin}–${filters.vintageMax}`
       : filters.vintageMin ? `${filters.vintageMin}+` : `To ${filters.vintageMax}`;
-    chips.push({ label, clear: () => onChange({ ...filters, vintageMin: '', vintageMax: '' }) });
+    chips.push({ key: 'vintage', label, clear: () => onChange({ ...filters, vintageMin: '', vintageMax: '' }) });
   }
   if (filters.dateRange) {
     const opt = dateRangeOptions.find((o) => o.value === filters.dateRange);
-    chips.push({ label: opt?.label ?? filters.dateRange, clear: () => onChange({ ...filters, dateRange: '' }) });
+    chips.push({ key: 'dateRange', label: opt?.label ?? filters.dateRange, clear: () => onChange({ ...filters, dateRange: '' }) });
   }
-  if (filters.stateProvince) chips.push({ label: filters.stateProvince, clear: () => onChange({ ...filters, stateProvince: '' }) });
-  if (filters.specialDesignation) chips.push({ label: filters.specialDesignation, clear: () => onChange({ ...filters, specialDesignation: '' }) });
+  multi('stateProvince');
+  multi('specialDesignation');
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
       {chips.map((chip) => (
         <button
-          key={chip.label}
+          key={chip.key}
           onClick={chip.clear}
+          data-testid="active-chip"
           className="inline-flex items-center gap-[5px] px-2.5 py-[3px] text-[10px] font-medium tracking-[0.06em] uppercase text-white bg-[#7b2d3e] border border-[rgba(123,45,62,0.6)] rounded-full hover:bg-[#a84458] transition-colors"
         >
           {chip.label}
@@ -660,7 +721,7 @@ export default function Sidebar({
   filters: Filters;
   onChange: (f: Filters) => void;
 }) {
-  const hasFilters = Object.values(filters).some((v) => v !== '');
+  const hasFilters = hasAnyFilter(filters);
   const hasAdvanced = !!(
     filters.vintageMin || filters.vintageMax ||
     filters.ava || filters.region ||
@@ -686,7 +747,7 @@ export default function Sidebar({
 
       {/* 1. Wine Type */}
       {meta && (
-        <FacetGroup label="Wine Type" hasSelection={!!filters.type} defaultOpen={true}>
+        <FacetGroup label="Wine Type" hasSelection={filters.type.length > 0} defaultOpen={true}>
           <FacetList
             options={sortTypes(meta.types)}
             value={filters.type}
@@ -695,19 +756,16 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* 2. Varietal — always-visible combobox, no toggle needed */}
+      {/* 2. Varietal — collapsible like the rest, but open by default */}
       {meta && (
-        <div className="border-b border-warm-border px-5 py-[13px]">
-          <p className={`text-[11px] font-medium tracking-[0.1em] uppercase mb-2 ${filters.mainVarietal ? 'text-gold' : 'text-muted'}`}>
-            Varietal
-          </p>
+        <FacetGroup label="Varietal" hasSelection={!!filters.mainVarietal} defaultOpen={true}>
           <VarietalCombobox
             options={meta.varietals}
             value={filters.mainVarietal}
             onChange={(v) => onChange({ ...filters, mainVarietal: v })}
             placeholder="Search varietals…"
           />
-        </div>
+        </FacetGroup>
       )}
 
       {/* 3. Score */}
@@ -738,7 +796,7 @@ export default function Sidebar({
 
       {/* 5. State/Province */}
       {meta && meta.stateProvinces.length > 0 && (
-        <FacetGroup label="State/Province" hasSelection={!!filters.stateProvince} defaultOpen={false}>
+        <FacetGroup label="State/Province/Region" hasSelection={filters.stateProvince.length > 0} defaultOpen={false}>
           <FacetList
             options={meta.stateProvinces}
             value={filters.stateProvince}
@@ -769,6 +827,7 @@ export default function Sidebar({
           <AvaTreeFilter
             value={filters.ava}
             onChange={(v) => onChange({ ...filters, ava: v })}
+            available={meta?.avaList ?? []}
           />
         </FacetGroup>
 
@@ -793,6 +852,7 @@ export default function Sidebar({
           {dateRangeOptions.map((opt) => (
             <FacetOption
               key={opt.value}
+              shape="radio"
               label={opt.label}
               selected={filters.dateRange === opt.value}
               onSelect={() =>
@@ -805,7 +865,7 @@ export default function Sidebar({
         {meta && meta.specialDesignations.length > 0 && (
           <FacetGroup
             label="Special Designation"
-            hasSelection={!!filters.specialDesignation}
+            hasSelection={filters.specialDesignation.length > 0}
             defaultOpen={false}
           >
             <FacetList

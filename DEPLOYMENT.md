@@ -34,7 +34,6 @@ Use `/deploy` in Claude Code to run this automatically, or follow the steps manu
 ### 1. Build MCP tools
 
 ```bash
-cd mcp && npm run build
 ```
 
 ### 2. Build the React app
@@ -74,7 +73,6 @@ EC2_KEY=/path/to/your-keypair.pem
 EC2_PATH=/home/ec2-user/wine-agent
 
 # MCP tools
-rsync -avz -e "ssh -i $EC2_KEY" mcp/dist/ $EC2_USER@$EC2_HOST:$EC2_PATH/mcp/dist/
 
 # API server source
 rsync -avz -e "ssh -i $EC2_KEY" web/server/ $EC2_USER@$EC2_HOST:$EC2_PATH/web/server/
