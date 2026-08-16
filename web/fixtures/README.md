@@ -16,7 +16,7 @@ cases that have actually caused bugs:
 |---|---|
 | `Itä`, `Gård Vintners`, `Sémillon`, `Carménère`, `Rhône-Style` | Accent folding — searchable without the accent, and with it |
 | `Kiona` as both a winery and a vineyard name in `wineName` | One query matching two different searched fields |
-| "Merlot" in a tasting note, and as a `mainVarietal` | Neither field is searched — these must NOT be found by query |
+| "Merlot" in a tasting note, and as a `mainVarietal` | The varietal is searched, the note is not |
 | `garden herbs` in a note, vs the winery `Gård` | Prefix matching: "gard" finds the winery, never "garden" |
 | `Rhône` in a note whose wine name is `Rhône-Style Blend` | Highlighting accented note text from an unaccented query |
 | `price: "N/A"` and `price: "0"` | Both mean "no price" and must sort last in both directions |

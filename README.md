@@ -43,7 +43,7 @@ wine-agent/
 
 ## Features
 
-- **Full-text search** across producer name, vintage and wine name, matching word prefixes
+- **Full-text search** across producer name, vintage, wine name and varietal, matching word prefixes
 - **Filters** — Wine type, appellation (hierarchical AVA tree), home region, varietal (with search box), price, score, vintage, review date
 - **Live updates** — WordPress fires a webhook on publish/trash; the API server updates in real time without a restart
 - **Mobile-friendly** — slide-up filter sheet on small screens

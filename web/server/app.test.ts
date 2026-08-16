@@ -65,9 +65,12 @@ describe('GET /api/search', () => {
   });
 
   it('ignores the tasting note', async () => {
-    // "Merlot" appears in tasting notes but in no producer or wine name here.
+    // Woodward Canyon's note mentions Merlot; it is a Cabernet, so it must not
+    // come back — every hit has to name Merlot in a searched field.
     const { wines } = await search('q=Merlot&limit=200');
-    expect(wines.every((w) => /merlot/i.test(`${w.brandName} ${w.wineName}`))).toBe(true);
+    expect(wines.length).toBeGreaterThan(0);
+    expect(wines.map((w) => w.brandName)).not.toContain('Woodward Canyon');
+    expect(wines.every((w) => /merlot/i.test(`${w.brandName} ${w.wineName} ${w.mainVarietal}`))).toBe(true);
   });
 
   it('finds accented names without the accent', async () => {

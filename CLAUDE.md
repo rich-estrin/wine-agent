@@ -106,9 +106,9 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 ### Search/Filter Logic
 - All text comparison goes through `fold()` in `src/lib/text.ts` — strips accents
   and case, so "Ita" finds "Itä" and "semillon" finds "Sémillon"
-- Full-text search: `server/wine-search.ts` looks at `brandName`, `vintage` and
-  `wineName` only — not the tasting note, appellation, region or varietal, which
-  are what the filters are for. Each query term must match the **start of a
+- Full-text search: `server/wine-search.ts` looks at `brandName`, `vintage`,
+  `wineName` and `mainVarietal` only — not the tasting note, appellation or
+  region, which are what the filters are for. Each query term must match the **start of a
   word** (accent-folded), and every term must match somewhere, though not
   necessarily in the same field. Matching only: results keep the source order
   unless a sort is given, and `/api/search` sorts by rating by default

@@ -11,10 +11,11 @@ import { fold, foldWords } from '../src/lib/text.js';
 const EXACT_MATCH_FIELDS = new Set(['mainVarietal', 'type', 'region', 'stateProvince', 'specialDesignation']);
 
 // What the search box looks at, and nothing else. Producer and vintage are what
-// people type; the full wine name catches the rest. The tasting note is
-// deliberately absent — matching prose turned a search for a winery into a list
-// of every review that happened to mention it.
-const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName'];
+// people type; the full wine name catches the rest. Varietal is here because a
+// wine named "Estate Red" is still a Tempranillo, and nothing in its name says
+// so. The tasting note is deliberately absent — matching prose turned a search
+// for a winery into a list of every review that happened to mention it.
+const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName', 'mainVarietal'];
 
 // Folding 3,000+ rows on every keystroke would be wasteful, so each wine's
 // searchable words are computed once and remembered. A WeakMap keyed on the

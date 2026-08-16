@@ -63,27 +63,32 @@ describe('searchWines — searchable fields', () => {
     expect(search('Crianza')).toEqual(['rioja']);
   });
 
+  it('searches the varietal, which the wine name need not mention', () => {
+    expect(search('Tempranillo')).toEqual(['rioja']);
+    expect(search('Syrah')).toEqual(['ita']);
+  });
+
   it('combines producer and vintage in one query', () => {
     expect(search('Woodward 2018')).toEqual(['woodward']);
     expect(search('Woodward 2019')).toEqual([]);
   });
 
   it('does not search the tasting note', () => {
-    // Woodward Canyon's review mentions Merlot; only Gård is a Merlot by name.
-    expect(search('Merlot')).toEqual([]);
+    // Woodward Canyon's review mentions Merlot; Gård is a Merlot by varietal.
+    expect(search('Merlot')).toEqual(['gard']);
     expect(search('herbs')).toEqual([]);
   });
 
-  it('does not search appellation, region or varietal — those are filters', () => {
+  it('does not search appellation or region — those are filters', () => {
     expect(search('Umpqua')).toEqual([]);
-    expect(search('Tempranillo')).toEqual([]);
+    expect(search('Walla')).toEqual([]);
   });
 });
 
 describe('searchWines — prefix matching', () => {
   it('matches the start of a word', () => {
     expect(search('Wood')).toEqual(['woodward']);
-    expect(search('Cab')).toEqual(['kiona', 'fidelitas']);
+    expect(search('Cab')).toEqual(['kiona', 'fidelitas', 'woodward']);
   });
 
   it('matches a word anywhere in the field, not just the first', () => {
@@ -96,12 +101,12 @@ describe('searchWines — prefix matching', () => {
   });
 
   it('leaves the source order alone when no sort is given', () => {
-    expect(search('cabernet')).toEqual(['kiona', 'fidelitas']);
+    expect(search('cabernet')).toEqual(['kiona', 'fidelitas', 'woodward']);
   });
 
   it('honours an explicit sort', () => {
     const byPrice = ids(searchWines(wines, { query: 'cabernet', limit: 99, sort_by: 'price', sort_order: 'desc' }));
-    expect(byPrice[0]).toBe('fidelitas');
+    expect(byPrice[0]).toBe('woodward');
   });
 
   it('applies the limit', () => {
