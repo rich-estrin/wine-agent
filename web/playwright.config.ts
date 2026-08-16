@@ -2,7 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 const WEB_PORT = Number(process.env.E2E_WEB_PORT || 5199);
 const API_PORT = Number(process.env.E2E_API_PORT || 3101);
-const baseURL = `http://127.0.0.1:${WEB_PORT}`;
+// localhost, not 127.0.0.1: Vite binds the dev server to IPv6 loopback ([::1])
+// by default, so an IPv4-literal health probe never connects and the webServer
+// times out. `localhost` resolves to whichever family Vite actually bound.
+const baseURL = `http://localhost:${WEB_PORT}`;
 
 // Some environments ship a pre-installed Chromium that doesn't match the build
 // this Playwright version expects. Point at it explicitly rather than baking a
