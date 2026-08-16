@@ -28,6 +28,30 @@ test.describe('accent-insensitive search', () => {
   });
 });
 
+test.describe('apostrophe-insensitive search', () => {
+  // The apostrophe is a word separator, so "L'Ecole" indexes as "l" + "ecole"
+  // and a search for "lecole" found nothing at all before the elision was added.
+  const cases: [string, string][] = [
+    ['lecole', "L'Ecole No. 41"],
+    ["L'Ecole", "L'Ecole No. 41"],
+    ['ecole', "L'Ecole No. 41"],
+    ['colters', 'Colter’s Creek'],
+    ['colter', 'Colter’s Creek'],
+  ];
+
+  for (const [query, expectedBrand] of cases) {
+    test(`"${query}" finds ${expectedBrand}`, async ({ page }) => {
+      await search(page, query);
+      await expect(page.getByTestId('wine-card-brand').first()).toHaveText(expectedBrand);
+    });
+  }
+
+  test('does not invent a match the elision cannot produce', async ({ page }) => {
+    await search(page, 'lecoles');
+    await expect(page.getByTestId('wine-card')).toHaveCount(0);
+  });
+});
+
 test.describe('what the query matches', () => {
   test('matches the producer and a wine naming the same vineyard', async ({ page }) => {
     await search(page, 'Kiona');

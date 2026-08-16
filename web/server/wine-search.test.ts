@@ -85,6 +85,46 @@ describe('searchWines — searchable fields', () => {
   });
 });
 
+describe('searchWines — apostrophes', () => {
+  // A local set: these rows exist to be searched by name, and adding them to
+  // the shared list above would shift the price/varietal assertions there.
+  // Two spellings, because the export holds both — an ASCII quote and a
+  // typographic one — and neither should need the reader to type it.
+  const apostrophes: Wine[] = [
+    makeWine({ id: 'lecole',  brandName: "L'Ecole No. 41", wineName: 'Frenchtown',
+               mainVarietal: 'Merlot' }),
+    makeWine({ id: 'colters', brandName: 'Colter’s Creek', wineName: 'Koos Koos Kia',
+               mainVarietal: 'Syrah' }),
+    makeWine({ id: 'plain',   brandName: 'Woodward Canyon', wineName: 'Old Vines',
+               mainVarietal: 'Merlot' }),
+  ];
+  const search = (q: string) => ids(searchWines(apostrophes, { query: q, limit: 99 }));
+
+  it('finds L\'Ecole when the apostrophe is left out', () => {
+    expect(search('lecole')).toEqual(['lecole']);
+  });
+
+  it('finds it with the apostrophe typed, either spelling', () => {
+    expect(search("L'Ecole")).toEqual(['lecole']);
+    expect(search('L’Ecole')).toEqual(['lecole']);
+  });
+
+  it('still finds it by the part after the apostrophe', () => {
+    expect(search('ecole')).toEqual(['lecole']);
+  });
+
+  it('applies to possessives, on the typographic apostrophe too', () => {
+    expect(search('colters')).toEqual(['colters']);
+    expect(search("colter's")).toEqual(['colters']);
+    expect(search('colter')).toEqual(['colters']);
+  });
+
+  it('does not match an elision that is not there', () => {
+    expect(search('lecoles')).toEqual([]);
+    expect(search('xecole')).toEqual([]);
+  });
+});
+
 describe('searchWines — prefix matching', () => {
   it('matches the start of a word', () => {
     expect(search('Wood')).toEqual(['woodward']);

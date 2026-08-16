@@ -218,7 +218,9 @@ test.describe('infinite scroll', () => {
       await scrollToBottom(page);
       await expect(page.getByTestId('wine-card')).toHaveCount(total, { timeout: 2_000 });
     }).toPass({ timeout: 20_000 });
-    await expect(page.getByText('All 61 results shown')).toBeVisible();
+    // Derived from the count line, not hardcoded: the fixture grows whenever a
+    // new edge case is added, and a literal here fails for the wrong reason.
+    await expect(page.getByText(`All ${total} results shown`)).toBeVisible();
   });
 
   test('paging in the rest of the list never duplicates a row', async ({ page }) => {

@@ -3,7 +3,7 @@ import {
   parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull,
   parseFilterValue, compareValues, sortWines,
 } from './wine-utils.js';
-import { fold, foldWords } from '../src/lib/text.js';
+import { fold, foldWords, foldSearchWords } from '../src/lib/text.js';
 
 // Fields populated from single-select dropdowns / grouped trees. These match
 // exactly (case-insensitive) against a comma-separated OR list rather than by
@@ -26,14 +26,15 @@ const wordCache = new WeakMap<Wine, string[]>();
 function searchWords(wine: Wine): string[] {
   const cached = wordCache.get(wine);
   if (cached) return cached;
-  const words = SEARCH_FIELDS.flatMap((field) => foldWords((wine[field] as string) ?? ''));
+  const words = SEARCH_FIELDS.flatMap((field) => foldSearchWords((wine[field] as string) ?? ''));
   wordCache.set(wine, words);
   return words;
 }
 
 /** True when every query term begins a word in one of the search fields.
  *  Prefix, not substring: "gard" finds "Gård Vintners" but not "garden", and
- *  all terms must match somewhere (AND), though not in the same field. */
+ *  all terms must match somewhere (AND), though not in the same field.
+ *  The indexed words include apostrophe elisions, so "lecole" finds "L'Ecole". */
 function matchesQuery(wine: Wine, terms: string[]): boolean {
   if (terms.length === 0) return true;
   const words = searchWords(wine);

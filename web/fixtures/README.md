@@ -15,6 +15,7 @@ cases that have actually caused bugs:
 | Case | Why it's here |
 |---|---|
 | `Itä`, `Gård Vintners`, `Sémillon`, `Carménère`, `Rhône-Style` | Accent folding — searchable without the accent, and with it |
+| `L'Ecole No. 41` (ASCII quote), `Colter’s Creek` (typographic) | Apostrophe elision — "lecole" and "colters" must find them, both spellings |
 | `Kiona` as both a winery and a vineyard name in `wineName` | One query matching two different searched fields |
 | "Merlot" in a tasting note, and as a `mainVarietal` | The varietal is searched, the note is not |
 | `garden herbs` in a note, vs the winery `Gård` | Prefix matching: "gard" finds the winery, never "garden" |

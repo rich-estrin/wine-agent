@@ -158,6 +158,58 @@
     },
     {
       "id": "7",
+      "brandName": "L'Ecole No. 41",
+      "wineName": "Frenchtown Merlot",
+      "ava": "Walla Walla Valley",
+      "vintage": "2019",
+      "price": "$40",
+      "rating": "92",
+      "review": "Cedar and red plum, with the estate’s familiar savoury edge.",
+      "region": "Walla Walla Valley (WA/OR)",
+      "type": "Red",
+      "mainVarietal": "Merlot",
+      "varietyStyle": "",
+      "tastingDate": "",
+      "publicationDate": "2025-06-15",
+      "setting": "",
+      "purchasedProvided": "",
+      "temp": "",
+      "hyperlink": "",
+      "specialDesignation": "",
+      "alcohol": "14.1%",
+      "closure": "Cork",
+      "stateProvince": "Washington",
+      "source": "Sample",
+      "reviewer": "A. Taster"
+    },
+    {
+      "id": "8",
+      "brandName": "Colter’s Creek",
+      "wineName": "Koos Koos Kia Red",
+      "ava": "Lewis-Clark Valley",
+      "vintage": "2021",
+      "price": "$28",
+      "rating": "90",
+      "review": "Peppery and lean, with dried cherry and sage.",
+      "region": "Sunnyslope (ID)",
+      "type": "Red",
+      "mainVarietal": "Syrah",
+      "varietyStyle": "",
+      "tastingDate": "",
+      "publicationDate": "2025-06-15",
+      "setting": "",
+      "purchasedProvided": "",
+      "temp": "",
+      "hyperlink": "",
+      "specialDesignation": "",
+      "alcohol": "14.1%",
+      "closure": "Cork",
+      "stateProvince": "Idaho",
+      "source": "Sample",
+      "reviewer": "A. Taster"
+    },
+    {
+      "id": "9",
       "brandName": "Kiona",
       "wineName": "Estate Cabernet Sauvignon",
       "ava": "Red Mountain",
@@ -183,7 +235,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "8",
+      "id": "10",
       "brandName": "Fidelitas",
       "wineName": "Kiona Vineyard Cabernet Sauvignon",
       "ava": "Red Mountain",
@@ -209,7 +261,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "9",
+      "id": "11",
       "brandName": "Obelisco",
       "wineName": "Estate Electrum",
       "ava": "Red Mountain",
@@ -235,7 +287,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "10",
+      "id": "12",
       "brandName": "Chinook",
       "wineName": "Merlot",
       "ava": "Yakima Valley",
@@ -261,7 +313,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "11",
+      "id": "13",
       "brandName": "Woodward Canyon",
       "wineName": "Old Vines Cabernet Sauvignon",
       "ava": "Walla Walla Valley",
@@ -287,7 +339,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "12",
+      "id": "14",
       "brandName": "Cellar Door",
       "wineName": "Library Reserve",
       "ava": "Yakima Valley",
@@ -313,7 +365,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "13",
+      "id": "15",
       "brandName": "Quarry Butte",
       "wineName": "Unpriced Red",
       "ava": "Columbia Valley",
@@ -339,7 +391,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "14",
+      "id": "16",
       "brandName": "Nonvintage Cellars",
       "wineName": "Solera Blend",
       "ava": "Columbia Valley",
@@ -365,7 +417,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "15",
+      "id": "17",
       "brandName": "Silver Bell",
       "wineName": "Old Block Riesling",
       "ava": "Ancient Lakes of Columbia Valley",
@@ -391,7 +443,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "16",
+      "id": "18",
       "brandName": "Harrow & Vine",
       "wineName": "Dry Rosé",
       "ava": "Columbia Gorge",
@@ -417,7 +469,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "17",
+      "id": "19",
       "brandName": "Tumbledown",
       "wineName": "Unrated Curiosity",
       "ava": "Puget Sound",
@@ -443,7 +495,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "18",
+      "id": "20",
       "brandName": "Owen Roe",
       "wineName": "Sinister Hand",
       "ava": "Yakima Valley",
@@ -469,7 +521,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "19",
+      "id": "21",
       "brandName": "Pale Harvest",
       "wineName": "White Cabernet Franc",
       "ava": "Yakima Valley",
@@ -495,7 +547,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "20",
+      "id": "22",
       "brandName": "Northlight",
       "wineName": "Blanc de Pinot Noir",
       "ava": "Willamette Valley",
@@ -521,7 +573,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "21",
+      "id": "23",
       "brandName": "Import Cellars",
       "wineName": "Rioja Crianza",
       "ava": "Rioja",
@@ -547,7 +599,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "22",
+      "id": "24",
       "brandName": "Transatlantic",
       "wineName": "Chianti Classico",
       "ava": "Chianti Classico",
@@ -573,7 +625,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "23",
+      "id": "25",
       "brandName": "Sawtooth",
       "wineName": "Classic Fly Series Riesling",
       "ava": "Snake River Valley",
@@ -599,7 +651,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "24",
+      "id": "26",
       "brandName": "Eagle Foothills Estate",
       "wineName": "Reserve Syrah",
       "ava": "Eagle Foothills",
@@ -625,7 +677,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "25",
+      "id": "27",
       "brandName": "Mission Hill",
       "wineName": "Reserve Merlot",
       "ava": "Okanagan Valley",
@@ -651,7 +703,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "26",
+      "id": "28",
       "brandName": "Golden Mile Bench Winery",
       "wineName": "Estate Pinot Gris",
       "ava": "Golden Mile Bench",
@@ -677,7 +729,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "27",
+      "id": "29",
       "brandName": "Abacela",
       "wineName": "Fiesta Albariño",
       "ava": "Umpqua Valley",
@@ -703,7 +755,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "28",
+      "id": "30",
       "brandName": "Ribbon Ridge Cellars",
       "wineName": "Estate Pinot Noir",
       "ava": "Ribbon Ridge",
@@ -729,7 +781,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "29",
+      "id": "31",
       "brandName": "Applegate Ridge",
       "wineName": "Tempranillo",
       "ava": "Applegate Valley",
@@ -755,7 +807,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "30",
+      "id": "32",
       "brandName": "Elkton Hill",
       "wineName": "Late Harvest Gewürztraminer",
       "ava": "Elkton Oregon",
@@ -781,7 +833,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "31",
+      "id": "33",
       "brandName": "The Rocks District Cooperative Winery & Vineyard Company",
       "wineName": "Single Block Estate Reserve Syrah from the Home Vineyard",
       "ava": "The Rocks District of Milton-Freewater",
@@ -807,7 +859,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "32",
+      "id": "34",
       "brandName": "Columbia Bench",
       "wineName": "Everyday Red",
       "ava": "Horse Heaven Hills",
@@ -833,7 +885,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "33",
+      "id": "35",
       "brandName": "Columbia Bench",
       "wineName": "Weeknight White",
       "ava": "Horse Heaven Hills",
@@ -859,7 +911,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "34",
+      "id": "36",
       "brandName": "Columbia Bench",
       "wineName": "Midweek Rosé",
       "ava": "Horse Heaven Hills",
@@ -885,7 +937,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "35",
+      "id": "37",
       "brandName": "Columbia Bench",
       "wineName": "Sunday Syrah",
       "ava": "Horse Heaven Hills",
@@ -911,7 +963,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "36",
+      "id": "38",
       "brandName": "Columbia Bench",
       "wineName": "Anniversary Cab",
       "ava": "Horse Heaven Hills",
@@ -937,7 +989,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "37",
+      "id": "39",
       "brandName": "Columbia Bench",
       "wineName": "Collector Reserve",
       "ava": "Horse Heaven Hills",
@@ -963,7 +1015,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "38",
+      "id": "40",
       "brandName": "Basalt Ridge",
       "wineName": "Cabernet Sauvignon",
       "ava": "Columbia Valley",
@@ -989,7 +1041,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "39",
+      "id": "41",
       "brandName": "Basalt Ridge",
       "wineName": "Merlot",
       "ava": "Columbia Valley",
@@ -1015,7 +1067,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "40",
+      "id": "42",
       "brandName": "Basalt Ridge",
       "wineName": "Syrah Reserve",
       "ava": "Columbia Valley",
@@ -1041,7 +1093,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "41",
+      "id": "43",
       "brandName": "Coyote Draw",
       "wineName": "Merlot",
       "ava": "Wahluke Slope",
@@ -1067,7 +1119,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "42",
+      "id": "44",
       "brandName": "Coyote Draw",
       "wineName": "Syrah",
       "ava": "Wahluke Slope",
@@ -1093,7 +1145,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "43",
+      "id": "45",
       "brandName": "Coyote Draw",
       "wineName": "Chardonnay Reserve",
       "ava": "Wahluke Slope",
@@ -1119,7 +1171,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "44",
+      "id": "46",
       "brandName": "Stonecrop",
       "wineName": "Syrah",
       "ava": "Naches Heights",
@@ -1145,7 +1197,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "45",
+      "id": "47",
       "brandName": "Stonecrop",
       "wineName": "Chardonnay",
       "ava": "Naches Heights",
@@ -1171,7 +1223,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "46",
+      "id": "48",
       "brandName": "Stonecrop",
       "wineName": "Riesling Reserve",
       "ava": "Naches Heights",
@@ -1197,7 +1249,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "47",
+      "id": "49",
       "brandName": "Lake Chelan Cellars",
       "wineName": "Chardonnay",
       "ava": "Lake Chelan",
@@ -1223,7 +1275,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "48",
+      "id": "50",
       "brandName": "Lake Chelan Cellars",
       "wineName": "Riesling",
       "ava": "Lake Chelan",
@@ -1249,7 +1301,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "49",
+      "id": "51",
       "brandName": "Lake Chelan Cellars",
       "wineName": "Pinot Noir Reserve",
       "ava": "Lake Chelan",
@@ -1275,7 +1327,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "50",
+      "id": "52",
       "brandName": "Dundee Bench",
       "wineName": "Riesling",
       "ava": "Dundee Hills",
@@ -1301,7 +1353,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "51",
+      "id": "53",
       "brandName": "Dundee Bench",
       "wineName": "Pinot Noir",
       "ava": "Dundee Hills",
@@ -1327,7 +1379,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "52",
+      "id": "54",
       "brandName": "Dundee Bench",
       "wineName": "Cabernet Sauvignon Reserve",
       "ava": "Dundee Hills",
@@ -1353,7 +1405,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "53",
+      "id": "55",
       "brandName": "Eola Springs",
       "wineName": "Pinot Noir",
       "ava": "Eola-Amity Hills",
@@ -1379,7 +1431,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "54",
+      "id": "56",
       "brandName": "Eola Springs",
       "wineName": "Cabernet Sauvignon",
       "ava": "Eola-Amity Hills",
@@ -1405,7 +1457,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "55",
+      "id": "57",
       "brandName": "Eola Springs",
       "wineName": "Merlot Reserve",
       "ava": "Eola-Amity Hills",
@@ -1431,7 +1483,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "56",
+      "id": "58",
       "brandName": "Yamhill Crest",
       "wineName": "Cabernet Sauvignon",
       "ava": "Yamhill-Carlton",
@@ -1457,7 +1509,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "57",
+      "id": "59",
       "brandName": "Yamhill Crest",
       "wineName": "Merlot",
       "ava": "Yamhill-Carlton",
@@ -1483,7 +1535,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "58",
+      "id": "60",
       "brandName": "Yamhill Crest",
       "wineName": "Syrah Reserve",
       "ava": "Yamhill-Carlton",
@@ -1509,7 +1561,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "59",
+      "id": "61",
       "brandName": "Fraser Bend",
       "wineName": "Merlot",
       "ava": "Fraser Valley",
@@ -1535,7 +1587,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "60",
+      "id": "62",
       "brandName": "Fraser Bend",
       "wineName": "Syrah",
       "ava": "Fraser Valley",
@@ -1561,7 +1613,7 @@
       "reviewer": "A. Taster"
     },
     {
-      "id": "61",
+      "id": "63",
       "brandName": "Fraser Bend",
       "wineName": "Chardonnay Reserve",
       "ava": "Fraser Valley",

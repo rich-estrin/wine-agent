@@ -112,6 +112,11 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
   word** (accent-folded), and every term must match somewhere, though not
   necessarily in the same field. Matching only: results keep the source order
   unless a sort is given, and `/api/search` sorts by rating by default
+- Apostrophes: the search index is built with `foldSearchWords()`, which adds the
+  elided form of any apostrophe compound alongside the split words — "L'Ecole"
+  indexes as `l`, `ecole` *and* `lecole`, so all three spellings find it. Both the
+  ASCII and typographic apostrophe count, since the export contains both. Query
+  terms stay on `foldWords()`
 - Filtering: `server/wine-search.ts` — special-cased keys before generic field lookup.
   Dropdown fields match a comma-separated OR list, which is what backs multi-select
 - Sorting: `server/wine-utils.ts` — wines with no price/vintage/date sort **last in

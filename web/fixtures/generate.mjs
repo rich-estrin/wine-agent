@@ -61,6 +61,19 @@ wine({ brandName: 'Maison Bleue', wineName: 'Rhône-Style Blend', ava: 'Yakima V
        stateProvince: 'Washington', region: 'Yakima (WA)',
        review: 'Raspberry, garrigue and warm stone — a Rhône blend through and through.' });
 
+// ── Apostrophe cases ───────────────────────────────────────────────────────
+// Readers type these names without the punctuation, and the export spells them
+// both ways: an ASCII quote on one row, a typographic one on the other. Both
+// must be findable as "lecole" / "colters" and as the written spelling.
+wine({ brandName: "L'Ecole No. 41", wineName: 'Frenchtown Merlot', ava: 'Walla Walla Valley',
+       vintage: '2019', price: '$40', rating: '92', type: 'Red', mainVarietal: 'Merlot',
+       stateProvince: 'Washington', region: 'Walla Walla Valley (WA/OR)',
+       review: 'Cedar and red plum, with the estate’s familiar savoury edge.' });
+wine({ brandName: 'Colter’s Creek', wineName: 'Koos Koos Kia Red', ava: 'Lewis-Clark Valley',
+       vintage: '2021', price: '$28', rating: '90', type: 'Red', mainVarietal: 'Syrah',
+       stateProvince: 'Idaho', region: 'Sunnyslope (ID)',
+       review: 'Peppery and lean, with dried cherry and sage.' });
+
 // ── Winery name that is also a vineyard name ───────────────────────────────
 wine({ brandName: 'Kiona', wineName: 'Estate Cabernet Sauvignon', ava: 'Red Mountain', vintage: '2020',
        price: '$30', rating: '92', type: 'Red', mainVarietal: 'Cabernet Sauvignon',
