@@ -34,8 +34,6 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [sortBy, setSortBy] = useState('rating');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  // Once someone picks a sort by hand we stop switching it for them.
-  const sortChosen = useRef(false);
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -117,13 +115,6 @@ export default function App() {
   const searchKey = useMemo(() => JSON.stringify(buildParams(0)), [buildParams]);
   const buildParamsRef = useRef(buildParams);
   buildParamsRef.current = buildParams;
-
-  // Sorting by rating is the right default for browsing, but the wrong one the
-  // moment there's a query — it discards the ranking the search just computed.
-  useEffect(() => {
-    if (sortChosen.current) return;
-    setSortBy(query.trim() ? 'relevance' : 'rating');
-  }, [query]);
 
   // Re-derive the filter options whenever the filters change, so each facet
   // offers only what the others leave available.
@@ -240,25 +231,20 @@ export default function App() {
                   <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
                   <select
                     value={sortBy}
-                    onChange={(e) => { sortChosen.current = true; setSortBy(e.target.value); }}
+                    onChange={(e) => setSortBy(e.target.value)}
                     className="text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] outline-none cursor-pointer"
                   >
-                    {query.trim() && <option value="relevance">Relevance</option>}
                     <option value="rating">Rating</option>
                     <option value="price">Price</option>
                     <option value="vintage">Vintage</option>
                     <option value="publicationDate">Review Date</option>
                   </select>
-                  {/* Relevance has only one meaningful order, so the direction
-                      toggle would be a control that does nothing. */}
-                  {sortBy !== 'relevance' && (
-                    <button
-                      onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                      className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
-                    >
-                      {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
+                  >
+                    {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
+                  </button>
                 </div>
               </div>
 
@@ -279,23 +265,20 @@ export default function App() {
                 <div className="ml-auto flex items-center gap-1.5">
                   <select
                     value={sortBy}
-                    onChange={(e) => { sortChosen.current = true; setSortBy(e.target.value); }}
+                    onChange={(e) => setSortBy(e.target.value)}
                     className="text-[11px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2 py-[6px] outline-none cursor-pointer"
                   >
-                    {query.trim() && <option value="relevance">Relevance</option>}
                     <option value="rating">Rating</option>
                     <option value="price">Price</option>
                     <option value="vintage">Vintage</option>
                     <option value="publicationDate">Review Date</option>
                   </select>
-                  {sortBy !== 'relevance' && (
-                    <button
-                      onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                      className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
-                    >
-                      {sortOrder === 'desc' ? '↓' : '↑'}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
+                  >
+                    {sortOrder === 'desc' ? '↓' : '↑'}
+                  </button>
                 </div>
               </div>
 

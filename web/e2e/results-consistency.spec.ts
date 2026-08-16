@@ -11,8 +11,9 @@ import {
 const scrollToBottom = (page: Page) =>
   page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-/** Only these two fixture wines contain "ita" in any searched field. */
-const ITA_MATCHES = ['Itä', 'Fidelitas'];
+/** Only these two fixture wines start a word with "kiona" in a searched field:
+ *  the winery itself and the wine naming its vineyard. */
+const KIONA_MATCHES = ['Kiona', 'Fidelitas'];
 
 test.beforeEach(async ({ page }) => {
   await gotoApp(page);
@@ -20,9 +21,9 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('the result list agrees with the result count', () => {
   test('a fresh search renders exactly its matches', async ({ page }) => {
-    const total = await search(page, 'ita');
+    const total = await search(page, 'kiona');
     expect(total).toBe(2);
-    expect((await resultBrands(page)).sort()).toEqual([...ITA_MATCHES].sort());
+    expect((await resultBrands(page)).sort()).toEqual([...KIONA_MATCHES].sort());
   });
 
   test('a second search replaces the first list rather than adding to it', async ({ page }) => {
@@ -30,15 +31,15 @@ test.describe('the result list agrees with the result count', () => {
     const before = await resultBrands(page);
     expect(before.length).toBeGreaterThan(0);
 
-    await search(page, 'ita');
+    await search(page, 'kiona');
     const after = await resultBrands(page);
-    expect(after.sort()).toEqual([...ITA_MATCHES].sort());
+    expect(after.sort()).toEqual([...KIONA_MATCHES].sort());
     // Nothing from the previous query may survive.
     expect(after.some((b) => b === 'Transatlantic' || b === 'Fraser Bend')).toBe(false);
   });
 
   test('clearing the query restores the full list exactly once', async ({ page }) => {
-    await search(page, 'ita');
+    await search(page, 'kiona');
     const total = await search(page, '');
     await expectCountMatchesRows(page, total);
     expect(await page.getByTestId('wine-card').count()).toBe(Math.min(total, PAGE_SIZE));
@@ -58,7 +59,7 @@ test.describe('out-of-order responses', () => {
     });
 
     await scrollToBottom(page);
-    await searchBox(page).fill('ita');
+    await searchBox(page).fill('kiona');
     await searchBox(page).press('Enter');
 
     await expect(resultCount(page)).toHaveText('2 wines found');
@@ -66,7 +67,7 @@ test.describe('out-of-order responses', () => {
     await page.waitForTimeout(2000);
 
     await expect(page.getByTestId('wine-card')).toHaveCount(2);
-    expect((await resultBrands(page)).sort()).toEqual([...ITA_MATCHES].sort());
+    expect((await resultBrands(page)).sort()).toEqual([...KIONA_MATCHES].sort());
   });
 
   test('a slow first page cannot overwrite a newer one', async ({ page }) => {
@@ -83,7 +84,7 @@ test.describe('out-of-order responses', () => {
 
     await searchBox(page).fill('Chardonnay');
     await page.waitForTimeout(350);
-    await searchBox(page).fill('ita');
+    await searchBox(page).fill('kiona');
     await searchBox(page).press('Enter');
 
     await expect(resultCount(page)).toHaveText('2 wines found');
@@ -94,7 +95,7 @@ test.describe('out-of-order responses', () => {
   });
 
   test('typing several queries in quick succession settles on the last', async ({ page }) => {
-    for (const q of ['red', 'merlot', 'kiona', 'ita']) {
+    for (const q of ['red', 'merlot', 'ita', 'kiona']) {
       await searchBox(page).fill(q);
       await page.waitForTimeout(120);
     }
@@ -103,7 +104,7 @@ test.describe('out-of-order responses', () => {
     await expect(resultCount(page)).toHaveText('2 wines found');
     await page.waitForTimeout(1500);
     await expectCountMatchesRows(page, await totalResults(page));
-    expect((await resultBrands(page)).sort()).toEqual([...ITA_MATCHES].sort());
+    expect((await resultBrands(page)).sort()).toEqual([...KIONA_MATCHES].sort());
   });
 });
 

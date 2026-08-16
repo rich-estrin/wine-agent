@@ -56,7 +56,10 @@ wine({ brandName: 'Cadaretta', wineName: 'Carménère', ava: 'Columbia Valley', 
        region: 'Walla Walla Valley (WA/OR)', review: 'Green peppercorn and blackberry, firmly structured.' });
 wine({ brandName: 'Maison Bleue', wineName: 'Rhône-Style Blend', ava: 'Yakima Valley', vintage: '2020',
        price: '$48', rating: '92', type: 'Red', mainVarietal: 'Grenache', varietyStyle: 'Rhône-Style Blend',
-       stateProvince: 'Washington', region: 'Yakima (WA)', review: 'Raspberry, garrigue and warm stone.' });
+       // The accented "Rhône" in the note, matched by an unaccented query against
+       // the wine name, is what exercises the highlighter's offset mapping.
+       stateProvince: 'Washington', region: 'Yakima (WA)',
+       review: 'Raspberry, garrigue and warm stone — a Rhône blend through and through.' });
 
 // ── Winery name that is also a vineyard name ───────────────────────────────
 wine({ brandName: 'Kiona', wineName: 'Estate Cabernet Sauvignon', ava: 'Red Mountain', vintage: '2020',

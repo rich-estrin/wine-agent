@@ -40,21 +40,23 @@ test.describe('the detail modal', () => {
 });
 
 test.describe('search-term highlighting', () => {
+  // Highlighting is independent of what the query matched on: the search finds
+  // Fidelitas by the vineyard in its wine name, and the note is marked wherever
+  // the same term turns up there.
   test('marks the query inside the tasting note', async ({ page }) => {
-    await search(page, 'garden herbs');
+    await search(page, 'Kiona');
     await page.getByTestId('wine-card').first().click();
 
     const marks = dialog(page).locator('mark');
-    await expect(marks).toHaveCount(2);
-    await expect(marks.first()).toHaveText(/garden/i);
-    await expect(marks.last()).toHaveText(/herbs/i);
+    await expect(marks).toHaveCount(1);
+    await expect(marks.first()).toHaveText(/kiona/i);
   });
 
   // The offset mapping in action: the query has no accent, the note does.
   test('marks accented text from an unaccented query', async ({ page }) => {
-    await search(page, 'garrigue');
+    await search(page, 'Rhone');
     await page.getByTestId('wine-card').first().click();
-    await expect(dialog(page).locator('mark').first()).toHaveText(/garrigue/i);
+    await expect(dialog(page).locator('mark').first()).toHaveText(/rhône/i);
   });
 
   test('marks nothing when there is no query', async ({ page }) => {
@@ -63,11 +65,10 @@ test.describe('search-term highlighting', () => {
   });
 
   test('marks nothing when the term is not in the note', async ({ page }) => {
-    await search(page, 'Kiona');
+    // Chinook is matched as a producer; the word appears nowhere in its note.
+    await search(page, 'Chinook');
     await page.getByTestId('wine-card').first().click();
-    // "Kiona" is the winery, not a word in its own tasting note.
-    const marks = await dialog(page).locator('mark').allInnerTexts();
-    for (const mark of marks) expect(mark.toLowerCase()).toContain('kiona');
+    await expect(dialog(page).locator('mark')).toHaveCount(0);
   });
 });
 

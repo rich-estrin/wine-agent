@@ -29,7 +29,6 @@ wine-agent/
 │   │   ├── app.ts          # Routes: /api/search, /api/meta, /api/webhook/review
 │   │   ├── index.ts        # Picks a data source and listens
 │   │   ├── wine-search.ts  # Search and filter over the loaded wines
-│   │   ├── relevance.ts    # Tiered relevance scoring
 │   │   ├── csv-client.ts   # Loads WordPress CSV export → wines.json cache
 │   │   ├── wp-client.ts    # Alternative: loads directly from WP REST API
 │   │   └── fixture-client.ts  # Static sample data for local work and tests
@@ -44,7 +43,7 @@ wine-agent/
 
 ## Features
 
-- **Full-text search** across wine names, brands, reviews, regions, AVAs, varietals, and vintage
+- **Full-text search** across producer name, vintage and wine name, matching word prefixes
 - **Filters** — Wine type, appellation (hierarchical AVA tree), home region, varietal (with search box), price, score, vintage, review date
 - **Live updates** — WordPress fires a webhook on publish/trash; the API server updates in real time without a restart
 - **Mobile-friendly** — slide-up filter sheet on small screens

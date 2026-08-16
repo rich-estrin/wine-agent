@@ -3,47 +3,53 @@ import {
   parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull,
   parseFilterValue, compareValues, sortWines,
 } from './wine-utils.js';
-import { queryTerms, scoreWine } from './relevance.js';
-import { fold } from '../src/lib/text.js';
+import { fold, foldWords } from '../src/lib/text.js';
 
 // Fields populated from single-select dropdowns / grouped trees. These match
 // exactly (case-insensitive) against a comma-separated OR list rather than by
 // substring, fixing e.g. varietal "Ca" matching every Cabernet.
 const EXACT_MATCH_FIELDS = new Set(['mainVarietal', 'type', 'region', 'stateProvince', 'specialDesignation']);
 
-/** Full-text search, ranked. Results come back ordered by relevance (best
- *  first) so callers that want relevance order can simply not re-sort. */
+// What the search box looks at, and nothing else. Producer and vintage are what
+// people type; the full wine name catches the rest. The tasting note is
+// deliberately absent — matching prose turned a search for a winery into a list
+// of every review that happened to mention it.
+const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName'];
+
+// Folding 3,000+ rows on every keystroke would be wasteful, so each wine's
+// searchable words are computed once and remembered. A WeakMap keyed on the
+// wine object means webhook upserts (which replace the object) invalidate their
+// own entry for free.
+const wordCache = new WeakMap<Wine, string[]>();
+
+function searchWords(wine: Wine): string[] {
+  const cached = wordCache.get(wine);
+  if (cached) return cached;
+  const words = SEARCH_FIELDS.flatMap((field) => foldWords((wine[field] as string) ?? ''));
+  wordCache.set(wine, words);
+  return words;
+}
+
+/** True when every query term begins a word in one of the search fields.
+ *  Prefix, not substring: "gard" finds "Gård Vintners" but not "garden", and
+ *  all terms must match somewhere (AND), though not in the same field. */
+function matchesQuery(wine: Wine, terms: string[]): boolean {
+  if (terms.length === 0) return true;
+  const words = searchWords(wine);
+  return terms.every((term) => words.some((w) => w.startsWith(term)));
+}
+
+/** Full-text search over producer, vintage and wine name. Matching only — the
+ *  caller decides the order. */
 export function searchWines(
   wines: Wine[],
   params: { query: string; limit?: number; sort_by?: string; sort_order?: 'asc' | 'desc' },
 ): Wine[] {
   const { query, limit = 20, sort_by, sort_order = 'desc' } = params;
-  const terms = queryTerms(query);
+  const terms = foldWords(query);
 
-  const scored: { wine: Wine; score: number }[] = [];
-  for (const wine of wines) {
-    const score = scoreWine(wine, terms);
-    if (score !== null) scored.push({ wine, score });
-  }
-  // Equal relevance means the query says nothing about which wine comes first —
-  // a winery's own bottlings all score identically on its name. Fall back to the
-  // browsing default, best-rated first, rather than to load order. Unrated wines
-  // go last, matching how every other sort treats a missing value.
-  scored.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    const aRating = parseRatingOrNull(a.wine.rating);
-    const bRating = parseRatingOrNull(b.wine.rating);
-    if (aRating === null || bRating === null) {
-      if (aRating === bRating) return 0;
-      return aRating === null ? 1 : -1;
-    }
-    return bRating - aRating;
-  });
-  let results = scored.map((s) => s.wine);
-
-  // Any explicit sort other than relevance replaces the ranking. Array.sort is
-  // stable, so relevance still breaks ties within equal ratings/prices.
-  if (sort_by && sort_by !== 'relevance') results = sortWines(results, sort_by, sort_order);
+  let results = wines.filter((wine) => matchesQuery(wine, terms));
+  if (sort_by) results = sortWines(results, sort_by, sort_order);
   return results.slice(0, limit);
 }
 
@@ -55,7 +61,7 @@ export function filterWines(
   let results = wines.filter((wine) =>
     Object.entries(filters).every(([key, val]) => matchesFilter(wine, key, val)),
   );
-  if (sort_by && sort_by !== 'relevance') results = sortWines(results, sort_by, sort_order);
+  if (sort_by) results = sortWines(results, sort_by, sort_order);
   return results.slice(0, limit);
 }
 

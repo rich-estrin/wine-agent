@@ -37,11 +37,11 @@ const filter = (filters: Record<string, string>) =>
 
 describe('searchWines — accent folding', () => {
   it('finds accented winery names without the accent', () => {
-    expect(search('Ita')[0]).toBe('ita');
-    expect(search('Gard')[0]).toBe('gard');
+    expect(search('Ita')).toEqual(['ita']);
+    expect(search('Gard')).toEqual(['gard']);
   });
 
-  it('finds an accented varietal without the accent', () => {
+  it('finds an accented wine name without the accent', () => {
     expect(search('semillon')).toEqual(['semillon']);
   });
 
@@ -50,34 +50,58 @@ describe('searchWines — accent folding', () => {
   });
 });
 
-describe('searchWines — ranking', () => {
-  it('puts the winery above a wine that merely names its vineyard', () => {
-    expect(search('Kiona')).toEqual(['kiona', 'fidelitas']);
+describe('searchWines — searchable fields', () => {
+  it('searches the producer name', () => {
+    expect(search('Woodward')).toEqual(['woodward']);
   });
 
-  it('puts a varietal in the name above one mentioned in a note', () => {
-    expect(search('Merlot')).toEqual(['gard', 'woodward']);
+  it('searches the vintage', () => {
+    expect(search('2018')).toEqual(['woodward']);
   });
 
-  it('keeps loose mid-word matches, ranked last', () => {
-    // "garden herbs" in a review still matches "gard", behind Gård Vintners.
-    expect(search('Gard')).toEqual(['gard', 'woodward']);
+  it('searches the full wine name', () => {
+    expect(search('Crianza')).toEqual(['rioja']);
   });
 
-  it('returns results relevance-ordered when no sort is given', () => {
-    // wineName and mainVarietal share a tier, so all three Cabernets score the
-    // same here — which means the rating tie-break decides, best first.
-    expect(search('cabernet')).toEqual(['woodward', 'fidelitas', 'kiona']);
+  it('combines producer and vintage in one query', () => {
+    expect(search('Woodward 2018')).toEqual(['woodward']);
+    expect(search('Woodward 2019')).toEqual([]);
   });
 
-  it('honours an explicit sort, replacing the ranking', () => {
+  it('does not search the tasting note', () => {
+    // Woodward Canyon's review mentions Merlot; only Gård is a Merlot by name.
+    expect(search('Merlot')).toEqual([]);
+    expect(search('herbs')).toEqual([]);
+  });
+
+  it('does not search appellation, region or varietal — those are filters', () => {
+    expect(search('Umpqua')).toEqual([]);
+    expect(search('Tempranillo')).toEqual([]);
+  });
+});
+
+describe('searchWines — prefix matching', () => {
+  it('matches the start of a word', () => {
+    expect(search('Wood')).toEqual(['woodward']);
+    expect(search('Cab')).toEqual(['kiona', 'fidelitas']);
+  });
+
+  it('matches a word anywhere in the field, not just the first', () => {
+    expect(search('Vintners')).toEqual(['gard']);
+  });
+
+  it('does not match inside a word', () => {
+    expect(search('idelitas')).toEqual([]);
+    expect(search('ernet')).toEqual([]);
+  });
+
+  it('leaves the source order alone when no sort is given', () => {
+    expect(search('cabernet')).toEqual(['kiona', 'fidelitas']);
+  });
+
+  it('honours an explicit sort', () => {
     const byPrice = ids(searchWines(wines, { query: 'cabernet', limit: 99, sort_by: 'price', sort_order: 'desc' }));
-    expect(byPrice[0]).toBe('woodward');
-  });
-
-  it('leaves the order alone for sort_by=relevance', () => {
-    const relevance = ids(searchWines(wines, { query: 'Kiona', limit: 99, sort_by: 'relevance' }));
-    expect(relevance).toEqual(['kiona', 'fidelitas']);
+    expect(byPrice[0]).toBe('fidelitas');
   });
 
   it('applies the limit', () => {
@@ -85,36 +109,9 @@ describe('searchWines — ranking', () => {
   });
 });
 
-describe('searchWines — ties within one relevance tier', () => {
-  // A winery's own bottlings all score identically on its name, so the query
-  // says nothing about their order. Fall back to the browsing default.
-  const cellar = [
-    makeWine({ id: 'low',  brandName: 'Itä', wineName: 'Pinot Noir', rating: '88' }),
-    makeWine({ id: 'high', brandName: 'Itä', wineName: 'Sémillon',   rating: '93' }),
-    makeWine({ id: 'mid',  brandName: 'Itä', wineName: 'Syrah',      rating: '90' }),
-  ];
-
-  it('orders equally relevant wines by rating, best first', () => {
-    expect(ids(searchWines(cellar, { query: 'ita', limit: 99 }))).toEqual(['high', 'mid', 'low']);
-  });
-
-  it('puts unrated wines last rather than first', () => {
-    const withUnrated = [makeWine({ id: 'none', brandName: 'Itä', wineName: 'Rosé', rating: '' }), ...cellar];
-    expect(ids(searchWines(withUnrated, { query: 'ita', limit: 99 }))).toEqual(['high', 'mid', 'low', 'none']);
-  });
-
-  it('never lets the tie-break outrank relevance itself', () => {
-    // The vineyard mention is lower-tier, so it stays last despite a top score.
-    const mixed = [
-      makeWine({ id: 'other', brandName: 'Neighbour', review: 'Fruit from Itä.', rating: '99' }),
-      ...cellar,
-    ];
-    expect(ids(searchWines(mixed, { query: 'ita', limit: 99 }))).toEqual(['high', 'mid', 'low', 'other']);
-  });
-});
-
 describe('searchWines — matching semantics', () => {
-  it('requires all terms', () => {
+  it('requires all terms, though not in the same field', () => {
+    // Kiona's own bottling matches on the brand; Fidelitas names the vineyard.
     expect(search('Kiona Cabernet')).toEqual(['kiona', 'fidelitas']);
     expect(search('Kiona Riesling')).toEqual([]);
   });

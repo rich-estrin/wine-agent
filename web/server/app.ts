@@ -105,21 +105,19 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
       const filters = collectFilters(filterParams);
 
       const sortOrd = sort_order === 'asc' ? 'asc' : 'desc';
-      let sortBy = typeof sort_by === 'string' && sort_by ? sort_by : query ? 'relevance' : 'rating';
-      // Relevance has nothing to rank without a query — don't leave the order arbitrary.
-      if (sortBy === 'relevance' && !query) sortBy = 'rating';
+      let sortBy = typeof sort_by === 'string' && sort_by ? sort_by : 'rating';
+      // Relevance ranking is gone; older embeds may still ask for it by name.
+      if (sortBy === 'relevance') sortBy = 'rating';
 
       let results = dataClient.getAllWines();
 
-      // Full-text search returns relevance-ordered results.
       if (query) results = searchWines(results, { query, limit: Infinity });
 
       if (Object.keys(filters).length > 0) {
         results = filterWines(results, { filters, limit: Infinity });
       }
 
-      // Anything other than relevance replaces the ranking.
-      if (sortBy !== 'relevance') results = sortWines(results, sortBy, sortOrd);
+      results = sortWines(results, sortBy, sortOrd);
 
       const finalLimit = limit ? parseInt(limit as string) : 20;
       const finalOffset = offset ? parseInt(offset as string) : 0;

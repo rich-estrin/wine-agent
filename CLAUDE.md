@@ -12,7 +12,6 @@ wine-agent/
 │   │   ├── index.ts        # API server (port 3001)
 │   │   ├── wine-search.ts  # search + filter over the loaded wines
 │   │   ├── wine-utils.ts   # value parsing and sorting
-│   │   ├── relevance.ts    # tiered relevance scoring
 │   │   ├── csv-client.ts   # WP CSV export loader with disk cache
 │   │   └── wp-client.ts    # WordPress REST API loader with disk cache
 │   └── cache/              # wines.json cache (gitignored)
@@ -107,10 +106,12 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 ### Search/Filter Logic
 - All text comparison goes through `fold()` in `src/lib/text.ts` — strips accents
   and case, so "Ita" finds "Itä" and "semillon" finds "Sémillon"
-- Full-text search: `server/wine-search.ts` scores each wine via
-  `server/relevance.ts` — a whole-word hit on `brandName` outranks `wineName`,
-  then appellation/region, then the tasting note, with mid-word substrings last.
-  Results come back relevance-ordered; `sort_by=relevance` leaves that order alone
+- Full-text search: `server/wine-search.ts` looks at `brandName`, `vintage` and
+  `wineName` only — not the tasting note, appellation, region or varietal, which
+  are what the filters are for. Each query term must match the **start of a
+  word** (accent-folded), and every term must match somewhere, though not
+  necessarily in the same field. Matching only: results keep the source order
+  unless a sort is given, and `/api/search` sorts by rating by default
 - Filtering: `server/wine-search.ts` — special-cased keys before generic field lookup.
   Dropdown fields match a comma-separated OR list, which is what backs multi-select
 - Sorting: `server/wine-utils.ts` — wines with no price/vintage/date sort **last in
@@ -155,7 +156,7 @@ web/
 └── **/*.test.ts         # Vitest unit tests, beside the code they cover
 ```
 
-- **Unit tests** (`npm test`) cover text folding, relevance scoring, sorting,
+- **Unit tests** (`npm test`) cover text folding, search matching, sorting,
   filtering, the AVA/region/designation trees, both importers, and the API
   routes via `createApp()` over an ephemeral port
 - **End-to-end tests** (`npm run test:e2e`) run against the fixture app at two

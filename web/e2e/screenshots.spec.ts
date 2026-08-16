@@ -51,7 +51,7 @@ test('detail modal with a long note — desktop', async ({ page }) => {
 
 test('detail modal with highlighting — desktop', async ({ page }) => {
   await gotoApp(page);
-  await search(page, 'garden herbs');
+  await search(page, 'Kiona');
   await page.getByTestId('wine-card').first().click();
   await expect(page.getByTestId('wine-detail').locator('mark').first()).toBeVisible();
   await page.screenshot({ path: `${OUT}/detail-highlight-desktop.png` });

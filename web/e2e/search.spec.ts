@@ -28,49 +28,44 @@ test.describe('accent-insensitive search', () => {
   });
 });
 
-test.describe('relevance ranking', () => {
-  test('a winery outranks a wine that merely names its vineyard', async ({ page }) => {
+test.describe('what the query matches', () => {
+  test('matches the producer and a wine naming the same vineyard', async ({ page }) => {
     await search(page, 'Kiona');
     const brands = await resultBrands(page);
-    expect(brands[0]).toBe('Kiona');
-    expect(brands).toContain('Fidelitas');
-    expect(brands.indexOf('Kiona')).toBeLessThan(brands.indexOf('Fidelitas'));
+    expect(brands.sort()).toEqual(['Fidelitas', 'Kiona']);
   });
 
-  test('a varietal in the name outranks one mentioned in a note', async ({ page }) => {
+  test('does not match inside the tasting note', async ({ page }) => {
+    // Woodward Canyon only mentions Merlot in its note, so it must not appear.
     await search(page, 'Merlot');
-    const brands = await resultBrands(page);
-    // Woodward Canyon only mentions Merlot in its tasting note.
-    expect(brands[0]).not.toBe('Woodward Canyon');
-    expect(brands).toContain('Woodward Canyon');
+    expect(await resultBrands(page)).not.toContain('Woodward Canyon');
   });
 
-  test('a loose mid-word match is kept but ranked below a real hit', async ({ page }) => {
+  test('matches word prefixes, not fragments inside a word', async ({ page }) => {
     await search(page, 'Gard');
-    const brands = await resultBrands(page);
-    expect(brands[0]).toBe('Gård Vintners');
-    // "garden herbs" in a review still matches — just not first.
-    expect(brands.length).toBeGreaterThan(1);
+    expect(await resultBrands(page)).toEqual(['Gård Vintners']);
+
+    // "iona" sits mid-word in Kiona — a substring search would have found it.
+    await search(page, 'iona');
+    await expect(resultCount(page)).toHaveText(/^0 wines found$/);
+  });
+
+  test('narrows on a producer plus a vintage', async ({ page }) => {
+    await search(page, 'Kiona 2020');
+    expect((await resultBrands(page)).length).toBeGreaterThan(0);
+    await search(page, 'Kiona 1999');
+    await expect(resultCount(page)).toHaveText(/^0 wines found$/);
   });
 });
 
 test.describe('sort control', () => {
-  test('offers Relevance only while a query is present', async ({ page }) => {
-    await expect(sortSelect(page).locator('option[value="relevance"]')).toHaveCount(0);
-    await search(page, 'Kiona');
-    await expect(sortSelect(page).locator('option[value="relevance"]')).toHaveCount(1);
-  });
-
-  test('switches to Relevance on a query and back to Rating when cleared', async ({ page }) => {
+  test('stays on Rating when a query is typed', async ({ page }) => {
     await expect(sortSelect(page)).toHaveValue('rating');
     await search(page, 'Kiona');
-    await expect(sortSelect(page)).toHaveValue('relevance');
-
-    await search(page, '');
     await expect(sortSelect(page)).toHaveValue('rating');
   });
 
-  test('stops auto-switching once a sort is chosen by hand', async ({ page }) => {
+  test('keeps a sort chosen by hand across a search', async ({ page }) => {
     await sortBy(page, 'price');
     await search(page, 'Kiona');
     await expect(sortSelect(page)).toHaveValue('price');
@@ -80,11 +75,11 @@ test.describe('sort control', () => {
     await expect(sortSelect(page).locator('option[value="publicationDate"]')).toHaveText('Review Date');
   });
 
-  test('hides the direction toggle under Relevance, which has one order', async ({ page }) => {
+  test('keeps the direction toggle available while searching', async ({ page }) => {
     const direction = page.getByTestId('results').getByRole('button', { name: /^(Highest|Lowest|↓|↑)$/ });
     await expect(direction).toHaveCount(1);
     await search(page, 'Kiona');
-    await expect(direction).toHaveCount(0);
+    await expect(direction).toHaveCount(1);
   });
 });
 

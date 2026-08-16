@@ -31,7 +31,7 @@ afterAll(() => close(server));
 const search = async (qs: string) => {
   const res = await fetch(`${base}/api/search?${qs}`);
   expect(res.status).toBe(200);
-  return res.json() as Promise<{ wines: { id: string; brandName: string; price: string; vintage: string; mainVarietal: string }[]; total: number }>;
+  return res.json() as Promise<{ wines: { id: string; brandName: string; wineName: string; price: string; vintage: string; mainVarietal: string }[]; total: number }>;
 };
 const meta = async (qs = '') => {
   const res = await fetch(`${base}/api/meta${qs ? `?${qs}` : ''}`);
@@ -54,10 +54,20 @@ describe('GET /api/search', () => {
     expect(first.total).toBe(second.total);
   });
 
-  it('ranks the winery above a wine naming its vineyard', async () => {
+  it('matches the winery and a wine naming its vineyard alike', async () => {
     const { wines } = await search('q=Kiona');
-    expect(wines[0].brandName).toBe('Kiona');
-    expect(wines.map((w) => w.brandName)).toContain('Fidelitas');
+    expect(wines.map((w) => w.brandName).sort()).toEqual(['Fidelitas', 'Kiona']);
+  });
+
+  it('matches word prefixes, not fragments inside a word', async () => {
+    expect((await search('q=Kio')).total).toBeGreaterThan(0);
+    expect((await search('q=iona')).total).toBe(0);
+  });
+
+  it('ignores the tasting note', async () => {
+    // "Merlot" appears in tasting notes but in no producer or wine name here.
+    const { wines } = await search('q=Merlot&limit=200');
+    expect(wines.every((w) => /merlot/i.test(`${w.brandName} ${w.wineName}`))).toBe(true);
   });
 
   it('finds accented names without the accent', async () => {
@@ -82,16 +92,18 @@ describe('GET /api/search', () => {
     }
   });
 
-  it('defaults to relevance when a query is present', async () => {
+  it('defaults to rating, query or not', async () => {
     const withQuery = await search('q=Kiona');
-    const explicit = await search('q=Kiona&sort_by=relevance');
-    expect(withQuery.wines.map((w) => w.id)).toEqual(explicit.wines.map((w) => w.id));
+    expect(withQuery.wines.map((w) => w.brandName)).toEqual(['Fidelitas', 'Kiona']); // 94 then 92
+    const noQuery = await search('limit=5');
+    const rating = await search('sort_by=rating&limit=5');
+    expect(noQuery.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
   });
 
-  it('falls back to rating when relevance is asked for with no query', async () => {
-    const relevance = await search('sort_by=relevance&limit=5');
+  it('treats a legacy sort_by=relevance as rating', async () => {
+    const legacy = await search('sort_by=relevance&limit=5');
     const rating = await search('sort_by=rating&limit=5');
-    expect(relevance.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
+    expect(legacy.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
   });
 
   it('accepts a comma-separated OR list for multi-select facets', async () => {
