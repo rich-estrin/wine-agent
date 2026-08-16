@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.20.0
+ * Version: 2.21.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
