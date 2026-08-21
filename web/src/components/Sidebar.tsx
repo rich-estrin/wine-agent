@@ -892,7 +892,7 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* Advanced — Appellation, Home Region, Cases, Review Date, Special Designation */}
+      {/* Advanced — Appellation, Review Date, Cases, Home Region, Special Designation */}
       <AdvancedSection hasSelection={hasAdvanced}>
         <FacetGroup
           label="Appellation"
@@ -903,31 +903,6 @@ export default function Sidebar({
             value={filters.ava}
             onChange={(v) => onChange({ ...filters, ava: v })}
             available={meta?.avaList ?? []}
-          />
-        </FacetGroup>
-
-        {/* Home Region — nested tree grouped by state */}
-        <FacetGroup
-          label="Home Region"
-          hasSelection={!!filters.region}
-          defaultOpen={false}
-        >
-          <RegionTreeFilter
-            regions={meta?.regions ?? []}
-            value={filters.region}
-            onChange={(v) => onChange({ ...filters, region: v })}
-          />
-        </FacetGroup>
-
-        <FacetGroup
-          label="Cases"
-          hasSelection={!!(filters.casesMin || filters.casesMax)}
-          defaultOpen={false}
-        >
-          <SidebarCasesSlider
-            casesMin={filters.casesMin}
-            casesMax={filters.casesMax}
-            onChange={(min, max) => onChange({ ...filters, casesMin: min, casesMax: max })}
           />
         </FacetGroup>
 
@@ -949,6 +924,30 @@ export default function Sidebar({
           ))}
         </FacetGroup>
 
+        <FacetGroup
+          label="Cases"
+          hasSelection={!!(filters.casesMin || filters.casesMax)}
+          defaultOpen={false}
+        >
+          <SidebarCasesSlider
+            casesMin={filters.casesMin}
+            casesMax={filters.casesMax}
+            onChange={(min, max) => onChange({ ...filters, casesMin: min, casesMax: max })}
+          />
+        </FacetGroup>
+
+        <FacetGroup
+          label="Home Region"
+          hasSelection={!!filters.region}
+          defaultOpen={false}
+        >
+          <RegionTreeFilter
+            regions={meta?.regions ?? []}
+            value={filters.region}
+            onChange={(v) => onChange({ ...filters, region: v })}
+          />
+        </FacetGroup>
+
         {meta && meta.specialDesignations.length > 0 && (
           <FacetGroup
             label="Special Designation"
@@ -962,6 +961,7 @@ export default function Sidebar({
             />
           </FacetGroup>
         )}
+
       </AdvancedSection>
     </div>
   );

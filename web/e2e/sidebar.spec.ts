@@ -90,12 +90,16 @@ test.describe('facet groups', () => {
     ]);
   });
 
-  test('Advanced reveals the secondary facets', async ({ page }) => {
+  test('Advanced reveals the secondary facets, in order', async ({ page }) => {
     const panel = await openFilters(page);
     await facetHeader(panel, 'Advanced').click();
-    for (const label of ['Appellation', 'Review Date', 'Cases', 'Home Region']) {
-      await expect(facetHeader(panel, label)).toBeVisible();
-    }
+    const labels = await panel.getByTestId(/^facet-/).evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-testid')),
+    );
+    expect(labels.slice(-5)).toEqual([
+      'facet-appellation', 'facet-review-date', 'facet-cases',
+      'facet-home-region', 'facet-special-designation',
+    ]);
   });
 
   test('a group with a selection is highlighted', async ({ page }) => {
