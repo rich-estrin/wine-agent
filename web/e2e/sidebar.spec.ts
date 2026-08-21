@@ -93,7 +93,7 @@ test.describe('facet groups', () => {
   test('Advanced reveals the secondary facets', async ({ page }) => {
     const panel = await openFilters(page);
     await facetHeader(panel, 'Advanced').click();
-    for (const label of ['Appellation', 'Review Date', 'Home Region']) {
+    for (const label of ['Appellation', 'Review Date', 'Cases', 'Home Region']) {
       await expect(facetHeader(panel, label)).toBeVisible();
     }
   });

@@ -110,6 +110,17 @@ describe('GET /api/search', () => {
     expect(legacy.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
   });
 
+  it('narrows on a case-production range', async () => {
+    const all = await search('limit=200');
+    const small = await search('casesMax=500&limit=200');
+    expect(small.total).toBeGreaterThan(0);
+    expect(small.total).toBeLessThan(all.total);
+    expect(small.wines.every((w) => Number(w.cases) <= 500 && w.cases !== '')).toBe(true);
+
+    const large = await search('casesMin=5000&limit=200');
+    expect(large.wines.every((w) => Number(w.cases) >= 5000)).toBe(true);
+  });
+
   it('accepts a comma-separated OR list for multi-select facets', async () => {
     const red = await search('type=Red&limit=200');
     const white = await search('type=White&limit=200');

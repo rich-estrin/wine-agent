@@ -95,6 +95,33 @@ describe('searchWines — searchable fields', () => {
   });
 });
 
+describe('matchesFilter — cases', () => {
+  const lots = [
+    makeWine({ id: 'tiny',    cases: '48' }),
+    makeWine({ id: 'mid',     cases: '900' }),
+    makeWine({ id: 'big',     cases: '12000' }),
+    makeWine({ id: 'unknown', cases: '' }),
+  ];
+  const byCases = (f: Record<string, string>) => ids(filterWines(lots, { filters: f, limit: 99 }));
+
+  it('filters on a minimum', () => {
+    expect(byCases({ casesMin: '900' })).toEqual(['mid', 'big']);
+  });
+
+  it('filters on a maximum', () => {
+    expect(byCases({ casesMax: '900' })).toEqual(['tiny', 'mid']);
+  });
+
+  it('filters on a range', () => {
+    expect(byCases({ casesMin: '100', casesMax: '5000' })).toEqual(['mid']);
+  });
+
+  it('excludes wines that report no case production, rather than reading them as zero', () => {
+    expect(byCases({ casesMax: '50000' })).not.toContain('unknown');
+    expect(byCases({ casesMin: '0' })).not.toContain('unknown');
+  });
+});
+
 describe('searchWines — apostrophes', () => {
   // A local set: these rows exist to be searched by name, and adding them to
   // the shared list above would shift the price/varietal assertions there.

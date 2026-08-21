@@ -28,6 +28,7 @@ cases that have actually caused bugs:
 | Regions spanning two states, e.g. `Walla Walla Valley (WA/OR)` | Must appear under both states |
 | Tasting notes from one line to several hundred words | Card and modal layout under both extremes |
 | Long winery + wine + appellation names | Text overflow in cards and chips |
+| Case production from 48 to 12,000, and every seventh row blank | The Cases range filter must exclude "not reported", not read it as zero |
 
 Regenerate with `node fixtures/generate.mjs` after editing that script. The
 output is committed so tests are deterministic and the app runs on a fresh

@@ -20,6 +20,7 @@ export interface Wine {
   specialDesignation: string;
   alcohol: string;
   closure: string;
+  cases: string;
   stateProvince: string;
   source: string;
   reviewer: string;

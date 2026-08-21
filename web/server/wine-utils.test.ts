@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull, parseDayOrNull,
+  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull, parseDayOrNull, parseCasesOrNull, normalizeCases,
   parseFilterValue, compareValues, sortWines,
 } from './wine-utils.js';
 import { makeWine, ids } from '../test/factory.js';
@@ -79,6 +79,25 @@ describe('compareValues', () => {
 
   it('is false for an unknown operator', () => {
     expect(compareValues(3, '!!', 3)).toBe(false);
+  });
+});
+
+describe('normalizeCases / parseCasesOrNull', () => {
+  it('strips separators and the word', () => {
+    expect(normalizeCases('1,200 cases')).toBe('1200');
+    expect(normalizeCases('  850 ')).toBe('850');
+  });
+
+  it('treats blank and zero as "not reported"', () => {
+    expect(normalizeCases('')).toBe('');
+    expect(normalizeCases('0')).toBe('');
+    expect(parseCasesOrNull('')).toBeNull();
+    expect(parseCasesOrNull('0')).toBeNull();
+  });
+
+  it('parses a normalized value back to a number', () => {
+    expect(parseCasesOrNull('1200')).toBe(1200);
+    expect(parseCasesOrNull('1,200')).toBe(1200);
   });
 });
 

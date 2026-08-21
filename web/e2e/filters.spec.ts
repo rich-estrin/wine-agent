@@ -202,3 +202,22 @@ test('the mobile filter button shows a count of active filters', async ({ page }
 
   await expect(page.getByRole('button', { name: /^filters/i })).toContainText('2');
 });
+
+test.describe('cases', () => {
+  test('narrows the results to a case-production range', async ({ page }) => {
+    const all = await totalResults(page);
+    const panel = await openFilters(page);
+    await facetHeader(panel, 'Advanced').click();
+    await facetHeader(panel, 'Cases').click();
+
+    const boxes = rangeInputs(panel, 'Cases');
+    await expect(boxes).toHaveCount(2);
+
+    const narrowed = await withResults(page, async () => {
+      await boxes.nth(1).fill('500');
+      await boxes.nth(1).press('Enter');
+    });
+    expect(narrowed).toBeGreaterThan(0);
+    expect(narrowed).toBeLessThan(all);
+  });
+});

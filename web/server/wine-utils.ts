@@ -50,6 +50,19 @@ export function parseDayOrNull(dateStr: string): number | null {
   return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+/** Case production as plain digits, or '' when the row reports none. Strips
+ *  the separators and the word: "1,200 cases" and "1200" both land on "1200". */
+export function normalizeCases(raw: string): string {
+  const digits = (raw ?? '').replace(/[^0-9]/g, '');
+  return digits === '' || Number(digits) === 0 ? '' : String(Number(digits));
+}
+
+/** Numeric case production, or null when the wine reports none. */
+export function parseCasesOrNull(casesStr: string): number | null {
+  const n = parseInt((casesStr ?? '').replace(/[^0-9]/g, ''), 10);
+  return isNaN(n) || n === 0 ? null : n;
+}
+
 export function parseFilterValue(filterValue: string): { operator: string; value: string } {
   const match = filterValue.match(/^([><=]+)(.+)$/);
   if (match) return { operator: match[1], value: match[2].trim() };
@@ -74,6 +87,7 @@ function sortValue(wine: Wine, sortBy: string): number | string | null {
     case 'price':   return parsePriceOrNull(wine.price);
     case 'rating':  return parseRatingOrNull(wine.rating);
     case 'vintage': return parseVintageOrNull(wine.vintage);
+    case 'cases':   return parseCasesOrNull(wine.cases);
     // Day granularity, so same-day reviews tie and fall through to the
     // rating tiebreak below rather than being ordered by their timestamps.
     case 'publicationDate': return parseDayOrNull(wine.publicationDate);

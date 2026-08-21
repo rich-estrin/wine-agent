@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname } from 'path';
 import type { Wine } from '../src/types.js';
+import { normalizeCases } from './wine-utils.js';
 
 const DEFAULT_CACHE_PATH = './cache/wines.json';
 
@@ -63,6 +64,9 @@ export interface WPReview {
   special_designation: string;
   alcohol: string;
   closure: string;
+  cases?: string;
+  cases_produced?: string;
+  case_production?: string;
   state_or_province: string;
   source: string;
   reviewer: string;
@@ -102,6 +106,7 @@ export function mapWPReview(row: WPReview): Wine {
     specialDesignation: (row.special_designation ?? '').trim(),
     alcohol:           (row.alcohol ?? '').trim(),
     closure:           (row.closure ?? '').trim(),
+    cases:             normalizeCases(row.cases ?? row.cases_produced ?? row.case_production ?? ''),
     stateProvince:     toTitleCase(row.state_or_province ?? ''),
     source:            (row.source ?? '').trim(),
     reviewer:          (row.reviewer ?? '').trim(),

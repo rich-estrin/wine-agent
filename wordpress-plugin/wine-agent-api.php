@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.21.0
+ * Version: 2.22.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -82,6 +82,8 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
             MAX( CASE WHEN pm.meta_key = 'special_designation' THEN pm.meta_value END ) AS special_designation,
             MAX( CASE WHEN pm.meta_key = 'alcohol_percentage'  THEN pm.meta_value END ) AS alcohol_percentage,
             MAX( CASE WHEN pm.meta_key = 'closure'             THEN pm.meta_value END ) AS closure,
+            MAX( CASE WHEN pm.meta_key IN ( 'cases', 'cases_produced', 'case_production' )
+                                                               THEN pm.meta_value END ) AS cases,
             MAX( CASE WHEN pm.meta_key = 'state_or_province'   THEN pm.meta_value END ) AS state_or_province,
             MAX( CASE WHEN pm.meta_key = 'source'              THEN pm.meta_value END ) AS source,
             MAX( CASE WHEN pm.meta_key = 'reviewer_user'       THEN pm.meta_value END ) AS reviewer
@@ -120,6 +122,7 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
             'special_designation' => (string) $row['special_designation'],
             'alcohol'          => (string) $row['alcohol_percentage'],
             'closure'          => (string) $row['closure'],
+            'cases'            => (string) $row['cases'],
             'state_or_province' => (string) $row['state_or_province'],
             'source'           => (string) $row['source'],
             'reviewer'         => (string) $row['reviewer'],
@@ -165,6 +168,9 @@ function wine_agent_build_review_payload( int $post_id ): array {
         'special_designation' => (string) get_post_meta( $post_id, 'special_designation', true ),
         'alcohol'          => (string) get_post_meta( $post_id, 'alcohol_percentage', true ),
         'closure'          => (string) get_post_meta( $post_id, 'closure', true ),
+        'cases'            => (string) ( get_post_meta( $post_id, 'cases', true )
+                           ?: get_post_meta( $post_id, 'cases_produced', true )
+                           ?: get_post_meta( $post_id, 'case_production', true ) ),
         'state_or_province' => (string) get_post_meta( $post_id, 'state_or_province', true ),
         'source'           => (string) get_post_meta( $post_id, 'source', true ),
         'reviewer'         => (string) get_post_meta( $post_id, 'reviewer_user', true ),

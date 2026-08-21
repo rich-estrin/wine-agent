@@ -83,6 +83,8 @@ export default function App() {
     if (filters.scoreMax) params.scoreMax = filters.scoreMax;
     if (filters.vintageMin) params.vintageMin = filters.vintageMin;
     if (filters.vintageMax) params.vintageMax = filters.vintageMax;
+    if (filters.casesMin) params.casesMin = filters.casesMin;
+    if (filters.casesMax) params.casesMax = filters.casesMax;
     if (filters.stateProvince.length) params.stateProvince = filters.stateProvince.join(',');
     if (filters.specialDesignation.length) {
       params.specialDesignation = [

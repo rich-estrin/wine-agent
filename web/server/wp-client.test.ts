@@ -107,3 +107,16 @@ describe('mapWPReview — dates and defaults', () => {
     expect(sparse.price).toBe('N/A');
   });
 });
+
+describe('case production', () => {
+  it('reads whichever meta key the install uses', () => {
+    expect(mapWPReview(review({ cases: '1,200' })).cases).toBe('1200');
+    expect(mapWPReview(review({ cases_produced: '850' })).cases).toBe('850');
+    expect(mapWPReview(review({ case_production: '48' })).cases).toBe('48');
+  });
+
+  it('is blank when the review reports none', () => {
+    expect(mapWPReview(review({})).cases).toBe('');
+    expect(mapWPReview(review({ cases: '0' })).cases).toBe('');
+  });
+});

@@ -1,6 +1,6 @@
 import type { Wine } from '../src/types.js';
 import {
-  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull,
+  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull, parseCasesOrNull,
   parseFilterValue, compareValues, sortWines,
 } from './wine-utils.js';
 import { fold, foldWords, foldSearchWords } from '../src/lib/text.js';
@@ -86,6 +86,14 @@ export function matchesFilter(wine: Wine, key: string, filterValue: string): boo
     const n = parsePriceOrNull(wine.price);
     return n !== null && n <= parseFloat(filterValue);
   }
+  if (key === 'casesMin') {
+    const n = parseCasesOrNull(wine.cases);
+    return n !== null && n >= parseFloat(filterValue);
+  }
+  if (key === 'casesMax') {
+    const n = parseCasesOrNull(wine.cases);
+    return n !== null && n <= parseFloat(filterValue);
+  }
   if (key === 'ava') {
     const allowed = filterValue.split(',').map((s) => fold(s.trim()));
     return allowed.includes(fold(wine.ava));
@@ -125,6 +133,10 @@ export function matchesFilter(wine: Wine, key: string, filterValue: string): boo
     case 'vintage': {
       const v = parseVintageOrNull(wineValue);
       return v !== null && compareValues(v, operator, parseInt(value) || 0);
+    }
+    case 'cases': {
+      const n = parseCasesOrNull(wineValue);
+      return n !== null && compareValues(n, operator, parseInt(value) || 0);
     }
     case 'publicationDate':
     case 'tastingDate': {
