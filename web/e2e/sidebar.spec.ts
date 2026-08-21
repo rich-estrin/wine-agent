@@ -73,16 +73,27 @@ test.describe('the Varietal control', () => {
 });
 
 test.describe('facet groups', () => {
-  test('Wine Type and Score are open by default; Advanced is collapsed', async ({ page }) => {
+  test('Wine Type, Score, Vintage and Price are open by default; Advanced is collapsed', async ({ page }) => {
     const panel = await openFilters(page);
     await expect(facetOption(panel, 'Red')).toBeVisible();
-    await expect(facetGroup(panel, 'Vintage')).toHaveCount(0); // inside Advanced
+    await expect(facetGroup(panel, 'Vintage')).toHaveCount(1);
+    await expect(facetGroup(panel, 'Appellation')).toHaveCount(0); // inside Advanced
+  });
+
+  test('Vintage sits between Score and Price', async ({ page }) => {
+    const panel = await openFilters(page);
+    const labels = await panel.getByTestId(/^facet-/).evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-testid')),
+    );
+    expect(labels.slice(0, 5)).toEqual([
+      'facet-wine-type', 'facet-varietal', 'facet-score', 'facet-vintage', 'facet-price',
+    ]);
   });
 
   test('Advanced reveals the secondary facets', async ({ page }) => {
     const panel = await openFilters(page);
     await facetHeader(panel, 'Advanced').click();
-    for (const label of ['Vintage', 'Appellation', 'Home Region', 'Review Date']) {
+    for (const label of ['Appellation', 'Review Date', 'Home Region']) {
       await expect(facetHeader(panel, label)).toBeVisible();
     }
   });

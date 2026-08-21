@@ -716,7 +716,7 @@ function AdvancedSection({
       </button>
       {!open && (
         <p className="px-5 pb-3 text-[10px] text-muted opacity-50 leading-none -mt-1">
-          Vintage · Appellation · Region…
+          Appellation · Review Date · Region…
         </p>
       )}
       {open && <div ref={contentRef}>{children}</div>}
@@ -737,9 +737,8 @@ export default function Sidebar({
 }) {
   const hasFilters = hasAnyFilter(filters);
   const hasAdvanced = !!(
-    filters.vintageMin || filters.vintageMax ||
     filters.ava || filters.region ||
-    filters.dateRange || filters.specialDesignation
+    filters.dateRange || filters.specialDesignation.length
   );
 
   return (
@@ -795,7 +794,20 @@ export default function Sidebar({
         />
       </FacetGroup>
 
-      {/* 4. Price */}
+      {/* 4. Vintage */}
+      <FacetGroup
+        label="Vintage"
+        hasSelection={!!(filters.vintageMin || filters.vintageMax)}
+        defaultOpen={true}
+      >
+        <SidebarVintageSlider
+          vintageMin={filters.vintageMin}
+          vintageMax={filters.vintageMax}
+          onChange={(min, max) => onChange({ ...filters, vintageMin: min, vintageMax: max })}
+        />
+      </FacetGroup>
+
+      {/* 5. Price */}
       <FacetGroup
         label="Price"
         hasSelection={!!(filters.priceMin || filters.priceMax)}
@@ -808,7 +820,7 @@ export default function Sidebar({
         />
       </FacetGroup>
 
-      {/* 5. State/Province */}
+      {/* 6. State/Province */}
       {meta && meta.stateProvinces.length > 0 && (
         <FacetGroup label="State/Province/Region" hasSelection={filters.stateProvince.length > 0} defaultOpen={false}>
           <FacetList
@@ -819,20 +831,8 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* Advanced — Vintage, Appellation, Home Region, Review Date, Special Designation */}
+      {/* Advanced — Appellation, Review Date, Home Region, Special Designation */}
       <AdvancedSection hasSelection={hasAdvanced}>
-        <FacetGroup
-          label="Vintage"
-          hasSelection={!!(filters.vintageMin || filters.vintageMax)}
-          defaultOpen={false}
-        >
-          <SidebarVintageSlider
-            vintageMin={filters.vintageMin}
-            vintageMax={filters.vintageMax}
-            onChange={(min, max) => onChange({ ...filters, vintageMin: min, vintageMax: max })}
-          />
-        </FacetGroup>
-
         <FacetGroup
           label="Appellation"
           hasSelection={!!filters.ava}

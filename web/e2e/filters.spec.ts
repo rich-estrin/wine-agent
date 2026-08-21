@@ -154,10 +154,8 @@ test.describe('faceting — filters narrow each other', () => {
 test.describe('range filters', () => {
   test('accepts a single vintage — 2022 to 2022', async ({ page }) => {
     const panel = await openFilters(page);
-    await facetHeader(panel, 'Advanced').click();
     const vintage = facetHeader(panel, 'Vintage');
     await expect(vintage).toBeVisible();
-    await vintage.click();
 
     const boxes = rangeInputs(panel, 'Vintage');
     await expect(boxes).toHaveCount(2);
