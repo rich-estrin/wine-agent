@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 
 // Long enough that a normal typing rhythm doesn't fire a request per keystroke,
 // short enough that pausing feels like the results are keeping up.
@@ -43,7 +43,6 @@ export default function SearchBar({
 
   return (
     <div className="relative">
-      <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gold opacity-70" />
       <input
         type="text"
         value={draft}
@@ -53,7 +52,7 @@ export default function SearchBar({
           if (e.key === 'Escape') clear();
         }}
         placeholder="Search winery, varietal, appellation…"
-        className="w-full pl-10 pr-8 py-2.5 font-cormorant font-light text-[15px] text-ink bg-white border border-warm-border rounded-[3px] placeholder:italic placeholder-muted/60 focus:outline-none focus:border-gold/60 transition-colors"
+        className="w-full pl-3.5 pr-8 py-2.5 font-cormorant font-light text-[15px] text-ink bg-white border border-warm-border rounded-[3px] placeholder:italic placeholder-muted/60 focus:outline-none focus:border-gold/60 transition-colors"
       />
       {draft && (
         <button
