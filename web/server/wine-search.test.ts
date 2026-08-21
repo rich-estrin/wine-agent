@@ -25,7 +25,8 @@ const wines: Wine[] = [
              review: 'A blend with Merlot rounding the mid-palate; garden herbs on the finish.' }),
   makeWine({ id: 'albarino',  brandName: 'Abacela', wineName: 'Fiesta', ava: 'Umpqua Valley',
              vintage: '2022', price: '$22', rating: '90', type: 'White',
-             mainVarietal: 'Albariño', stateProvince: 'Oregon' }),
+             mainVarietal: 'Albariño', stateProvince: 'Oregon',
+             region: 'Southern Oregon (OR)' }),
   makeWine({ id: 'rioja',     brandName: 'Import Cellars', wineName: 'Rioja Crianza', ava: 'Rioja',
              vintage: '2019', price: '$25', rating: '90', type: 'Red',
              mainVarietal: 'Tempranillo', stateProvince: 'America' }),
@@ -79,9 +80,18 @@ describe('searchWines — searchable fields', () => {
     expect(search('herbs')).toEqual([]);
   });
 
-  it('does not search appellation or region — those are filters', () => {
-    expect(search('Umpqua')).toEqual([]);
-    expect(search('Walla')).toEqual([]);
+  it('searches the appellation', () => {
+    expect(search('Umpqua')).toEqual(['albarino']);
+    expect(search('Walla')).toEqual(['ita', 'woodward']);
+  });
+
+  it('finds a multi-word appellation typed in full', () => {
+    expect(search('Red Mountain')).toEqual(['kiona', 'fidelitas']);
+  });
+
+  it('does not search the home region — that stays a filter', () => {
+    // Abacela's home region is Southern Oregon; only its appellation is indexed.
+    expect(search('Southern')).toEqual([]);
   });
 });
 

@@ -13,9 +13,11 @@ const EXACT_MATCH_FIELDS = new Set(['mainVarietal', 'type', 'region', 'stateProv
 // What the search box looks at, and nothing else. Producer and vintage are what
 // people type; the full wine name catches the rest. Varietal is here because a
 // wine named "Estate Red" is still a Tempranillo, and nothing in its name says
-// so. The tasting note is deliberately absent — matching prose turned a search
-// for a winery into a list of every review that happened to mention it.
-const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName', 'mainVarietal'];
+// so. The appellation is here because readers type one ("Goose Gap") expecting
+// the wines from it, and the Appellation filter is buried under Advanced. The
+// tasting note is deliberately absent — matching prose turned a search for a
+// winery into a list of every review that happened to mention it.
+const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName', 'mainVarietal', 'ava'];
 
 // Folding 3,000+ rows on every keystroke would be wasteful, so each wine's
 // searchable words are computed once and remembered. A WeakMap keyed on the
@@ -41,8 +43,8 @@ function matchesQuery(wine: Wine, terms: string[]): boolean {
   return terms.every((term) => words.some((w) => w.startsWith(term)));
 }
 
-/** Full-text search over producer, vintage and wine name. Matching only — the
- *  caller decides the order. */
+/** Full-text search over producer, vintage, wine name, varietal and appellation.
+ *  Matching only — the caller decides the order. */
 export function searchWines(
   wines: Wine[],
   params: { query: string; limit?: number; sort_by?: string; sort_order?: 'asc' | 'desc' },
