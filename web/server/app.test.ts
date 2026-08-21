@@ -31,7 +31,7 @@ afterAll(() => close(server));
 const search = async (qs: string) => {
   const res = await fetch(`${base}/api/search?${qs}`);
   expect(res.status).toBe(200);
-  return res.json() as Promise<{ wines: { id: string; brandName: string; wineName: string; price: string; vintage: string; mainVarietal: string }[]; total: number }>;
+  return res.json() as Promise<{ wines: { id: string; brandName: string; wineName: string; price: string; vintage: string; mainVarietal: string; cases: string }[]; total: number }>;
 };
 const meta = async (qs = '') => {
   const res = await fetch(`${base}/api/meta${qs ? `?${qs}` : ''}`);

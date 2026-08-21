@@ -109,10 +109,9 @@ describe('mapWPReview — dates and defaults', () => {
 });
 
 describe('case production', () => {
-  it('reads whichever meta key the install uses', () => {
+  it('reads the cases meta key, separators stripped', () => {
     expect(mapWPReview(review({ cases: '1,200' })).cases).toBe('1200');
-    expect(mapWPReview(review({ cases_produced: '850' })).cases).toBe('850');
-    expect(mapWPReview(review({ case_production: '48' })).cases).toBe('48');
+    expect(mapWPReview(review({ cases: '850' })).cases).toBe('850');
   });
 
   it('is blank when the review reports none', () => {

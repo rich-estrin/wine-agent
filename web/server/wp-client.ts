@@ -64,9 +64,8 @@ export interface WPReview {
   special_designation: string;
   alcohol: string;
   closure: string;
+  /** Absent from plugin builds before 2.23.0. */
   cases?: string;
-  cases_produced?: string;
-  case_production?: string;
   state_or_province: string;
   source: string;
   reviewer: string;
@@ -106,7 +105,7 @@ export function mapWPReview(row: WPReview): Wine {
     specialDesignation: (row.special_designation ?? '').trim(),
     alcohol:           (row.alcohol ?? '').trim(),
     closure:           (row.closure ?? '').trim(),
-    cases:             normalizeCases(row.cases ?? row.cases_produced ?? row.case_production ?? ''),
+    cases:             normalizeCases(row.cases ?? ''),
     stateProvince:     toTitleCase(row.state_or_province ?? ''),
     source:            (row.source ?? '').trim(),
     reviewer:          (row.reviewer ?? '').trim(),

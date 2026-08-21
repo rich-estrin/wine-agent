@@ -39,15 +39,6 @@ function normalizeRegion(raw: string): string {
   );
 }
 
-// Case production, whose export header has moved around. First non-empty wins;
-// the value is normalized to plain digits so "1,200 cases" and "1200" agree.
-const CASES_COLUMNS = [
-  'Review Input => Cases Produced',
-  'Review Input => Cases',
-  'Review Input => Case Production',
-  'Review Input => Production',
-];
-
 interface CacheFile {
   fetchedAt: string;
   csvPath: string;
@@ -139,7 +130,7 @@ export class CSVClient {
       specialDesignation: (row['Review Input => Special Designation'] ?? '').trim(),
       alcohol: (row['Review Input => Alcohol Percentage'] ?? '').trim(),
       closure: (row['Review Input => Closure'] ?? '').trim(),
-      cases: normalizeCases(CASES_COLUMNS.map((c) => row[c]).find((v) => v?.trim()) ?? ''),
+      cases: normalizeCases(row['Review Input => Cases'] ?? ''),
       stateProvince: toTitleCase(row['Review Input => State or Province'] ?? ''),
       source: (row['Review Input => Source'] ?? '').trim(),
       reviewer: (row['Review Input => Reviewer'] ?? '').trim(),
