@@ -32,7 +32,9 @@ export default function App() {
   const [allMeta, setAllMeta] = useState<Meta | null>(null);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [sortBy, setSortBy] = useState('rating');
+  // Review Date, newest first — the order a reader expects from a review site,
+  // and the one the results already arrive in.
+  const [sortBy, setSortBy] = useState('publicationDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(false);

@@ -83,10 +83,10 @@ test.describe('what the query matches', () => {
 });
 
 test.describe('sort control', () => {
-  test('stays on Rating when a query is typed', async ({ page }) => {
-    await expect(sortSelect(page)).toHaveValue('rating');
+  test('opens on Review Date and stays there when a query is typed', async ({ page }) => {
+    await expect(sortSelect(page)).toHaveValue('publicationDate');
     await search(page, 'Kiona');
-    await expect(sortSelect(page)).toHaveValue('rating');
+    await expect(sortSelect(page)).toHaveValue('publicationDate');
   });
 
   test('keeps a sort chosen by hand across a search', async ({ page }) => {

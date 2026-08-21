@@ -95,12 +95,13 @@ describe('GET /api/search', () => {
     }
   });
 
-  it('defaults to rating, query or not', async () => {
-    const withQuery = await search('q=Kiona');
-    expect(withQuery.wines.map((w) => w.brandName)).toEqual(['Fidelitas', 'Kiona']); // 94 then 92
+  it('defaults to review date, query or not', async () => {
+    const withQuery = await search('q=Kiona&limit=5');
+    const withQueryDated = await search('q=Kiona&sort_by=publicationDate&limit=5');
+    expect(withQuery.wines.map((w) => w.id)).toEqual(withQueryDated.wines.map((w) => w.id));
     const noQuery = await search('limit=5');
-    const rating = await search('sort_by=rating&limit=5');
-    expect(noQuery.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
+    const dated = await search('sort_by=publicationDate&limit=5');
+    expect(noQuery.wines.map((w) => w.id)).toEqual(dated.wines.map((w) => w.id));
   });
 
   it('treats a legacy sort_by=relevance as rating', async () => {
