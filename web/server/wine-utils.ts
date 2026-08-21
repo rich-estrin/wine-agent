@@ -35,6 +35,21 @@ export function parseDateOrNull(dateStr: string): number | null {
   return isNaN(d.getTime()) ? null : d.getTime();
 }
 
+/** Midnight UTC of the calendar day a date string names, or null when it names
+ *  none. Sorting by review date compares the published *day*: two reviews that
+ *  went out the same morning are a tie to be broken by rating, however many
+ *  minutes apart their timestamps happen to be. The ISO prefix is read
+ *  literally rather than through Date, whose handling of "2025-06-15" and
+ *  "2025-06-15 09:30" differs by a timezone offset. */
+export function parseDayOrNull(dateStr: string): number | null {
+  if (!dateStr) return null;
+  const iso = dateStr.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return Date.UTC(+iso[1], +iso[2] - 1, +iso[3]);
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 export function parseFilterValue(filterValue: string): { operator: string; value: string } {
   const match = filterValue.match(/^([><=]+)(.+)$/);
   if (match) return { operator: match[1], value: match[2].trim() };
@@ -59,9 +74,10 @@ function sortValue(wine: Wine, sortBy: string): number | string | null {
     case 'price':   return parsePriceOrNull(wine.price);
     case 'rating':  return parseRatingOrNull(wine.rating);
     case 'vintage': return parseVintageOrNull(wine.vintage);
-    case 'publicationDate':
-    case 'tastingDate':
-      return parseDateOrNull(wine[sortBy as keyof Wine] as string);
+    // Day granularity, so same-day reviews tie and fall through to the
+    // rating tiebreak below rather than being ordered by their timestamps.
+    case 'publicationDate': return parseDayOrNull(wine.publicationDate);
+    case 'tastingDate':     return parseDateOrNull(wine.tastingDate);
     default: {
       const v = (wine[sortBy as keyof Wine] as string) ?? '';
       return v === '' ? null : v;
@@ -87,6 +103,22 @@ export function sortWines(
 
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-    return 0;
+    return tieBreak(a, b, sortBy);
   });
+}
+
+/** Order two wines the primary sort could not separate. Only review date has
+ *  one: a day's reviews are published as a batch, so leaving them in export
+ *  order buried the day's best wine in the middle of it. Highest score first,
+ *  in both directions — "Lowest" asks for the oldest reviews, not for the
+ *  worst wine of the day — and unrated wines last, as everywhere else. */
+function tieBreak(a: Wine, b: Wine, sortBy: string): number {
+  if (sortBy !== 'publicationDate') return 0;
+  const aRating = parseRatingOrNull(a.rating);
+  const bRating = parseRatingOrNull(b.rating);
+  if (aRating === null || bRating === null) {
+    if (aRating === bRating) return 0;
+    return aRating === null ? 1 : -1;
+  }
+  return bRating - aRating;
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull,
+  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull, parseDayOrNull,
   parseFilterValue, compareValues, sortWines,
 } from './wine-utils.js';
 import { makeWine, ids } from '../test/factory.js';
@@ -82,6 +82,22 @@ describe('compareValues', () => {
   });
 });
 
+describe('parseDayOrNull', () => {
+  it('reads an ISO date as its own calendar day, timezone-free', () => {
+    expect(parseDayOrNull('2025-06-15')).toBe(Date.UTC(2025, 5, 15));
+  });
+
+  it('drops a time component, so two times on a day are equal', () => {
+    expect(parseDayOrNull('2025-06-15 09:30:00')).toBe(parseDayOrNull('2025-06-15'));
+    expect(parseDayOrNull('2025-06-15T23:59:59')).toBe(parseDayOrNull('2025-06-15'));
+  });
+
+  it('is null for empty and unparseable values', () => {
+    expect(parseDayOrNull('')).toBeNull();
+    expect(parseDayOrNull('not a date')).toBeNull();
+  });
+});
+
 describe('sortWines — wines with no value sort last in BOTH directions', () => {
   const wines = [
     makeWine({ id: 'cheap',    price: '$18', vintage: '2019', publicationDate: '2024-01-01', rating: '88' }),
@@ -112,6 +128,38 @@ describe('sortWines — wines with no value sort last in BOTH directions', () =>
   it('sorts unrated wines last in both directions', () => {
     expect(ids(sortWines(wines, 'rating', 'desc')).at(-1)).toBe('zeroprice');
     expect(ids(sortWines(wines, 'rating', 'asc')).at(-1)).toBe('zeroprice');
+  });
+
+  it('breaks a same-day tie by rating, highest first, in both directions', () => {
+    // The example from the feedback: a day's batch led by the 94-point rosé.
+    const sameDay = [
+      makeWine({ id: 'sauv-blanc', publicationDate: '2025-07-01', rating: '93' }),
+      makeWine({ id: 'rose',       publicationDate: '2025-07-01', rating: '94' }),
+      makeWine({ id: 'red',        publicationDate: '2025-07-01', rating: '90' }),
+      makeWine({ id: 'older',      publicationDate: '2025-06-01', rating: '99' }),
+    ];
+    expect(ids(sortWines(sameDay, 'publicationDate', 'desc')))
+      .toEqual(['rose', 'sauv-blanc', 'red', 'older']);
+    // "Lowest" reverses the dates, not the within-day order.
+    expect(ids(sortWines(sameDay, 'publicationDate', 'asc')))
+      .toEqual(['older', 'rose', 'sauv-blanc', 'red']);
+  });
+
+  it('ties on the published day, not the timestamp', () => {
+    const timestamped = [
+      makeWine({ id: 'morning', publicationDate: '2025-07-01 08:15:00', rating: '90' }),
+      makeWine({ id: 'evening', publicationDate: '2025-07-01 19:40:00', rating: '95' }),
+    ];
+    expect(ids(sortWines(timestamped, 'publicationDate', 'desc')))
+      .toEqual(['evening', 'morning']);
+  });
+
+  it('puts an unrated wine last within its own day', () => {
+    const sameDay = [
+      makeWine({ id: 'unrated', publicationDate: '2025-07-01', rating: '' }),
+      makeWine({ id: 'rated',   publicationDate: '2025-07-01', rating: '88' }),
+    ];
+    expect(ids(sortWines(sameDay, 'publicationDate', 'desc'))).toEqual(['rated', 'unrated']);
   });
 
   it('does not mutate the input array', () => {
