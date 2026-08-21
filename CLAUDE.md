@@ -98,7 +98,7 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 - **`main.tsx`** — mounts to `#wine-agent-root` (WordPress embed) or `#root` (standalone)
 
 ### API Server (`web/server/index.ts`)
-- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `publicationDate`)
+- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`)
 - `GET /api/meta` — returns `{ varietals, regions, types, avaList }`
 - `POST /api/webhook/review` — receives `{ action: 'upsert'|'delete', review: WPReview }` from WP plugin; authenticated via `X-Webhook-Secret` header
 - `POST /api/chat` — **disabled (503)**; full implementation preserved in comment
@@ -107,7 +107,7 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 - All text comparison goes through `fold()` in `src/lib/text.ts` — strips accents
   and case, so "Ita" finds "Itä" and "semillon" finds "Sémillon"
 - Full-text search: `server/wine-search.ts` looks at `brandName`, `vintage`,
-  `wineName` and `mainVarietal` only — not the tasting note, appellation or
+  `wineName`, `mainVarietal` and `ava` only — not the tasting note or home
   region, which are what the filters are for. Each query term must match the **start of a
   word** (accent-folded), and every term must match somewhere, though not
   necessarily in the same field. Matching only: results keep the source order
@@ -120,9 +120,16 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 - Filtering: `server/wine-search.ts` — special-cased keys before generic field lookup.
   Dropdown fields match a comma-separated OR list, which is what backs multi-select
 - Sorting: `server/wine-utils.ts` — wines with no price/vintage/date sort **last in
-  both directions** (`parse*OrNull` returns null rather than a sentinel number)
+  both directions** (`parse*OrNull` returns null rather than a sentinel number).
+  Default sort is `publicationDate` descending, in the app and on `/api/search`.
+  Review-date ties are compared on the published **day** (`parseDayOrNull`) and
+  broken by rating, highest first, in both directions
 - AVA filter: comma-separated list of expanded descendants via `expandAva()` in `ava-tree.ts`
 - Price slider: non-linear (piecewise) — 0–25% → $0–$15, 25–75% → $15–$100, 75–100% → $100–$300
+- Cases slider: same shape — 0–25% → 0–500, 25–75% → 500–5,000, 75–100% → 5,000–50,000.
+  Blank/`0` cases mean "not reported" and are excluded from the range, never read as zero
+- The search box debounces 500ms and runs itself; Enter and Escape skip the wait.
+  `App.tsx` skips its own 300ms request debounce for query changes
 - Filter options are faceted: `/api/meta` takes the same filters as `/api/search`
   and derives each facet from the wines matching every *other* active filter, so
   Wine Type narrows Varietal and State narrows Appellation and Home Region. A facet
@@ -179,6 +186,8 @@ web/
 
 ## Key Conventions
 
+- Sidebar order: Wine Type, Varietal, Score, Vintage, Price, State/Province, then
+  Advanced (Appellation, Review Date, Cases, Home Region, Special Designation)
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
   Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
   the combobox and tree pickers stay single-select `string`
