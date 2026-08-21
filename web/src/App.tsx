@@ -152,6 +152,10 @@ export default function App() {
     }
   };
 
+  // The search box debounces its own input, so a query change is already
+  // settled by the time it lands here; only filter changes need the extra wait.
+  const prevQuery = useRef(query);
+
   // Reset and fetch first page whenever search params change
   useEffect(() => {
     setOffset(0);
@@ -159,6 +163,9 @@ export default function App() {
     setInitialLoad(false);
     generation.current += 1;
     const gen = generation.current;
+
+    const queryChanged = prevQuery.current !== query;
+    prevQuery.current = query;
 
     const timer = setTimeout(() => {
       setLoading(true);
@@ -172,7 +179,7 @@ export default function App() {
         })
         .catch(console.error)
         .finally(() => setLoading(false));
-    }, initialLoad ? 0 : 300);
+    }, initialLoad || queryChanged ? 0 : 300);
 
     return () => clearTimeout(timer);
   }, [searchKey]); // eslint-disable-line react-hooks/exhaustive-deps
