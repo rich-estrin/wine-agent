@@ -51,9 +51,15 @@ export function parseDayOrNull(dateStr: string): number | null {
 }
 
 /** Case production as plain digits, or '' when the row reports none. Strips
- *  the separators and the word: "1,200 cases" and "1200" both land on "1200". */
+ *  the separators and the word: "1,200 cases" and "1200 Cases" both land on
+ *  "1200". A value carrying anything else — a decimal point most of all — is
+ *  read as no data rather than salvaged: the export has rows whose Cases cell
+ *  holds an alcohol percentage ("14.8"), and dropping the point would report
+ *  those wines as producing 148 cases. */
 export function normalizeCases(raw: string): string {
-  const digits = (raw ?? '').replace(/[^0-9]/g, '');
+  const trimmed = (raw ?? '').trim();
+  if (!/^[0-9][0-9,\s]*(cases?)?$/i.test(trimmed)) return '';
+  const digits = trimmed.replace(/[^0-9]/g, '');
   return digits === '' || Number(digits) === 0 ? '' : String(Number(digits));
 }
 
@@ -111,7 +117,10 @@ export function sortWines(
     // Wines with no value sort last in BOTH directions — a wine with no price
     // is not the cheapest wine on "Lowest" nor the priciest on "Highest".
     if (aVal === null || bVal === null) {
-      if (aVal === bVal) return 0;
+      // Two wines that both lack the value are still a tie to be broken —
+      // the undated tail of a review-date sort gets the same best-first
+      // ordering as every dated day above it.
+      if (aVal === bVal) return tieBreak(a, b, sortBy);
       return aVal === null ? 1 : -1;
     }
 

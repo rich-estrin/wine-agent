@@ -60,13 +60,17 @@ The cache is invalidated automatically when the source path/URL changes. Both cl
 - **Always bump the version** in the plugin header and repackage the zip after any change:
   ```bash
   cd wordpress-plugin
-  rm -f wine-agent-api.zip
+  VER=$(grep -m1 -E '^\s*\*\s*Version:' wine-agent-api.php | sed -E 's/.*Version:[[:space:]]*//')
+  rm -f wine-agent-api.zip; rm -f ./wine-agent-api-[0-9]*.zip
   mkdir -p wine-agent-api/assets
   cp wine-agent-api.php wine-agent-api/
   cp ../web/dist/.vite/manifest.json wine-agent-api/assets/
   cp ../web/dist/assets/* wine-agent-api/assets/
-  zip -r wine-agent-api.zip wine-agent-api/ && rm -rf wine-agent-api
+  zip -rq "wine-agent-api-$VER.zip" wine-agent-api/ && rm -rf wine-agent-api
   ```
+- The zip is named for the version inside it (`wine-agent-api-2.23.0.zip`), and the
+  previous version's zip is deleted in the same step — there is never an
+  unversioned `wine-agent-api.zip`
 - The plugin zip bundles the built JS/CSS assets — no HTTP fetching at runtime
 - EC2 only exposes `/api/*`; no static files served from EC2
 - Plugin settings (WP Admin → Settings → Wine Agent API): API Key, Search App URL, Webhook URL, Webhook Secret

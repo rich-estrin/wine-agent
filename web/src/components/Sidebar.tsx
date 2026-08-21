@@ -392,6 +392,7 @@ function SidebarDualRange({
   onHi,
   loText,
   hiText,
+  hiPlaceholder,
   onLoText,
   onHiText,
   prefix,
@@ -405,6 +406,8 @@ function SidebarDualRange({
   onHi: (v: number) => void;
   loText: string;
   hiText: string;
+  /** Shown when the max box is empty, i.e. when there is no upper bound. */
+  hiPlaceholder?: string;
   onLoText: (v: string) => void;
   onHiText: (v: string) => void;
   prefix?: string;
@@ -483,6 +486,7 @@ function SidebarDualRange({
             type="text"
             inputMode="numeric"
             value={hiDraft}
+            placeholder={hiPlaceholder}
             onChange={(e) => setHiDraft(e.target.value.replace(/\D/g, ''))}
             onFocus={(e) => { hiFocused.current = true; setHiError(false); e.target.select(); }}
             onBlur={commitHi}
@@ -581,7 +585,8 @@ function SidebarCasesSlider({
         onChange(casesMin, c === CASES_MAX ? '' : String(c));
       }}
       loText={casesMin || '0'}
-      hiText={casesMax || String(CASES_MAX)}
+      hiText={casesMax}
+      hiPlaceholder="Any"
       onLoText={(v) => onChange(v.replace(/\D/g, ''), casesMax)}
       onHiText={(v) => onChange(casesMin, v.replace(/\D/g, ''))}
       zLo={lo > 80 ? 5 : 3}

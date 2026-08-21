@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { mapWPReview, type WPReview } from './wp-client.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { WPClient, CACHE_VERSION, mapWPReview, type WPReview } from './wp-client.js';
 
 const review = (overrides: Partial<WPReview> = {}): WPReview => ({
   id: 1, brand_name: 'Kiona', wine_name: 'Estate Red', designation: '', variety_style: '',
@@ -118,5 +121,49 @@ describe('case production', () => {
   it('is blank when the review reports none', () => {
     expect(mapWPReview(review({})).cases).toBe('');
     expect(mapWPReview(review({ cases: '0' })).cases).toBe('');
+  });
+});
+
+
+// A cache written before a mapping change has to be discarded, or the new field
+// is silently absent everywhere: EC2 keeps its cache across deploys, and only
+// the WP URL used to be compared.
+describe('WPClient — cache versioning', () => {
+  let dir: string;
+  const cachePath = () => join(dir, 'cache.json');
+  const url = 'https://example.test/staging';
+
+  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'wine-wp-')); });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  const writeCache = (cache: Record<string, unknown>) =>
+    writeFileSync(cachePath(), JSON.stringify(cache));
+
+  it('refetches when the cache predates the current version', async () => {
+    writeCache({ fetchedAt: '2025-01-01', wpUrl: url, wines: [mapWPReview(review())] });
+    let fetched = false;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      fetched = true;
+      return { ok: true, json: async () => ({ reviews: [], total: 0 }) } as Response;
+    }) as typeof fetch;
+    try {
+      await new WPClient(url, 'key', cachePath()).initialize();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    expect(fetched).toBe(true);
+  });
+
+  it('reuses a cache written at the current version', async () => {
+    const fresh = new WPClient(url, 'key', cachePath());
+    writeCache({
+      fetchedAt: '2025-01-01',
+      wpUrl: url,
+      wines: [mapWPReview(review())],
+      version: CACHE_VERSION,
+    });
+    await fresh.initialize();
+    expect(fresh.getAllWines()).toHaveLength(1);
   });
 });

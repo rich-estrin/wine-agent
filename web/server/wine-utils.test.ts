@@ -99,6 +99,15 @@ describe('normalizeCases / parseCasesOrNull', () => {
     expect(parseCasesOrNull('1200')).toBe(1200);
     expect(parseCasesOrNull('1,200')).toBe(1200);
   });
+
+  // The export has rows whose Cases cell holds an alcohol percentage. Dropping
+  // the decimal point would report those wines as producing 148 cases.
+  it('reads a decimal as "not reported" rather than stripping the point', () => {
+    expect(normalizeCases('14.8')).toBe('');
+    expect(normalizeCases('15.0')).toBe('');
+    expect(normalizeCases('12.5k')).toBe('');
+    expect(normalizeCases('n/a')).toBe('');
+  });
 });
 
 describe('parseDayOrNull', () => {
@@ -179,6 +188,18 @@ describe('sortWines — wines with no value sort last in BOTH directions', () =>
       makeWine({ id: 'rated',   publicationDate: '2025-07-01', rating: '88' }),
     ];
     expect(ids(sortWines(sameDay, 'publicationDate', 'desc'))).toEqual(['rated', 'unrated']);
+  });
+
+  it('orders the undated tail by rating too, not by export order', () => {
+    const undated = [
+      makeWine({ id: 'low',   publicationDate: '', rating: '87' }),
+      makeWine({ id: 'high',  publicationDate: '', rating: '96' }),
+      makeWine({ id: 'dated', publicationDate: '2025-07-01', rating: '80' }),
+    ];
+    expect(ids(sortWines(undated, 'publicationDate', 'desc')))
+      .toEqual(['dated', 'high', 'low']);
+    expect(ids(sortWines(undated, 'publicationDate', 'asc')))
+      .toEqual(['dated', 'high', 'low']);
   });
 
   it('does not mutate the input array', () => {

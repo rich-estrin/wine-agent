@@ -5,6 +5,8 @@ import { normalizeCases } from './wine-utils.js';
 
 const DEFAULT_CACHE_PATH = './cache/wines.json';
 
+export const CACHE_VERSION = 1; // bump when parse/normalize logic changes
+
 const AVA_CORRECTIONS: Record<string, string> = {
   'columbia valley':                    'Columbia Valley',
   'horse heaven hills':                 'Horse Heaven Hills',
@@ -117,6 +119,7 @@ interface CacheFile {
   fetchedAt: string;
   wpUrl: string;
   wines: Wine[];
+  version?: number;
 }
 
 export class WPClient {
@@ -135,12 +138,16 @@ export class WPClient {
   async initialize(): Promise<void> {
     if (existsSync(this.cachePath)) {
       const cache: CacheFile = JSON.parse(readFileSync(this.cachePath, 'utf-8'));
-      if (cache.wpUrl === this.wpUrl) {
+      if (cache.wpUrl === this.wpUrl && cache.version === CACHE_VERSION) {
         this.wines = cache.wines;
         console.log(`Loaded ${this.wines.length} wines from cache (${this.cachePath})`);
         return;
       }
-      console.log(`Cache WP URL mismatch — refreshing from ${this.wpUrl}`);
+      console.log(
+        cache.wpUrl === this.wpUrl
+          ? `Cache version ${cache.version ?? 0} predates ${CACHE_VERSION} — refreshing from ${this.wpUrl}`
+          : `Cache WP URL mismatch — refreshing from ${this.wpUrl}`,
+      );
     } else {
       console.log(`No cache found — fetching from ${this.wpUrl}`);
     }
@@ -177,6 +184,7 @@ export class WPClient {
       fetchedAt: new Date().toISOString(),
       wpUrl: this.wpUrl,
       wines: this.wines,
+      version: CACHE_VERSION,
     };
     writeFileSync(this.cachePath, JSON.stringify(cache));
     console.log(`Fetched ${this.wines.length} wines from WP — cache written to ${this.cachePath}`);
@@ -211,6 +219,7 @@ export class WPClient {
       fetchedAt: new Date().toISOString(),
       wpUrl: this.wpUrl,
       wines: this.wines,
+      version: CACHE_VERSION,
     }));
   }
 
