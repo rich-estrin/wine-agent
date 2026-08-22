@@ -20,7 +20,7 @@ const HEADER = [
   'Review Input => Wine Type', 'Review Input => Special Designation',
   'Review Input => Alcohol Percentage', 'Review Input => Closure',
   'Review Input => State or Province', 'Review Input => Source',
-  'Review Input => Reviewer', 'Review Input => Cases Produced',
+  'Review Input => Reviewer', 'Review Input => Cases',
 ].join(',');
 
 function writeCsv(rows: string[]) {
@@ -148,7 +148,7 @@ describe('CSVClient — cache', () => {
 });
 
 describe('case production', () => {
-  it('reads the Cases Produced column, separators stripped', () => {
+  it('reads the Cases column, separators stripped', () => {
     writeCsv([row()]);
     expect(load().getAllWines()[0].cases).toBe('1200');
   });
