@@ -1,6 +1,6 @@
 import type { Wine } from '../src/types.js';
 import {
-  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull,
+  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull, parseCasesOrNull,
   parseFilterValue, compareValues, sortWines,
 } from './wine-utils.js';
 import { fold, foldWords, foldSearchWords } from '../src/lib/text.js';
@@ -13,9 +13,11 @@ const EXACT_MATCH_FIELDS = new Set(['mainVarietal', 'type', 'region', 'stateProv
 // What the search box looks at, and nothing else. Producer and vintage are what
 // people type; the full wine name catches the rest. Varietal is here because a
 // wine named "Estate Red" is still a Tempranillo, and nothing in its name says
-// so. The tasting note is deliberately absent — matching prose turned a search
-// for a winery into a list of every review that happened to mention it.
-const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName', 'mainVarietal'];
+// so. The appellation is here because readers type one ("Goose Gap") expecting
+// the wines from it, and the Appellation filter is buried under Advanced. The
+// tasting note is deliberately absent — matching prose turned a search for a
+// winery into a list of every review that happened to mention it.
+const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName', 'mainVarietal', 'ava'];
 
 // Folding 3,000+ rows on every keystroke would be wasteful, so each wine's
 // searchable words are computed once and remembered. A WeakMap keyed on the
@@ -41,8 +43,8 @@ function matchesQuery(wine: Wine, terms: string[]): boolean {
   return terms.every((term) => words.some((w) => w.startsWith(term)));
 }
 
-/** Full-text search over producer, vintage and wine name. Matching only — the
- *  caller decides the order. */
+/** Full-text search over producer, vintage, wine name, varietal and appellation.
+ *  Matching only — the caller decides the order. */
 export function searchWines(
   wines: Wine[],
   params: { query: string; limit?: number; sort_by?: string; sort_order?: 'asc' | 'desc' },
@@ -84,6 +86,14 @@ export function matchesFilter(wine: Wine, key: string, filterValue: string): boo
     const n = parsePriceOrNull(wine.price);
     return n !== null && n <= parseFloat(filterValue);
   }
+  if (key === 'casesMin') {
+    const n = parseCasesOrNull(wine.cases);
+    return n !== null && n >= parseFloat(filterValue);
+  }
+  if (key === 'casesMax') {
+    const n = parseCasesOrNull(wine.cases);
+    return n !== null && n <= parseFloat(filterValue);
+  }
   if (key === 'ava') {
     const allowed = filterValue.split(',').map((s) => fold(s.trim()));
     return allowed.includes(fold(wine.ava));
@@ -123,6 +133,10 @@ export function matchesFilter(wine: Wine, key: string, filterValue: string): boo
     case 'vintage': {
       const v = parseVintageOrNull(wineValue);
       return v !== null && compareValues(v, operator, parseInt(value) || 0);
+    }
+    case 'cases': {
+      const n = parseCasesOrNull(wineValue);
+      return n !== null && compareValues(n, operator, parseInt(value) || 0);
     }
     case 'publicationDate':
     case 'tastingDate': {

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { search, searchBox, sortSelect, sortBy, toggleSortDirection, resultBrands, resultCount, totalResults, withResults, gotoApp } from './helpers';
+import { search, typeSearch, searchBox, sortSelect, sortBy, toggleSortDirection, resultBrands, resultCount, totalResults, withResults, gotoApp } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await gotoApp(page);
@@ -82,11 +82,40 @@ test.describe('what the query matches', () => {
   });
 });
 
+test.describe('search runs itself', () => {
+  test('typing searches without Enter', async ({ page }) => {
+    const all = await totalResults(page);
+    const total = await typeSearch(page, 'Kiona');
+    expect(total).toBeGreaterThan(0);
+    expect(total).toBeLessThan(all);
+    expect(await resultBrands(page)).toContain('Kiona');
+  });
+
+  test('deleting the query restores the full list without Enter', async ({ page }) => {
+    const all = await totalResults(page);
+    const narrowed = await search(page, 'Kiona');
+    expect(narrowed).toBeLessThan(all);
+
+    // Backspace over it, as a reader would — no Enter, no clear button.
+    const restored = await withResults(
+      page,
+      async () => {
+        await searchBox(page).click();
+        for (let i = 0; i < 'Kiona'.length; i++) {
+          await searchBox(page).press('Backspace');
+        }
+      },
+      (params) => (params.get('q') ?? '') === '',
+    );
+    expect(restored).toBe(all);
+  });
+});
+
 test.describe('sort control', () => {
-  test('stays on Rating when a query is typed', async ({ page }) => {
-    await expect(sortSelect(page)).toHaveValue('rating');
+  test('opens on Review Date and stays there when a query is typed', async ({ page }) => {
+    await expect(sortSelect(page)).toHaveValue('publicationDate');
     await search(page, 'Kiona');
-    await expect(sortSelect(page)).toHaveValue('rating');
+    await expect(sortSelect(page)).toHaveValue('publicationDate');
   });
 
   test('keeps a sort chosen by hand across a search', async ({ page }) => {

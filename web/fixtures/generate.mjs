@@ -32,7 +32,7 @@ function wine(o) {
     review: '', region: '', type: '', mainVarietal: '', varietyStyle: '',
     tastingDate: '', publicationDate: '2025-06-15', setting: '',
     purchasedProvided: '', temp: '', hyperlink: '', specialDesignation: '',
-    alcohol: '14.1%', closure: 'Cork', stateProvince: '', source: 'Sample',
+    alcohol: '14.1%', closure: 'Cork', cases: '', stateProvince: '', source: 'Sample',
     reviewer: 'A. Taster',
     ...o,
   });
@@ -218,6 +218,14 @@ fillers.forEach(([brand, ava, state, region], i) => {
       review: n === 1 ? NOTE_SHORT : 'Clean, correct and easy to recommend at the price.',
     });
   }
+});
+
+// Case production: a spread from tiny lots to industrial volume, with every
+// seventh row reporting none — the filter has to exclude those rather than
+// treat them as zero.
+const caseLots = ['48', '150', '420', '900', '2500', '12000'];
+wines.forEach((w, i) => {
+  w.cases = i % 7 === 6 ? '' : caseLots[i % caseLots.length];
 });
 
 writeFileSync(OUT, JSON.stringify({ wines }, null, 2) + '\n');

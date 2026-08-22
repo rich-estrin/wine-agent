@@ -4,7 +4,8 @@ const BLANK: Wine = {
   id: '', brandName: '', wineName: '', ava: '', vintage: '', price: '', rating: '',
   review: '', region: '', type: '', mainVarietal: '', varietyStyle: '', tastingDate: '',
   publicationDate: '', setting: '', purchasedProvided: '', temp: '', hyperlink: '',
-  specialDesignation: '', alcohol: '', closure: '', stateProvince: '', source: '', reviewer: '',
+  specialDesignation: '', alcohol: '', closure: '', cases: '', stateProvince: '',
+  source: '', reviewer: '',
 };
 
 let seq = 0;

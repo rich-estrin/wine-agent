@@ -32,7 +32,9 @@ export default function App() {
   const [allMeta, setAllMeta] = useState<Meta | null>(null);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [sortBy, setSortBy] = useState('rating');
+  // Review Date, newest first — the order a reader expects from a review site,
+  // and the one the results already arrive in.
+  const [sortBy, setSortBy] = useState('publicationDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,8 @@ export default function App() {
     if (filters.scoreMax) params.scoreMax = filters.scoreMax;
     if (filters.vintageMin) params.vintageMin = filters.vintageMin;
     if (filters.vintageMax) params.vintageMax = filters.vintageMax;
+    if (filters.casesMin) params.casesMin = filters.casesMin;
+    if (filters.casesMax) params.casesMax = filters.casesMax;
     if (filters.stateProvince.length) params.stateProvince = filters.stateProvince.join(',');
     if (filters.specialDesignation.length) {
       params.specialDesignation = [
@@ -150,6 +154,10 @@ export default function App() {
     }
   };
 
+  // The search box debounces its own input, so a query change is already
+  // settled by the time it lands here; only filter changes need the extra wait.
+  const prevQuery = useRef(query);
+
   // Reset and fetch first page whenever search params change
   useEffect(() => {
     setOffset(0);
@@ -157,6 +165,9 @@ export default function App() {
     setInitialLoad(false);
     generation.current += 1;
     const gen = generation.current;
+
+    const queryChanged = prevQuery.current !== query;
+    prevQuery.current = query;
 
     const timer = setTimeout(() => {
       setLoading(true);
@@ -170,7 +181,7 @@ export default function App() {
         })
         .catch(console.error)
         .finally(() => setLoading(false));
-    }, initialLoad ? 0 : 300);
+    }, initialLoad || queryChanged ? 0 : 300);
 
     return () => clearTimeout(timer);
   }, [searchKey]); // eslint-disable-line react-hooks/exhaustive-deps

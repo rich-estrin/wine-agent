@@ -20,6 +20,8 @@ export interface SearchParams {
   scoreMax?: string;
   vintageMin?: string;
   vintageMax?: string;
+  casesMin?: string;
+  casesMax?: string;
   vintage?: string;
   publicationDate?: string;
   stateProvince?: string;

@@ -25,7 +25,8 @@ const wines: Wine[] = [
              review: 'A blend with Merlot rounding the mid-palate; garden herbs on the finish.' }),
   makeWine({ id: 'albarino',  brandName: 'Abacela', wineName: 'Fiesta', ava: 'Umpqua Valley',
              vintage: '2022', price: '$22', rating: '90', type: 'White',
-             mainVarietal: 'Albariño', stateProvince: 'Oregon' }),
+             mainVarietal: 'Albariño', stateProvince: 'Oregon',
+             region: 'Southern Oregon (OR)' }),
   makeWine({ id: 'rioja',     brandName: 'Import Cellars', wineName: 'Rioja Crianza', ava: 'Rioja',
              vintage: '2019', price: '$25', rating: '90', type: 'Red',
              mainVarietal: 'Tempranillo', stateProvince: 'America' }),
@@ -79,9 +80,45 @@ describe('searchWines — searchable fields', () => {
     expect(search('herbs')).toEqual([]);
   });
 
-  it('does not search appellation or region — those are filters', () => {
-    expect(search('Umpqua')).toEqual([]);
-    expect(search('Walla')).toEqual([]);
+  it('searches the appellation', () => {
+    expect(search('Umpqua')).toEqual(['albarino']);
+    expect(search('Walla')).toEqual(['ita', 'woodward']);
+  });
+
+  it('finds a multi-word appellation typed in full', () => {
+    expect(search('Red Mountain')).toEqual(['kiona', 'fidelitas']);
+  });
+
+  it('does not search the home region — that stays a filter', () => {
+    // Abacela's home region is Southern Oregon; only its appellation is indexed.
+    expect(search('Southern')).toEqual([]);
+  });
+});
+
+describe('matchesFilter — cases', () => {
+  const lots = [
+    makeWine({ id: 'tiny',    cases: '48' }),
+    makeWine({ id: 'mid',     cases: '900' }),
+    makeWine({ id: 'big',     cases: '12000' }),
+    makeWine({ id: 'unknown', cases: '' }),
+  ];
+  const byCases = (f: Record<string, string>) => ids(filterWines(lots, { filters: f, limit: 99 }));
+
+  it('filters on a minimum', () => {
+    expect(byCases({ casesMin: '900' })).toEqual(['mid', 'big']);
+  });
+
+  it('filters on a maximum', () => {
+    expect(byCases({ casesMax: '900' })).toEqual(['tiny', 'mid']);
+  });
+
+  it('filters on a range', () => {
+    expect(byCases({ casesMin: '100', casesMax: '5000' })).toEqual(['mid']);
+  });
+
+  it('excludes wines that report no case production, rather than reading them as zero', () => {
+    expect(byCases({ casesMax: '50000' })).not.toContain('unknown');
+    expect(byCases({ casesMin: '0' })).not.toContain('unknown');
   });
 });
 

@@ -31,7 +31,7 @@ afterAll(() => close(server));
 const search = async (qs: string) => {
   const res = await fetch(`${base}/api/search?${qs}`);
   expect(res.status).toBe(200);
-  return res.json() as Promise<{ wines: { id: string; brandName: string; wineName: string; price: string; vintage: string; mainVarietal: string }[]; total: number }>;
+  return res.json() as Promise<{ wines: { id: string; brandName: string; wineName: string; price: string; vintage: string; mainVarietal: string; cases: string }[]; total: number }>;
 };
 const meta = async (qs = '') => {
   const res = await fetch(`${base}/api/meta${qs ? `?${qs}` : ''}`);
@@ -95,18 +95,30 @@ describe('GET /api/search', () => {
     }
   });
 
-  it('defaults to rating, query or not', async () => {
-    const withQuery = await search('q=Kiona');
-    expect(withQuery.wines.map((w) => w.brandName)).toEqual(['Fidelitas', 'Kiona']); // 94 then 92
+  it('defaults to review date, query or not', async () => {
+    const withQuery = await search('q=Kiona&limit=5');
+    const withQueryDated = await search('q=Kiona&sort_by=publicationDate&limit=5');
+    expect(withQuery.wines.map((w) => w.id)).toEqual(withQueryDated.wines.map((w) => w.id));
     const noQuery = await search('limit=5');
-    const rating = await search('sort_by=rating&limit=5');
-    expect(noQuery.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
+    const dated = await search('sort_by=publicationDate&limit=5');
+    expect(noQuery.wines.map((w) => w.id)).toEqual(dated.wines.map((w) => w.id));
   });
 
   it('treats a legacy sort_by=relevance as rating', async () => {
     const legacy = await search('sort_by=relevance&limit=5');
     const rating = await search('sort_by=rating&limit=5');
     expect(legacy.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
+  });
+
+  it('narrows on a case-production range', async () => {
+    const all = await search('limit=200');
+    const small = await search('casesMax=500&limit=200');
+    expect(small.total).toBeGreaterThan(0);
+    expect(small.total).toBeLessThan(all.total);
+    expect(small.wines.every((w) => Number(w.cases) <= 500 && w.cases !== '')).toBe(true);
+
+    const large = await search('casesMin=5000&limit=200');
+    expect(large.wines.every((w) => Number(w.cases) >= 5000)).toBe(true);
   });
 
   it('accepts a comma-separated OR list for multi-select facets', async () => {

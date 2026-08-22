@@ -160,6 +160,22 @@ export async function search(page: Page, query: string): Promise<number> {
   );
 }
 
+/** Type into the search box and wait for the debounced search — no Enter.
+ *  This is the path a reader actually takes; `search` above presses Enter to
+ *  skip the wait. */
+export async function typeSearch(page: Page, query: string): Promise<number> {
+  const wanted = query.trim();
+  return withResults(
+    page,
+    async () => {
+      await searchBox(page).click();
+      await searchBox(page).fill('');
+      await searchBox(page).pressSequentially(query, { delay: 30 });
+    },
+    (params) => (params.get('q') ?? '') === wanted,
+  );
+}
+
 /** Change the sort and wait for the re-sorted results. */
 export async function sortBy(page: Page, value: string): Promise<number> {
   return withResults(

@@ -118,6 +118,7 @@ export default function WineDetail({
                     {wine.stateProvince && <DetailRow label="State/Province" value={wine.stateProvince} />}
                     {wine.alcohol && <DetailRow label="Alcohol %" value={wine.alcohol} />}
                     {wine.closure && <DetailRow label="Closure" value={wine.closure} />}
+                    {wine.cases && <DetailRow label="Cases" value={Number(wine.cases).toLocaleString()} />}
                     {wine.region && <DetailRow label="Home Region" value={wine.region} />}
                     {wine.source && <DetailRow label="Source" value={wine.source} />}
                     {wine.reviewer && <DetailRow label="Reviewer" value={wine.reviewer} />}

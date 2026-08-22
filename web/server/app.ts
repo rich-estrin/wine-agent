@@ -105,7 +105,9 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
       const filters = collectFilters(filterParams);
 
       const sortOrd = sort_order === 'asc' ? 'asc' : 'desc';
-      let sortBy = typeof sort_by === 'string' && sort_by ? sort_by : 'rating';
+      // Newest reviews first when the caller doesn't say — matches the app's
+      // own default, so an embed that omits sort_by sees the same order.
+      let sortBy = typeof sort_by === 'string' && sort_by ? sort_by : 'publicationDate';
       // Relevance ranking is gone; older embeds may still ask for it by name.
       if (sortBy === 'relevance') sortBy = 'rating';
 

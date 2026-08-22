@@ -20,7 +20,7 @@ const HEADER = [
   'Review Input => Wine Type', 'Review Input => Special Designation',
   'Review Input => Alcohol Percentage', 'Review Input => Closure',
   'Review Input => State or Province', 'Review Input => Source',
-  'Review Input => Reviewer',
+  'Review Input => Reviewer', 'Review Input => Cases Produced',
 ].join(',');
 
 function writeCsv(rows: string[]) {
@@ -33,7 +33,7 @@ function row(overrides: Record<number, string> = {}): string {
     '1', 'Kiona', '2025-06-15', 'https://example.test/kiona',
     '', '', 'cabernet sauvignon', 'Red Mountain',
     '2020', '30', '92', 'Dusty and dense.', 'tri-cities (wa)',
-    'red', '', '14.1', 'Cork', 'washington', 'Sample', 'A. Taster',
+    'red', '', '14.1', 'Cork', 'washington', 'Sample', 'A. Taster', '1,200',
   ];
   for (const [i, v] of Object.entries(overrides)) cells[Number(i)] = v;
   return cells.map((c) => (c.includes(',') ? `"${c}"` : c)).join(',');
@@ -144,5 +144,28 @@ describe('CSVClient — cache', () => {
     const reopened = new CSVClient(csvPath(), cachePath());
     reopened.initialize();
     expect(reopened.getAllWines().map((w) => w.id)).toEqual(['1']);
+  });
+});
+
+describe('case production', () => {
+  it('reads the Cases Produced column, separators stripped', () => {
+    writeCsv([row()]);
+    expect(load().getAllWines()[0].cases).toBe('1200');
+  });
+
+  it('reports no cases for a blank or zero cell', () => {
+    writeCsv([row({ 20: '' })]);
+    expect(load().getAllWines()[0].cases).toBe('');
+    rmSync(cachePath(), { force: true });
+    writeCsv([row({ 20: '0' })]);
+    expect(load().getAllWines()[0].cases).toBe('');
+  });
+
+  it('falls back to an alternate export header', () => {
+    writeFileSync(
+      csvPath(),
+      ['ID,Title,Review Input => Cases', '1,Kiona,850'].join('\n'),
+    );
+    expect(load().getAllWines()[0].cases).toBe('850');
   });
 });

@@ -22,6 +22,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -48,6 +49,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -74,6 +76,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -100,6 +103,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -126,6 +130,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -152,6 +157,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -178,6 +184,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -204,6 +211,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Idaho",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -230,6 +238,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -256,6 +265,7 @@
       "specialDesignation": "Critic's Choice",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -282,6 +292,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -308,6 +319,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -334,6 +346,7 @@
       "specialDesignation": "Cellar Stocker",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -360,6 +373,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -386,6 +400,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -412,6 +427,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -438,6 +454,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -464,6 +481,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -490,6 +508,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -516,6 +535,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -542,6 +562,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -568,6 +589,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -594,6 +616,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "America",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -620,6 +643,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "America",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -646,6 +670,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Idaho",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -672,6 +697,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Idaho",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -698,6 +724,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "British Columbia",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -724,6 +751,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "British Columbia",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -750,6 +778,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -776,6 +805,7 @@
       "specialDesignation": "Editor's Choice",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -802,6 +832,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -828,6 +859,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -854,6 +886,7 @@
       "specialDesignation": "Critic's Choice",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -880,6 +913,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -906,6 +940,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -932,6 +967,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -958,6 +994,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -984,6 +1021,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1010,6 +1048,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1036,6 +1075,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1062,6 +1102,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1088,6 +1129,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1114,6 +1156,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1140,6 +1183,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1166,6 +1210,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1192,6 +1237,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1218,6 +1264,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1244,6 +1291,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1270,6 +1318,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1296,6 +1345,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1322,6 +1372,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1348,6 +1399,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1374,6 +1426,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1400,6 +1453,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1426,6 +1480,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1452,6 +1507,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1478,6 +1534,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "420",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1504,6 +1561,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1530,6 +1588,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "2500",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1556,6 +1615,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "12000",
       "stateProvince": "Oregon",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1582,6 +1642,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "48",
       "stateProvince": "British Columbia",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1608,6 +1669,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "150",
       "stateProvince": "British Columbia",
       "source": "Sample",
       "reviewer": "A. Taster"
@@ -1634,6 +1696,7 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
+      "cases": "",
       "stateProvince": "British Columbia",
       "source": "Sample",
       "reviewer": "A. Taster"

@@ -35,6 +35,40 @@ export function parseDateOrNull(dateStr: string): number | null {
   return isNaN(d.getTime()) ? null : d.getTime();
 }
 
+/** Midnight UTC of the calendar day a date string names, or null when it names
+ *  none. Sorting by review date compares the published *day*: two reviews that
+ *  went out the same morning are a tie to be broken by rating, however many
+ *  minutes apart their timestamps happen to be. The ISO prefix is read
+ *  literally rather than through Date, whose handling of "2025-06-15" and
+ *  "2025-06-15 09:30" differs by a timezone offset. */
+export function parseDayOrNull(dateStr: string): number | null {
+  if (!dateStr) return null;
+  const iso = dateStr.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return Date.UTC(+iso[1], +iso[2] - 1, +iso[3]);
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Case production as plain digits, or '' when the row reports none. Strips
+ *  the separators and the word: "1,200 cases" and "1200 Cases" both land on
+ *  "1200". A value carrying anything else — a decimal point most of all — is
+ *  read as no data rather than salvaged: the export has rows whose Cases cell
+ *  holds an alcohol percentage ("14.8"), and dropping the point would report
+ *  those wines as producing 148 cases. */
+export function normalizeCases(raw: string): string {
+  const trimmed = (raw ?? '').trim();
+  if (!/^[0-9][0-9,\s]*(cases?)?$/i.test(trimmed)) return '';
+  const digits = trimmed.replace(/[^0-9]/g, '');
+  return digits === '' || Number(digits) === 0 ? '' : String(Number(digits));
+}
+
+/** Numeric case production, or null when the wine reports none. */
+export function parseCasesOrNull(casesStr: string): number | null {
+  const n = parseInt((casesStr ?? '').replace(/[^0-9]/g, ''), 10);
+  return isNaN(n) || n === 0 ? null : n;
+}
+
 export function parseFilterValue(filterValue: string): { operator: string; value: string } {
   const match = filterValue.match(/^([><=]+)(.+)$/);
   if (match) return { operator: match[1], value: match[2].trim() };
@@ -59,9 +93,11 @@ function sortValue(wine: Wine, sortBy: string): number | string | null {
     case 'price':   return parsePriceOrNull(wine.price);
     case 'rating':  return parseRatingOrNull(wine.rating);
     case 'vintage': return parseVintageOrNull(wine.vintage);
-    case 'publicationDate':
-    case 'tastingDate':
-      return parseDateOrNull(wine[sortBy as keyof Wine] as string);
+    case 'cases':   return parseCasesOrNull(wine.cases);
+    // Day granularity, so same-day reviews tie and fall through to the
+    // rating tiebreak below rather than being ordered by their timestamps.
+    case 'publicationDate': return parseDayOrNull(wine.publicationDate);
+    case 'tastingDate':     return parseDateOrNull(wine.tastingDate);
     default: {
       const v = (wine[sortBy as keyof Wine] as string) ?? '';
       return v === '' ? null : v;
@@ -81,12 +117,31 @@ export function sortWines(
     // Wines with no value sort last in BOTH directions — a wine with no price
     // is not the cheapest wine on "Lowest" nor the priciest on "Highest".
     if (aVal === null || bVal === null) {
-      if (aVal === bVal) return 0;
+      // Two wines that both lack the value are still a tie to be broken —
+      // the undated tail of a review-date sort gets the same best-first
+      // ordering as every dated day above it.
+      if (aVal === bVal) return tieBreak(a, b, sortBy);
       return aVal === null ? 1 : -1;
     }
 
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-    return 0;
+    return tieBreak(a, b, sortBy);
   });
+}
+
+/** Order two wines the primary sort could not separate. Only review date has
+ *  one: a day's reviews are published as a batch, so leaving them in export
+ *  order buried the day's best wine in the middle of it. Highest score first,
+ *  in both directions — "Lowest" asks for the oldest reviews, not for the
+ *  worst wine of the day — and unrated wines last, as everywhere else. */
+function tieBreak(a: Wine, b: Wine, sortBy: string): number {
+  if (sortBy !== 'publicationDate') return 0;
+  const aRating = parseRatingOrNull(a.rating);
+  const bRating = parseRatingOrNull(b.rating);
+  if (aRating === null || bRating === null) {
+    if (aRating === bRating) return 0;
+    return aRating === null ? 1 : -1;
+  }
+  return bRating - aRating;
 }

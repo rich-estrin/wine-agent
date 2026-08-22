@@ -28,6 +28,8 @@ export interface Filters {
   scoreMax: string;
   vintageMin: string;
   vintageMax: string;
+  casesMin: string;
+  casesMax: string;
   dateRange: string;
   stateProvince: string[];
   specialDesignation: string[];
@@ -44,6 +46,8 @@ export const emptyFilters: Filters = {
   scoreMax: '',
   vintageMin: '',
   vintageMax: '',
+  casesMin: '',
+  casesMax: '',
   dateRange: '',
   stateProvince: [],
   specialDesignation: [],
@@ -103,6 +107,22 @@ function priceToSlider(p: number): number {
   if (p <= 100) return Math.round(25 + (p - 15) * 50 / 85);
   return Math.min(100, Math.round(75 + (p - 100) * 25 / 200));
 }
+
+// Non-linear case-production scale. Most lots are in the hundreds; stretching
+// that range over most of the track keeps the small end usable while still
+// reaching the few 50,000-case wines.
+function sliderToCases(v: number): number {
+  if (v <= 25) return Math.round(v * 500 / 25);
+  if (v <= 75) return Math.round(500 + (v - 25) * 4500 / 50);
+  return Math.round(5000 + (v - 75) * 45000 / 25);
+}
+function casesToSlider(c: number): number {
+  if (c <= 500) return Math.round(c * 25 / 500);
+  if (c <= 5000) return Math.round(25 + (c - 500) * 50 / 4500);
+  return Math.min(100, Math.round(75 + (c - 5000) * 25 / 45000));
+}
+
+const CASES_MAX = 50000;
 
 const SCORE_MIN = 80;
 const SCORE_MAX = 100;
@@ -372,6 +392,7 @@ function SidebarDualRange({
   onHi,
   loText,
   hiText,
+  hiPlaceholder,
   onLoText,
   onHiText,
   prefix,
@@ -385,6 +406,8 @@ function SidebarDualRange({
   onHi: (v: number) => void;
   loText: string;
   hiText: string;
+  /** Shown when the max box is empty, i.e. when there is no upper bound. */
+  hiPlaceholder?: string;
   onLoText: (v: string) => void;
   onHiText: (v: string) => void;
   prefix?: string;
@@ -463,6 +486,7 @@ function SidebarDualRange({
             type="text"
             inputMode="numeric"
             value={hiDraft}
+            placeholder={hiPlaceholder}
             onChange={(e) => setHiDraft(e.target.value.replace(/\D/g, ''))}
             onFocus={(e) => { hiFocused.current = true; setHiError(false); e.target.select(); }}
             onBlur={commitHi}
@@ -530,6 +554,41 @@ function SidebarPriceSlider({
       onLoText={(v) => onChange(v.replace(/\D/g, ''), priceMax)}
       onHiText={(v) => onChange(priceMin, v.replace(/\D/g, ''))}
       prefix="$"
+      zLo={lo > 80 ? 5 : 3}
+    />
+  );
+}
+
+function SidebarCasesSlider({
+  casesMin,
+  casesMax,
+  onChange,
+}: {
+  casesMin: string;
+  casesMax: string;
+  onChange: (min: string, max: string) => void;
+}) {
+  const lo = casesToSlider(casesMin !== '' ? parseInt(casesMin) : 0);
+  const hi = casesToSlider(casesMax !== '' ? parseInt(casesMax) : CASES_MAX);
+  return (
+    <SidebarDualRange
+      sliderMin={0}
+      sliderMax={100}
+      lo={lo}
+      hi={hi}
+      onLo={(v) => {
+        const c = sliderToCases(v);
+        onChange(c === 0 ? '' : String(c), casesMax);
+      }}
+      onHi={(v) => {
+        const c = sliderToCases(v);
+        onChange(casesMin, c === CASES_MAX ? '' : String(c));
+      }}
+      loText={casesMin || '0'}
+      hiText={casesMax}
+      hiPlaceholder="Any"
+      onLoText={(v) => onChange(v.replace(/\D/g, ''), casesMax)}
+      onHiText={(v) => onChange(casesMin, v.replace(/\D/g, ''))}
       zLo={lo > 80 ? 5 : 3}
     />
   );
@@ -632,6 +691,12 @@ export function ActiveChips({
       : filters.vintageMin ? `${filters.vintageMin}+` : `To ${filters.vintageMax}`;
     chips.push({ key: 'vintage', label, clear: () => onChange({ ...filters, vintageMin: '', vintageMax: '' }) });
   }
+  if (filters.casesMin || filters.casesMax) {
+    const label = filters.casesMin && filters.casesMax
+      ? `${filters.casesMin}–${filters.casesMax} cases`
+      : filters.casesMin ? `${filters.casesMin}+ cases` : `Up to ${filters.casesMax} cases`;
+    chips.push({ key: 'cases', label, clear: () => onChange({ ...filters, casesMin: '', casesMax: '' }) });
+  }
   if (filters.dateRange) {
     const opt = dateRangeOptions.find((o) => o.value === filters.dateRange);
     chips.push({ key: 'dateRange', label: opt?.label ?? filters.dateRange, clear: () => onChange({ ...filters, dateRange: '' }) });
@@ -716,7 +781,7 @@ function AdvancedSection({
       </button>
       {!open && (
         <p className="px-5 pb-3 text-[10px] text-muted opacity-50 leading-none -mt-1">
-          Vintage · Appellation · Region…
+          Appellation · Review Date · Region…
         </p>
       )}
       {open && <div ref={contentRef}>{children}</div>}
@@ -737,9 +802,9 @@ export default function Sidebar({
 }) {
   const hasFilters = hasAnyFilter(filters);
   const hasAdvanced = !!(
-    filters.vintageMin || filters.vintageMax ||
     filters.ava || filters.region ||
-    filters.dateRange || filters.specialDesignation
+    filters.casesMin || filters.casesMax ||
+    filters.dateRange || filters.specialDesignation.length
   );
 
   return (
@@ -795,7 +860,20 @@ export default function Sidebar({
         />
       </FacetGroup>
 
-      {/* 4. Price */}
+      {/* 4. Vintage */}
+      <FacetGroup
+        label="Vintage"
+        hasSelection={!!(filters.vintageMin || filters.vintageMax)}
+        defaultOpen={true}
+      >
+        <SidebarVintageSlider
+          vintageMin={filters.vintageMin}
+          vintageMax={filters.vintageMax}
+          onChange={(min, max) => onChange({ ...filters, vintageMin: min, vintageMax: max })}
+        />
+      </FacetGroup>
+
+      {/* 5. Price */}
       <FacetGroup
         label="Price"
         hasSelection={!!(filters.priceMin || filters.priceMax)}
@@ -808,7 +886,7 @@ export default function Sidebar({
         />
       </FacetGroup>
 
-      {/* 5. State/Province */}
+      {/* 6. State/Province */}
       {meta && meta.stateProvinces.length > 0 && (
         <FacetGroup label="State/Province/Region" hasSelection={filters.stateProvince.length > 0} defaultOpen={false}>
           <FacetList
@@ -819,20 +897,8 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* Advanced — Vintage, Appellation, Home Region, Review Date, Special Designation */}
+      {/* Advanced — Appellation, Review Date, Cases, Home Region, Special Designation */}
       <AdvancedSection hasSelection={hasAdvanced}>
-        <FacetGroup
-          label="Vintage"
-          hasSelection={!!(filters.vintageMin || filters.vintageMax)}
-          defaultOpen={false}
-        >
-          <SidebarVintageSlider
-            vintageMin={filters.vintageMin}
-            vintageMax={filters.vintageMax}
-            onChange={(min, max) => onChange({ ...filters, vintageMin: min, vintageMax: max })}
-          />
-        </FacetGroup>
-
         <FacetGroup
           label="Appellation"
           hasSelection={!!filters.ava}
@@ -842,19 +908,6 @@ export default function Sidebar({
             value={filters.ava}
             onChange={(v) => onChange({ ...filters, ava: v })}
             available={meta?.avaList ?? []}
-          />
-        </FacetGroup>
-
-        {/* Home Region — nested tree grouped by state */}
-        <FacetGroup
-          label="Home Region"
-          hasSelection={!!filters.region}
-          defaultOpen={false}
-        >
-          <RegionTreeFilter
-            regions={meta?.regions ?? []}
-            value={filters.region}
-            onChange={(v) => onChange({ ...filters, region: v })}
           />
         </FacetGroup>
 
@@ -876,6 +929,30 @@ export default function Sidebar({
           ))}
         </FacetGroup>
 
+        <FacetGroup
+          label="Cases"
+          hasSelection={!!(filters.casesMin || filters.casesMax)}
+          defaultOpen={false}
+        >
+          <SidebarCasesSlider
+            casesMin={filters.casesMin}
+            casesMax={filters.casesMax}
+            onChange={(min, max) => onChange({ ...filters, casesMin: min, casesMax: max })}
+          />
+        </FacetGroup>
+
+        <FacetGroup
+          label="Home Region"
+          hasSelection={!!filters.region}
+          defaultOpen={false}
+        >
+          <RegionTreeFilter
+            regions={meta?.regions ?? []}
+            value={filters.region}
+            onChange={(v) => onChange({ ...filters, region: v })}
+          />
+        </FacetGroup>
+
         {meta && meta.specialDesignations.length > 0 && (
           <FacetGroup
             label="Special Designation"
@@ -889,6 +966,7 @@ export default function Sidebar({
             />
           </FacetGroup>
         )}
+
       </AdvancedSection>
     </div>
   );
