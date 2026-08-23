@@ -31,7 +31,7 @@ require_once __DIR__ . '/wine-map.php';
  * @return string[]
  */
 function wine_agent_non_filter_params(): array {
-	return [ 'q', 'limit', 'offset', 'sort_by', 'sort_order', 'notes', 'rest_route' ];
+	return [ 'q', 'limit', 'offset', 'sort_by', 'sort_order', 'notes', 'rest_route', 'wa_mode' ];
 }
 
 /**

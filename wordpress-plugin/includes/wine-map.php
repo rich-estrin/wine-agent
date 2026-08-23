@@ -281,7 +281,7 @@ function wine_agent_build_index_row( array $wine ): array {
 		'cases_num'      => wine_agent_parse_cases_or_null( (string) ( $wine['cases'] ?? '' ) ),
 		'pub_day'        => wine_agent_parse_day_iso( (string) ( $wine['publicationDate'] ?? '' ) ),
 		'pub_ms'         => wine_agent_parse_date_or_null( (string) ( $wine['publicationDate'] ?? '' ) ),
-		'display_json'   => wp_json_encode_compat( $wine ),
+		'display_json'   => wine_agent_json_encode( $wine ),
 	];
 
 	foreach ( wine_agent_facet_fields() as $field ) {
@@ -307,9 +307,12 @@ function wine_agent_column( string $field ): string {
  * JSON encoding that matches what the Node API emits: unescaped slashes and
  * unicode, so the payload is byte-comparable in the parity harness.
  *
+ * Deliberately not wp_json_encode(): this runs in the WordPress-free core and
+ * must produce identical bytes with or without WordPress loaded.
+ *
  * @param mixed $value Value to encode.
  * @return string JSON.
  */
-function wp_json_encode_compat( $value ): string {
+function wine_agent_json_encode( $value ): string {
 	return (string) json_encode( $value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 }

@@ -1,13 +1,15 @@
 <?php
 /**
  * Plugin Name: Wine Agent API
- * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.26.0
+ * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
+ * Version: 2.27.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
+
+require_once plugin_dir_path( __FILE__ ) . 'includes/wine-index.php';
 
 // ─── REST endpoint ───────────────────────────────────────────────────────────
 
@@ -46,90 +48,18 @@ function wine_agent_format_acf_date( $raw ): string {
 }
 
 function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
-    global $wpdb;
-
     $page           = max( 1, (int) $request->get_param( 'page' ) ?: 1 );
     $per_page       = min( 1000, max( 1, (int) $request->get_param( 'per_page' ) ?: 500 ) );
     $modified_after = $request->get_param( 'modified_after' );
     $offset         = ( $page - 1 ) * $per_page;
 
-    // Build optional modified_after clause
-    $date_clause = '';
-    if ( $modified_after ) {
-        $date = sanitize_text_field( $modified_after );
-        $date_clause = $wpdb->prepare( 'AND p.post_modified >= %s', $date );
-    }
-
-    // One query: pivot the postmeta keys we need, join taxonomy for appellation.
-    // Uses MAX() to collapse the multiple meta rows into a single result row.
-    $sql = $wpdb->prepare(
-        "
-        SELECT
-            p.ID                                                   AS id,
-            p.post_title                                           AS brand_name,
-            p.post_date                                            AS entry_date,
-            MAX( CASE WHEN pm.meta_key = 'publishedDate'  THEN pm.meta_value END ) AS published_date,
-            MAX( CASE WHEN pm.meta_key = 'review_content' THEN pm.meta_value END ) AS tasting_note,
-            MAX( CASE WHEN pm.meta_key = 'rating'         THEN pm.meta_value END ) AS rating,
-            MAX( CASE WHEN pm.meta_key = 'price'          THEN pm.meta_value END ) AS price,
-            MAX( CASE WHEN pm.meta_key = 'vintage'        THEN pm.meta_value END ) AS vintage,
-            MAX( CASE WHEN pm.meta_key = 'wine_type'      THEN pm.meta_value END ) AS wine_type,
-            MAX( CASE WHEN pm.meta_key = 'designation'    THEN pm.meta_value END ) AS designation,
-            MAX( CASE WHEN pm.meta_key = 'variety_style'  THEN pm.meta_value END ) AS variety_style,
-            MAX( CASE WHEN pm.meta_key = 'home_region'    THEN pm.meta_value END ) AS home_region,
-            MAX( CASE WHEN pm.meta_key = 'appellation'    THEN pm.meta_value END ) AS appellation,
-            MAX( CASE WHEN pm.meta_key = 'varietal_label' THEN pm.meta_value END ) AS variety,
-            MAX( CASE WHEN pm.meta_key = 'special_designation' THEN pm.meta_value END ) AS special_designation,
-            MAX( CASE WHEN pm.meta_key = 'alcohol_percentage'  THEN pm.meta_value END ) AS alcohol_percentage,
-            MAX( CASE WHEN pm.meta_key = 'closure'             THEN pm.meta_value END ) AS closure,
-            MAX( CASE WHEN pm.meta_key = 'cases'               THEN pm.meta_value END ) AS cases,
-            MAX( CASE WHEN pm.meta_key = 'state_or_province'   THEN pm.meta_value END ) AS state_or_province,
-            MAX( CASE WHEN pm.meta_key = 'source'              THEN pm.meta_value END ) AS source,
-            MAX( CASE WHEN pm.meta_key = 'reviewer_user'       THEN pm.meta_value END ) AS reviewer
-        FROM {$wpdb->posts} p
-        JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID
-        WHERE p.post_type   = 'reviews'
-          AND p.post_status  = 'publish'
-          {$date_clause}
-        GROUP BY p.ID, p.post_title, p.post_date
-        ORDER BY p.ID ASC
-        LIMIT %d OFFSET %d
-        ",
-        $per_page,
-        $offset
-    );
-
-    $rows = $wpdb->get_results( $sql, ARRAY_A );
-
-    $reviews = array_map( function ( $row ) {
-        return [
-            'id'               => (int) $row['id'],
-            'brand_name'       => (string) $row['brand_name'],
-            'wine_name'        => (string) ( $row['designation'] ?: $row['variety_style'] ?: $row['variety'] ),
-            'designation'      => (string) $row['designation'],
-            'variety_style'    => (string) $row['variety_style'],
-            'tasting_note'     => (string) $row['tasting_note'],
-            'rating'           => (string) $row['rating'],
-            'price'            => (string) $row['price'],
-            'vintage'          => (string) $row['vintage'],
-            'wine_type'        => (string) $row['wine_type'],
-            // Varietal Label alone — blank for a blend, whose name lives in
-            // variety_style. The app applies its own fallback for filtering, so
-            // sending the style here only made the listing repeat it.
-            'variety'          => (string) $row['variety'],
-            'region'           => (string) $row['home_region'],
-            'appellation'      => (string) $row['appellation'],
-            'publication_date' => wine_agent_format_acf_date( $row['published_date'] )
-                               ?: substr( (string) $row['entry_date'], 0, 10 ),
-            'special_designation' => (string) $row['special_designation'],
-            'alcohol'          => (string) $row['alcohol_percentage'],
-            'closure'          => (string) $row['closure'],
-            'cases'            => (string) $row['cases'],
-            'state_or_province' => (string) $row['state_or_province'],
-            'source'           => (string) $row['source'],
-            'reviewer'         => (string) $row['reviewer'],
-        ];
-    }, $rows );
+    // The pivot lives in includes/wine-index.php, shared with the indexer so
+    // the two can never disagree about which meta keys make up a review.
+    $reviews = wine_agent_fetch_review_rows( [
+        'limit'          => $per_page,
+        'offset'         => $offset,
+        'modified_after' => $modified_after,
+    ] );
 
     $response = new WP_REST_Response( $reviews, 200 );
     $response->header( 'X-WP-Total-Page', $page );
@@ -206,20 +136,103 @@ function wine_agent_send_webhook( string $action, int $post_id ): void {
     wp_remote_post( $webhook_url, $args );
 }
 
-// Fire on publish/update
+// Keep the local index current, and keep feeding the EC2 webhook while proxy
+// mode is still a rollback target. Priority 20 so ACF has written its fields
+// to postmeta before the pivot reads them back.
 add_action( 'save_post_reviews', function ( int $post_id, WP_Post $post ) {
-    if ( $post->post_status !== 'publish' || wp_is_post_revision( $post_id ) ) {
+    if ( wp_is_post_revision( $post_id ) ) {
         return;
     }
-    wine_agent_send_webhook( 'upsert', $post_id );
-}, 10, 2 );
+
+    if ( $post->post_status === 'publish' ) {
+        wine_agent_index_upsert_post( $post_id );
+        wine_agent_send_webhook( 'upsert', $post_id );
+        return;
+    }
+
+    // Unpublished: the pivot only ever returns published reviews, so a review
+    // that leaves 'publish' has to be dropped from the index explicitly.
+    wine_agent_index_delete_post( $post_id );
+}, 20, 2 );
 
 // Fire on trash
 add_action( 'trashed_post', function ( int $post_id ) {
     if ( get_post_type( $post_id ) !== 'reviews' ) {
         return;
     }
+    wine_agent_index_delete_post( $post_id );
     wine_agent_send_webhook( 'delete', $post_id );
+} );
+
+// Restoring from trash puts the review back, if it lands published.
+add_action( 'untrashed_post', function ( int $post_id ) {
+    if ( get_post_type( $post_id ) !== 'reviews' ) {
+        return;
+    }
+    wine_agent_index_upsert_post( $post_id );
+    if ( get_post_status( $post_id ) === 'publish' ) {
+        wine_agent_send_webhook( 'upsert', $post_id );
+    }
+} );
+
+// Hard delete: the row has to go even though trashed_post already ran, since a
+// review can be deleted permanently without passing through the trash.
+add_action( 'before_delete_post', function ( int $post_id ) {
+    if ( get_post_type( $post_id ) !== 'reviews' ) {
+        return;
+    }
+    wine_agent_index_delete_post( $post_id );
+    wine_agent_send_webhook( 'delete', $post_id );
+} );
+
+// ─── Index lifecycle ─────────────────────────────────────────────────────────
+
+register_activation_hook( __FILE__, function () {
+    wine_agent_index_install();
+    if ( ! wp_next_scheduled( 'wine_agent_index_nightly' ) ) {
+        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'wine_agent_index_nightly' );
+    }
+} );
+
+register_deactivation_hook( __FILE__, function () {
+    wp_clear_scheduled_hook( 'wine_agent_index_nightly' );
+    wp_clear_scheduled_hook( 'wine_agent_index_continue' );
+} );
+
+// A nightly rebuild from scratch: incremental upserts are equivalent to a
+// rebuild by construction, but this catches anything that changed the data
+// without firing a post hook (a direct SQL edit, an importer, a restored
+// backup).
+add_action( 'wine_agent_index_nightly', function () {
+    delete_option( 'wine_agent_index_rebuild_offset' );
+    wine_agent_index_run_rebuild_pass();
+} );
+
+// Continuation for a rebuild that ran out of time budget.
+add_action( 'wine_agent_index_continue', 'wine_agent_index_run_rebuild_pass' );
+
+/**
+ * Run one rebuild pass and schedule the next if there is more to do.
+ */
+function wine_agent_index_run_rebuild_pass(): void {
+    if ( ! wine_agent_index_table_exists() ) {
+        wine_agent_index_install();
+    }
+    $state = wine_agent_index_rebuild_step( 20 );
+    if ( ! $state['done'] ) {
+        wp_schedule_single_event( time() + 5, 'wine_agent_index_continue' );
+    }
+}
+
+// Upgrades don't run the activation hook, so pick up a schema change on the
+// first admin page load after the plugin files are replaced.
+add_action( 'admin_init', function () {
+    if ( (int) get_option( 'wine_agent_index_version', 0 ) !== WINE_AGENT_INDEX_VERSION ) {
+        wine_agent_index_install();
+    }
+    if ( ! wp_next_scheduled( 'wine_agent_index_nightly' ) ) {
+        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'wine_agent_index_nightly' );
+    }
 } );
 
 // ─── [wine-search] shortcode ─────────────────────────────────────────────────
@@ -231,6 +244,18 @@ add_action( 'trashed_post', function ( int $post_id ) {
 add_action( 'admin_init', function () {
     register_setting( 'wine_agent_settings', 'wine_agent_app_url', [
         'sanitize_callback' => 'esc_url_raw',
+        'default'           => '',
+    ] );
+    register_setting( 'wine_agent_settings', 'wine_agent_search_mode', [
+        'sanitize_callback' => function ( $value ) {
+            return 'native' === $value ? 'native' : 'proxy';
+        },
+        'default'           => 'proxy',
+    ] );
+    register_setting( 'wine_agent_settings', 'wine_agent_allow_mode_override', [
+        'sanitize_callback' => function ( $value ) {
+            return '1' === (string) $value ? '1' : '';
+        },
         'default'           => '',
     ] );
 } );
@@ -264,26 +289,113 @@ add_shortcode( 'wine-search', function () {
          . '<script>window.__WINE_AGENT_API_BASE__ = ' . wp_json_encode( $proxy_base ) . ';</script>';
 } );
 
-// ─── Proxy endpoints: forward /search and /meta to the EC2 API ───────────────
+// ─── Search endpoints ────────────────────────────────────────────────────────
 //
-// Allows the embedded React app to call HTTPS WP REST endpoints instead of
-// making direct HTTP requests to EC2 (which browsers block as mixed content).
+// Two implementations behind one route, chosen by the Search Mode setting:
+//
+//   native — answer from the index table in this site's own database. No
+//            network hop, no second server, and the data is whatever
+//            WordPress last saved.
+//   proxy  — forward to the EC2 Node API, the pre-2.27 behaviour. Kept as the
+//            rollback path while native mode is soaking.
+//
+// Either way the embedded app calls same-origin HTTPS WP REST endpoints, which
+// is what keeps browsers from blocking the request as mixed content.
 
 add_action( 'rest_api_init', function () {
-    $proxy_args = [
+    $public_args = [
         'permission_callback' => '__return_true',
     ];
 
-    register_rest_route( 'wine-agent/v1', '/search', array_merge( $proxy_args, [
+    register_rest_route( 'wine-agent/v1', '/search', array_merge( $public_args, [
         'methods'  => 'GET',
-        'callback' => 'wine_agent_proxy_search',
+        'callback' => 'wine_agent_handle_search',
     ] ) );
 
-    register_rest_route( 'wine-agent/v1', '/meta', array_merge( $proxy_args, [
+    register_rest_route( 'wine-agent/v1', '/meta', array_merge( $public_args, [
         'methods'  => 'GET',
-        'callback' => 'wine_agent_proxy_meta',
+        'callback' => 'wine_agent_handle_meta',
+    ] ) );
+
+    // The app ships a chat client; the feature is disabled on both backends.
+    // Answering here keeps the contract explicit rather than 404-ing.
+    register_rest_route( 'wine-agent/v1', '/chat', array_merge( $public_args, [
+        'methods'  => 'POST',
+        'callback' => function () {
+            return new WP_REST_Response( [ 'error' => 'Chat is not available yet.' ], 503 );
+        },
     ] ) );
 } );
+
+/**
+ * Which backend serves /search and /meta: 'native' or 'proxy'.
+ *
+ * A `wa_mode` query param can override the setting for one request, but only
+ * while the override option is switched on — that is what lets the parity
+ * harness ask the same site the same question both ways, over the real data,
+ * before anyone commits to the switch. It stays off on a normal site.
+ */
+function wine_agent_search_mode(): string {
+    $mode = get_option( 'wine_agent_search_mode', 'proxy' );
+
+    if ( '1' === (string) get_option( 'wine_agent_allow_mode_override', '' ) && isset( $_GET['wa_mode'] ) ) {
+        $override = sanitize_text_field( wp_unslash( $_GET['wa_mode'] ) );
+        if ( 'native' === $override || 'proxy' === $override ) {
+            return $override;
+        }
+    }
+
+    return 'native' === $mode ? 'native' : 'proxy';
+}
+
+/**
+ * Query params to forward to the proxy — everything except the override, which
+ * is ours and would be read as a wine field by the Node API.
+ */
+function wine_agent_proxy_params( WP_REST_Request $request ): array {
+    $params = $request->get_query_params();
+    unset( $params['wa_mode'] );
+    return $params;
+}
+
+function wine_agent_handle_search( WP_REST_Request $request ): WP_REST_Response {
+    nocache_headers();
+
+    if ( 'native' !== wine_agent_search_mode() ) {
+        return wine_agent_proxy_request( 'search', wine_agent_proxy_params( $request ) );
+    }
+
+    if ( wine_agent_index_needs_rebuild() ) {
+        return new WP_REST_Response(
+            [ 'error' => 'Search index is not built yet. Rebuild it under Settings → Wine Agent API.' ],
+            503
+        );
+    }
+
+    $result = wine_agent_run_search( wine_agent_index_executor(), $request->get_query_params() );
+    return new WP_REST_Response( $result, 200 );
+}
+
+function wine_agent_handle_meta( WP_REST_Request $request ): WP_REST_Response {
+    nocache_headers();
+
+    if ( 'native' !== wine_agent_search_mode() ) {
+        // Note: proxy mode has never forwarded the filters, so its facet lists
+        // are unnarrowed. Native mode forwards them, which is what the app was
+        // built for — see the Search Mode setting.
+        return wine_agent_proxy_request( 'meta' );
+    }
+
+    if ( wine_agent_index_needs_rebuild() ) {
+        return new WP_REST_Response(
+            [ 'error' => 'Search index is not built yet. Rebuild it under Settings → Wine Agent API.' ],
+            503
+        );
+    }
+
+    $result = wine_agent_run_meta( wine_agent_index_executor(), $request->get_query_params() );
+    return new WP_REST_Response( $result, 200 );
+}
 
 function wine_agent_proxy_request( string $path, array $query_params = [] ): WP_REST_Response {
     $app_url = rtrim( get_option( 'wine_agent_app_url', '' ), '/' );
@@ -308,16 +420,6 @@ function wine_agent_proxy_request( string $path, array $query_params = [] ): WP_
     $code = wp_remote_retrieve_response_code( $response );
     $body = json_decode( wp_remote_retrieve_body( $response ), true );
     return new WP_REST_Response( $body, $code );
-}
-
-function wine_agent_proxy_search( WP_REST_Request $request ): WP_REST_Response {
-    nocache_headers();
-    return wine_agent_proxy_request( 'search', $request->get_query_params() );
-}
-
-function wine_agent_proxy_meta( WP_REST_Request $request ): WP_REST_Response {
-    nocache_headers();
-    return wine_agent_proxy_request( 'meta' );
 }
 
 // ─── Debug endpoint (temporary) ──────────────────────────────────────────────
@@ -365,12 +467,95 @@ function wine_agent_settings_page(): void {
         echo '<div class="notice notice-success"><p>API key regenerated.</p></div>';
     }
 
-    $search_key = get_option( 'wine_agent_search_key', '' );
-    $app_url    = get_option( 'wine_agent_app_url', '' );
-    $endpoint       = rest_url( 'wine-agent/v1/reviews' );
+    // Handle rebuild action. Runs in slices so a large site doesn't hit
+    // max_execution_time; the button reports progress and is pressed again
+    // until it reports done.
+    if (
+        isset( $_POST['wine_agent_rebuild'] )
+        && check_admin_referer( 'wine_agent_rebuild_index' )
+    ) {
+        if ( ! wine_agent_index_table_exists() ) {
+            wine_agent_index_install();
+        }
+        if ( isset( $_POST['wine_agent_rebuild_restart'] ) ) {
+            delete_option( 'wine_agent_index_rebuild_offset' );
+        }
+        $state = wine_agent_index_rebuild_step( 20 );
+        if ( $state['done'] ) {
+            printf(
+                '<div class="notice notice-success"><p>Index rebuilt: %s reviews.</p></div>',
+                esc_html( number_format_i18n( $state['processed'] ) )
+            );
+        } else {
+            printf(
+                '<div class="notice notice-warning"><p>Indexed %s of %s reviews. Press Continue to carry on.</p></div>',
+                esc_html( number_format_i18n( $state['processed'] ) ),
+                esc_html( number_format_i18n( $state['total'] ) )
+            );
+        }
+    }
+
+    $search_key  = get_option( 'wine_agent_search_key', '' );
+    $app_url     = get_option( 'wine_agent_app_url', '' );
+    $mode        = wine_agent_search_mode();
+    $endpoint    = rest_url( 'wine-agent/v1/reviews' );
+    $index_count = wine_agent_index_count();
+    $built_at    = get_option( 'wine_agent_index_built_at', '' );
+    $in_progress = (int) get_option( 'wine_agent_index_rebuild_offset', 0 );
+    $needs_build = wine_agent_index_needs_rebuild();
     ?>
     <div class="wrap">
         <h1>Wine Agent API</h1>
+
+        <?php if ( 'native' === $mode && $needs_build ) : ?>
+            <div class="notice notice-error">
+                <p><strong>Search is in native mode but the index is not ready.</strong>
+                Rebuild it below, or switch back to proxy mode — searches are
+                returning 503 until one or the other happens.</p>
+            </div>
+        <?php endif; ?>
+
+        <h2>Search index</h2>
+        <table class="form-table">
+            <tr>
+                <th scope="row">Indexed reviews</th>
+                <td>
+                    <?php echo esc_html( number_format_i18n( $index_count ) ); ?>
+                    <?php if ( ! wine_agent_index_table_exists() ) : ?>
+                        <span style="color:#b32d2e">— table not created yet</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Last full rebuild</th>
+                <td><?php echo $built_at ? esc_html( $built_at ) : '<em>never</em>'; ?></td>
+            </tr>
+            <?php if ( $in_progress > 0 ) : ?>
+            <tr>
+                <th scope="row">Rebuild in progress</th>
+                <td><?php echo esc_html( number_format_i18n( $in_progress ) ); ?> reviews written so far</td>
+            </tr>
+            <?php endif; ?>
+        </table>
+        <form method="post">
+            <?php wp_nonce_field( 'wine_agent_rebuild_index' ); ?>
+            <p>
+                <button type="submit" name="wine_agent_rebuild" class="button button-primary">
+                    <?php echo $in_progress > 0 ? 'Continue rebuild' : 'Rebuild index'; ?>
+                </button>
+                <?php if ( $in_progress > 0 ) : ?>
+                    <button type="submit" name="wine_agent_rebuild_restart" value="1" class="button">
+                        Start over
+                    </button>
+                <?php endif; ?>
+            </p>
+            <p class="description">
+                Reads every published review and rewrites the index. Rows are built in a
+                staging table and swapped in at the end, so searches keep working on the
+                old index until the new one is complete. Runs automatically each night;
+                you only need this after importing or editing reviews outside the editor.
+            </p>
+        </form>
 
         <h2>Endpoint</h2>
         <p><code><?php echo esc_html( $endpoint ); ?></code></p>
@@ -380,6 +565,46 @@ function wine_agent_settings_page(): void {
         <form method="post" action="options.php">
             <?php settings_fields( 'wine_agent_settings' ); ?>
             <table class="form-table">
+                <tr>
+                    <th scope="row">Search Mode</th>
+                    <td>
+                        <fieldset>
+                            <label>
+                                <input type="radio" name="wine_agent_search_mode" value="native"
+                                    <?php checked( $mode, 'native' ); ?> />
+                                <strong>Native</strong> — search this site's own database
+                            </label>
+                            <p class="description" style="margin:4px 0 12px 24px">
+                                No external server. Reviews appear in search as soon as they are saved.
+                                Filter dropdowns narrow each other (choosing a Wine Type narrows Varietal,
+                                a State narrows Appellation), which proxy mode never did.
+                            </p>
+                            <label>
+                                <input type="radio" name="wine_agent_search_mode" value="proxy"
+                                    <?php checked( $mode, 'proxy' ); ?> />
+                                <strong>Proxy</strong> — forward to the external search server
+                            </label>
+                            <p class="description" style="margin:4px 0 0 24px">
+                                The pre-2.27 behaviour, kept as a rollback. Requires the Search App URL
+                                below and a reachable server.
+                            </p>
+                        </fieldset>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Parity testing</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wine_agent_allow_mode_override" value="1"
+                                <?php checked( get_option( 'wine_agent_allow_mode_override', '' ), '1' ); ?> />
+                            Allow <code>?wa_mode=native|proxy</code> to override the mode per request
+                        </label>
+                        <p class="description">
+                            Lets the parity harness ask this site the same query both ways and diff the
+                            answers, over the real data. Turn it off once the comparison is done.
+                        </p>
+                    </td>
+                </tr>
                 <tr>
                     <th scope="row"><label for="wine_agent_search_key">Search API Key</label></th>
                     <td>
