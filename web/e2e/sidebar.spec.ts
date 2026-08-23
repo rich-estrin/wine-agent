@@ -126,6 +126,19 @@ test.describe('facet groups', () => {
 });
 
 test.describe('range controls', () => {
+  // "0 to Any" said nothing about what the track covers. The high end now names
+  // the largest production in the data, which /api/meta reports.
+  test('the Cases range ends at the highest production in the data', async ({ page }) => {
+    const panel = await openFilters(page);
+    await facetHeader(panel, 'Advanced').click();
+    await facetHeader(panel, 'Cases').click();
+
+    const cases = facetGroup(panel, 'Cases').locator('input[inputmode="numeric"]');
+    const { casesMax } = await (await page.request.get('/api/meta')).json();
+    await expect(cases.nth(0)).toHaveValue('0');
+    await expect(cases.nth(1)).toHaveAttribute('placeholder', casesMax.toLocaleString('en-US'));
+  });
+
   test('rejects a low endpoint above the high one', async ({ page }) => {
     const panel = await openFilters(page);
     const score = facetGroup(panel, 'Score').locator('input[inputmode="numeric"]');

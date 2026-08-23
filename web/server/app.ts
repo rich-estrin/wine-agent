@@ -2,7 +2,7 @@ import express from 'express';
 import type { Wine } from '../src/types.js';
 import { mapWPReview, type WPReview } from './wp-client.js';
 import { searchWines, filterWines, getWineDetails, matchesFilter } from './wine-search.js';
-import { sortWines } from './wine-utils.js';
+import { sortWines, parseCasesOrNull } from './wine-utils.js';
 import { designationGroupLabels } from '../src/data/designation-groups.js';
 
 /** The subset of a data client the API depends on. CSVClient, WPClient and
@@ -49,6 +49,17 @@ const FACETS: { key: string; controls: string; field: keyof Wine }[] = [
   { key: 'specialDesignations', controls: 'specialDesignation', field: 'specialDesignation' },
 ];
 
+/** The meta payload: one option list per facet, plus the numbers a range
+ *  control needs to size itself. */
+type MetaResponse = { casesMax: number } & Record<string, string[] | number>;
+
+/** Largest reported case production in the data, for the top of the Cases
+ *  slider. Computed over every wine, not the filtered pool — a range control
+ *  whose end moves as you filter is impossible to aim. */
+function highestCases(wines: Wine[]): number {
+  return wines.reduce((max, w) => Math.max(max, parseCasesOrNull(w.cases) ?? 0), 0);
+}
+
 const unique = (values: string[]) =>
   [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort(
     (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
@@ -73,11 +84,17 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
   }
 
   // Keyed by the active filter set. Cleared wholesale by the webhook.
-  let metaCache = new Map<string, Record<string, string[]>>();
+  let metaCache = new Map<string, MetaResponse>();
+  // The largest production doesn't depend on the filters, so it is a property
+  // of the dataset, not of a meta request. Scanned once and kept until a
+  // webhook changes the data — otherwise every new filter combination paid for
+  // another full pass over every wine to reach the same number.
+  let casesMax: number | null = null;
 
-  function buildMeta(filters: Record<string, string>): Record<string, string[]> {
+  function buildMeta(filters: Record<string, string>): MetaResponse {
     const wines = dataClient.getAllWines();
-    const result: Record<string, string[]> = {};
+    if (casesMax === null) casesMax = highestCases(wines);
+    const result: MetaResponse = { casesMax };
 
     for (const facet of FACETS) {
       const others = Object.entries(filters).filter(([key]) => key !== facet.controls);
@@ -391,6 +408,7 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
     }
 
     metaCache.clear(); // force rebuild so filter dropdowns reflect the change
+    casesMax = null;   // a published wine can raise (or a trashed one lower) it
 
     res.json({ ok: true, total: dataClient.getAllWines().length });
   });

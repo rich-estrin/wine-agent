@@ -98,12 +98,17 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 - **`components/AvaTreeFilter.tsx`** — hierarchical AVA dropdown with search
 - **`data/ava-tree.ts`** — PNW AVA hierarchy; `expandAva(name)` returns node + all descendants
 - **`api.ts`** — typed fetch wrappers for `/api/search`, `/api/meta`
-- **`types.ts`** — `Wine`, `Meta`, `formatPrice`, `numericScore`
+- **`types.ts`** — `Wine`, `Meta`, `formatPrice`, `numericScore`. `mainVarietal` is
+  the Varietal Label *with* a fallback to the variety style (what the Varietal filter
+  and the search index match on); `varietalLabel` is the label alone, blank on a blend,
+  and is what the listing prints
 - **`main.tsx`** — mounts to `#wine-agent-root` (WordPress embed) or `#root` (standalone)
 
 ### API Server (`web/server/index.ts`)
 - `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`)
-- `GET /api/meta` — returns `{ varietals, regions, types, avaList }`
+- `GET /api/meta` — returns `{ varietals, regions, types, avaList, stateProvinces, specialDesignations, casesMax }`.
+  `casesMax` is the largest reported case production, computed over **all** wines
+  (never narrowed by the active filters) so the Cases slider's top end holds still
 - `POST /api/webhook/review` — receives `{ action: 'upsert'|'delete', review: WPReview }` from WP plugin; authenticated via `X-Webhook-Secret` header
 - `POST /api/chat` — **disabled (503)**; full implementation preserved in comment
 
@@ -130,7 +135,8 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
   broken by rating, highest first, in both directions
 - AVA filter: comma-separated list of expanded descendants via `expandAva()` in `ava-tree.ts`
 - Price slider: non-linear (piecewise) — 0–25% → $0–$15, 25–75% → $15–$100, 75–100% → $100–$300
-- Cases slider: same shape — 0–25% → 0–500, 25–75% → 500–5,000, 75–100% → 5,000–50,000.
+- Cases slider: same shape — 0–25% → 0–500, 25–75% → 500–5,000, 75–100% → 5,000–`casesMax`,
+  the highest production in the data (shown as the high-end placeholder rather than "Any").
   Blank/`0` cases mean "not reported" and are excluded from the range, never read as zero
 - The search box debounces 500ms and runs itself; Enter and Escape skip the wait.
   `App.tsx` skips its own 300ms request debounce for query changes
