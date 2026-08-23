@@ -96,7 +96,11 @@ export function mapWPReview(row: WPReview): Wine {
     review:            (row.tasting_note ?? '').trim(),
     region:            normalizeRegion(row.region ?? ''),
     type:              toTitleCase(row.wine_type ?? ''),
-    mainVarietal:      toTitleCase(variety),
+    // `variety` is the Varietal Label, blank for blends — the filter falls back
+    // to the style so a blend stays selectable, while `varietalLabel` keeps the
+    // label alone for display.
+    mainVarietal:      toTitleCase(variety || varietyStyle),
+    varietalLabel:     toTitleCase(variety),
     varietyStyle:      toTitleCase(varietyStyle),
     publicationDate:   normalizePubDate(row.publication_date ?? ''),
     tastingDate:       '',

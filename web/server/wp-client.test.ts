@@ -56,6 +56,21 @@ describe('mapWPReview — title casing', () => {
   });
 });
 
+// `variety` is the Varietal Label, which a blend leaves empty.
+describe('mapWPReview — varietal label vs. variety style', () => {
+  it('keeps the label empty for a blend and falls the varietal back to the style', () => {
+    const wine = mapWPReview(review({ variety: '', variety_style: 'bordeaux-style red blend' }));
+    expect(wine.varietalLabel).toBe('');
+    expect(wine.mainVarietal).toBe('Bordeaux-Style Red Blend');
+  });
+
+  it('uses the label for both when the wine has one', () => {
+    const wine = mapWPReview(review({ variety: 'merlot', variety_style: 'merlot' }));
+    expect(wine.varietalLabel).toBe('Merlot');
+    expect(wine.mainVarietal).toBe('Merlot');
+  });
+});
+
 describe('mapWPReview — region casing', () => {
   it('keeps state codes uppercase', () => {
     expect(mapWPReview(review({ region: 'tri-cities (wa)' })).region).toBe('Tri-Cities (WA)');

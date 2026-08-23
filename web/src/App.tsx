@@ -108,8 +108,17 @@ export default function App() {
       sort_order: sortOrder,
     };
     if (query.trim()) params.q = query.trim();
+    // Deliberately not in buildFilterParams: /api/meta takes the same shape,
+    // and a search setting has no business narrowing the facet lists.
+    //
+    // Only sent alongside a query, because that is the only time it can change
+    // anything — with an empty search box every wine matches either way. Left
+    // in unconditionally it moved `searchKey`, so ticking the box with nothing
+    // typed re-ran the whole search and blinked the list away for a result set
+    // that came back identical.
+    if (filters.searchNotes && query.trim()) params.notes = '1';
     return params;
-  }, [query, buildFilterParams, sortBy, sortOrder]);
+  }, [query, buildFilterParams, filters.searchNotes, sortBy, sortOrder]);
 
   // Effects key off the *values* of the query, not the callback's identity.
   // buildFilterParams closes over `allMeta`, which arrives a beat after mount

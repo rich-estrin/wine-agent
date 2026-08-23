@@ -33,26 +33,64 @@ function searchWords(wine: Wine): string[] {
   return words;
 }
 
+// The tasting note, folded once per wine and remembered. Prose is 2.6 MB
+// across the export — folding it on every keystroke would be wasteful, and
+// tokenising it into words costs several times the memory of keeping the
+// string. Like `wordCache`, a WeakMap means a webhook upsert (which replaces
+// the wine object) invalidates its own entry, and a reader who never ticks the
+// box never pays for any of this.
+const noteCache = new WeakMap<Wine, string>();
+
+function foldedNote(wine: Wine): string {
+  const cached = noteCache.get(wine);
+  if (cached !== undefined) return cached;
+  const note = fold(wine.review ?? '');
+  noteCache.set(wine, note);
+  return note;
+}
+
+/** Word-start matchers for each term, or null when notes aren't being searched.
+ *  Terms come from `foldWords`, so they hold only letters and digits and need
+ *  no regex escaping. */
+function noteMatchers(terms: string[], searchNotes: boolean): RegExp[] | null {
+  if (!searchNotes) return null;
+  return terms.map((term) => new RegExp(`(?<![\\p{L}\\p{N}])${term}`, 'u'));
+}
+
 /** True when every query term begins a word in one of the search fields.
  *  Prefix, not substring: "gard" finds "Gård Vintners" but not "garden", and
  *  all terms must match somewhere (AND), though not in the same field.
  *  The indexed words include apostrophe elisions, so "lecole" finds "L'Ecole". */
-function matchesQuery(wine: Wine, terms: string[]): boolean {
+function matchesQuery(wine: Wine, terms: string[], notes: RegExp[] | null): boolean {
   if (terms.length === 0) return true;
   const words = searchWords(wine);
-  return terms.every((term) => words.some((w) => w.startsWith(term)));
+  return terms.every(
+    (term, i) =>
+      words.some((w) => w.startsWith(term)) ||
+      // Opt-in: the note widens the search, it never replaces the fields. Each
+      // term may land in a different place, exactly as it may across fields.
+      (notes !== null && notes[i].test(foldedNote(wine))),
+  );
 }
 
-/** Full-text search over producer, vintage, wine name, varietal and appellation.
- *  Matching only — the caller decides the order. */
+/** Full-text search over producer, vintage, wine name, varietal and appellation
+ *  — and, when `searchNotes` is set, the tasting note as well. Matching only —
+ *  the caller decides the order. */
 export function searchWines(
   wines: Wine[],
-  params: { query: string; limit?: number; sort_by?: string; sort_order?: 'asc' | 'desc' },
+  params: {
+    query: string;
+    limit?: number;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+    searchNotes?: boolean;
+  },
 ): Wine[] {
-  const { query, limit = 20, sort_by, sort_order = 'desc' } = params;
+  const { query, limit = 20, sort_by, sort_order = 'desc', searchNotes = false } = params;
   const terms = foldWords(query);
+  const notes = noteMatchers(terms, searchNotes);
 
-  let results = wines.filter((wine) => matchesQuery(wine, terms));
+  let results = wines.filter((wine) => matchesQuery(wine, terms, notes));
   if (sort_by) results = sortWines(results, sort_by, sort_order);
   return results.slice(0, limit);
 }

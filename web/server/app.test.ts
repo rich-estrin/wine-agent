@@ -3,6 +3,7 @@ import type { AddressInfo } from 'net';
 import type { Server } from 'http';
 import { createApp } from './app.js';
 import { FixtureClient } from './fixture-client.js';
+import { readFileSync } from 'fs';
 
 // Real routes, real fixture data, over real HTTP on an ephemeral port — the
 // same path the browser takes, without depending on WordPress or a CSV export.
@@ -36,7 +37,7 @@ const search = async (qs: string) => {
 const meta = async (qs = '') => {
   const res = await fetch(`${base}/api/meta${qs ? `?${qs}` : ''}`);
   expect(res.status).toBe(200);
-  return res.json() as Promise<Record<string, string[]>>;
+  return res.json() as Promise<Record<string, string[]> & { casesMax: number }>;
 };
 
 describe('GET /api/search', () => {
@@ -140,13 +141,56 @@ describe('GET /api/search', () => {
   });
 });
 
+// The tasting note is searched only when the caller asks for it.
+describe('GET /api/search — notes=1', () => {
+  it('finds a note-only word only with the flag', async () => {
+    const plain = await search('q=bright');
+    const withNotes = await search('q=bright&notes=1');
+    expect(plain.total).toBe(0);
+    expect(withNotes.total).toBeGreaterThan(0);
+  });
+
+  it('widens the result set rather than replacing it', async () => {
+    const plain = await search('q=merlot&limit=100');
+    const withNotes = await search('q=merlot&notes=1&limit=100');
+    expect(withNotes.total).toBeGreaterThanOrEqual(plain.total);
+    const widened = new Set(withNotes.wines.map((w) => w.id));
+    for (const wine of plain.wines) expect(widened).toContain(wine.id);
+  });
+
+  // A stray param that reached collectFilters would be looked up as a wine
+  // field, match nothing, and empty the results.
+  it('is not treated as a filter', async () => {
+    const off = await search('notes=1&limit=5');
+    expect(off.total).toBe((await search('limit=5')).total);
+  });
+
+  it('leaves the facet lists alone', async () => {
+    const plain = await meta();
+    const withNotes = await meta('notes=1');
+    expect(withNotes.varietals).toEqual(plain.varietals);
+  });
+});
+
 describe('GET /api/meta — faceting', () => {
   it('returns every facet list', async () => {
     const m = await meta();
     expect(Object.keys(m).sort()).toEqual(
-      ['avaList', 'regions', 'specialDesignations', 'stateProvinces', 'types', 'varietals'].sort(),
+      ['avaList', 'casesMax', 'regions', 'specialDesignations', 'stateProvinces', 'types', 'varietals'].sort(),
     );
     expect(m.types.length).toBeGreaterThan(1);
+  });
+
+  // The Cases slider needs a top end; "0 to Any" told the reader nothing.
+  it('reports the highest case production, and does not narrow it by filter', async () => {
+    const fixture = JSON.parse(readFileSync('fixtures/wines.json', 'utf-8')) as
+      { wines?: { cases: string }[] } | { cases: string }[];
+    const rows = Array.isArray(fixture) ? fixture : fixture.wines!;
+    const highest = Math.max(...rows.map((w) => parseInt((w.cases || '0').replace(/\D/g, '')) || 0));
+
+    const all = await meta();
+    expect(all.casesMax).toBe(highest);
+    expect((await meta('type=Red')).casesMax).toBe(highest);
   });
 
   it('narrows Varietal when a Wine Type is chosen', async () => {
@@ -218,6 +262,34 @@ describe('POST /api/webhook/review', () => {
 
       const after = await (await fetch(`${b}/api/meta`)).json();
       expect(after.varietals).toContain('Zinfandel');
+    } finally {
+      await close(s);
+    }
+  });
+
+  // casesMax is remembered across meta requests rather than rescanned per
+  // filter set, so the webhook has to drop it along with the facet lists.
+  it('re-scans the highest case production after a publish', async () => {
+    const { server: s, base: b } = await startApp();
+    try {
+      const before = await (await fetch(`${b}/api/meta`)).json();
+
+      const res = await fetch(`${b}/api/webhook/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upsert',
+          review: { id: 9002, brand_name: 'Big Lot', wine_name: 'Everyday Red', variety: 'Merlot',
+                    wine_type: 'Red', price: '12', rating: '86', vintage: '2023',
+                    appellation: 'Columbia Valley', region: 'Tri-Cities (WA)',
+                    state_or_province: 'Washington', tasting_note: 'Plummy.',
+                    cases: String(before.casesMax + 1000) },
+        }),
+      });
+      expect(res.status).toBe(200);
+
+      const after = await (await fetch(`${b}/api/meta`)).json();
+      expect(after.casesMax).toBe(before.casesMax + 1000);
     } finally {
       await close(s);
     }

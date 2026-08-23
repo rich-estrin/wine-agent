@@ -18,6 +18,10 @@ import RegionTreeFilter from './RegionTreeFilter';
 // treats these fields as a comma-separated OR list. The combobox and the two
 // tree pickers stay single-select and so stay plain strings.
 export interface Filters {
+  /** Widens the search box to the tasting note. Not a filter — it adds wines
+   *  rather than removing them — but it lives here so it shows as an active
+   *  chip, counts in the mobile badge, and resets with Clear all. */
+  searchNotes: boolean;
   mainVarietal: string;
   ava: string;
   region: string;
@@ -36,6 +40,7 @@ export interface Filters {
 }
 
 export const emptyFilters: Filters = {
+  searchNotes: false,
   mainVarietal: '',
   ava: '',
   region: '',
@@ -58,12 +63,14 @@ export function hasAnyFilter(filters: Filters): boolean {
   return countActiveFilters(filters) > 0;
 }
 
-/** Number of active filters, counting each selection in a multi-select. */
+/** Number of active filters, counting each selection in a multi-select and a
+ *  switched-on toggle as one. */
 export function countActiveFilters(filters: Filters): number {
-  return Object.values(filters).reduce<number>(
-    (n, v) => n + (Array.isArray(v) ? v.length : v !== '' ? 1 : 0),
-    0,
-  );
+  return Object.values(filters).reduce<number>((n, v) => {
+    if (Array.isArray(v)) return n + v.length;
+    if (typeof v === 'boolean') return n + (v ? 1 : 0);
+    return n + (v !== '' ? 1 : 0);
+  }, 0);
 }
 
 const dateRangeOptions = [
@@ -110,18 +117,21 @@ function priceToSlider(p: number): number {
 
 // Non-linear case-production scale. Most lots are in the hundreds; stretching
 // that range over most of the track keeps the small end usable while still
-// reaching the few 50,000-case wines.
-function sliderToCases(v: number): number {
+// reaching the handful of six-figure bottlings. The top of the track is the
+// largest production in the data, passed in — "0 to 264,270" says what the
+// range covers, where "0 to Any" said nothing.
+function sliderToCases(v: number, max: number): number {
   if (v <= 25) return Math.round(v * 500 / 25);
   if (v <= 75) return Math.round(500 + (v - 25) * 4500 / 50);
-  return Math.round(5000 + (v - 75) * 45000 / 25);
+  return Math.round(5000 + (v - 75) * (max - 5000) / 25);
 }
-function casesToSlider(c: number): number {
+function casesToSlider(c: number, max: number): number {
   if (c <= 500) return Math.round(c * 25 / 500);
   if (c <= 5000) return Math.round(25 + (c - 500) * 50 / 4500);
-  return Math.min(100, Math.round(75 + (c - 5000) * 25 / 45000));
+  return Math.min(100, Math.round(75 + (c - 5000) * 25 / (max - 5000)));
 }
 
+// Fallback ceiling, used only until /api/meta reports the real one.
 const CASES_MAX = 50000;
 
 const SCORE_MIN = 80;
@@ -460,7 +470,7 @@ function SidebarDualRange({
     }
   };
 
-  const baseInput = 'font-cormorant text-[17px] text-ink bg-transparent border-b outline-none transition-colors w-12';
+  const baseInput = 'font-cormorant text-[17px] text-ink bg-transparent border-b outline-none transition-colors w-16';
   const loInputClass = `${baseInput} ${loError ? 'border-red-400 focus:border-red-500' : 'border-[rgba(26,20,16,0.15)] focus:border-[#7b2d3e]'}`;
   const hiInputClass = `${baseInput} text-right ${hiError ? 'border-red-400 focus:border-red-500' : 'border-[rgba(26,20,16,0.15)] focus:border-[#7b2d3e]'}`;
 
@@ -562,14 +572,16 @@ function SidebarPriceSlider({
 function SidebarCasesSlider({
   casesMin,
   casesMax,
+  highest,
   onChange,
 }: {
   casesMin: string;
   casesMax: string;
+  highest: number;
   onChange: (min: string, max: string) => void;
 }) {
-  const lo = casesToSlider(casesMin !== '' ? parseInt(casesMin) : 0);
-  const hi = casesToSlider(casesMax !== '' ? parseInt(casesMax) : CASES_MAX);
+  const lo = casesToSlider(casesMin !== '' ? parseInt(casesMin) : 0, highest);
+  const hi = casesToSlider(casesMax !== '' ? parseInt(casesMax) : highest, highest);
   return (
     <SidebarDualRange
       sliderMin={0}
@@ -577,16 +589,16 @@ function SidebarCasesSlider({
       lo={lo}
       hi={hi}
       onLo={(v) => {
-        const c = sliderToCases(v);
+        const c = sliderToCases(v, highest);
         onChange(c === 0 ? '' : String(c), casesMax);
       }}
       onHi={(v) => {
-        const c = sliderToCases(v);
-        onChange(casesMin, c === CASES_MAX ? '' : String(c));
+        const c = sliderToCases(v, highest);
+        onChange(casesMin, c >= highest ? '' : String(c));
       }}
       loText={casesMin || '0'}
       hiText={casesMax}
-      hiPlaceholder="Any"
+      hiPlaceholder={highest.toLocaleString('en-US')}
       onLoText={(v) => onChange(v.replace(/\D/g, ''), casesMax)}
       onHiText={(v) => onChange(casesMin, v.replace(/\D/g, ''))}
       zLo={lo > 80 ? 5 : 3}
@@ -703,6 +715,13 @@ export function ActiveChips({
   }
   multi('stateProvince');
   multi('specialDesignation');
+  if (filters.searchNotes) {
+    chips.push({
+      key: 'searchNotes',
+      label: 'Incl. tasting notes',
+      clear: () => onChange({ ...filters, searchNotes: false }),
+    });
+  }
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -802,6 +821,7 @@ export default function Sidebar({
 }) {
   const hasFilters = hasAnyFilter(filters);
   const hasAdvanced = !!(
+    filters.searchNotes ||
     filters.ava || filters.region ||
     filters.casesMin || filters.casesMax ||
     filters.dateRange || filters.specialDesignation.length
@@ -897,7 +917,8 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* Advanced — Appellation, Review Date, Cases, Home Region, Special Designation */}
+      {/* Advanced — Appellation, Review Date, Cases, Home Region, Special
+          Designation, Tasting Notes */}
       <AdvancedSection hasSelection={hasAdvanced}>
         <FacetGroup
           label="Appellation"
@@ -937,6 +958,7 @@ export default function Sidebar({
           <SidebarCasesSlider
             casesMin={filters.casesMin}
             casesMax={filters.casesMax}
+            highest={meta?.casesMax || CASES_MAX}
             onChange={(min, max) => onChange({ ...filters, casesMin: min, casesMax: max })}
           />
         </FacetGroup>
@@ -966,6 +988,24 @@ export default function Sidebar({
             />
           </FacetGroup>
         )}
+
+        {/* Not a facet: it widens the search rather than narrowing the results.
+            It sits here because it is the one search setting a reader may want
+            to leave on, and because the search box has no room for it. */}
+        <FacetGroup
+          label="Tasting Notes"
+          hasSelection={filters.searchNotes}
+          defaultOpen={false}
+        >
+          <FacetOption
+            label="Search tasting notes"
+            selected={filters.searchNotes}
+            onSelect={() => onChange({ ...filters, searchNotes: !filters.searchNotes })}
+          />
+          <p className="mt-1.5 text-[10px] leading-[1.5] text-muted opacity-70">
+            Also matches the text of the review, not just the wine's name.
+          </p>
+        </FacetGroup>
 
       </AdvancedSection>
     </div>

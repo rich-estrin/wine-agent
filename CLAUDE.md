@@ -98,12 +98,17 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
 - **`components/AvaTreeFilter.tsx`** — hierarchical AVA dropdown with search
 - **`data/ava-tree.ts`** — PNW AVA hierarchy; `expandAva(name)` returns node + all descendants
 - **`api.ts`** — typed fetch wrappers for `/api/search`, `/api/meta`
-- **`types.ts`** — `Wine`, `Meta`, `formatPrice`, `numericScore`
+- **`types.ts`** — `Wine`, `Meta`, `formatPrice`, `numericScore`. `mainVarietal` is
+  the Varietal Label *with* a fallback to the variety style (what the Varietal filter
+  and the search index match on); `varietalLabel` is the label alone, blank on a blend,
+  and is what the listing prints
 - **`main.tsx`** — mounts to `#wine-agent-root` (WordPress embed) or `#root` (standalone)
 
 ### API Server (`web/server/index.ts`)
 - `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`)
-- `GET /api/meta` — returns `{ varietals, regions, types, avaList }`
+- `GET /api/meta` — returns `{ varietals, regions, types, avaList, stateProvinces, specialDesignations, casesMax }`.
+  `casesMax` is the largest reported case production, computed over **all** wines
+  (never narrowed by the active filters) so the Cases slider's top end holds still
 - `POST /api/webhook/review` — receives `{ action: 'upsert'|'delete', review: WPReview }` from WP plugin; authenticated via `X-Webhook-Secret` header
 - `POST /api/chat` — **disabled (503)**; full implementation preserved in comment
 
@@ -112,7 +117,11 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
   and case, so "Ita" finds "Itä" and "semillon" finds "Sémillon"
 - Full-text search: `server/wine-search.ts` looks at `brandName`, `vintage`,
   `wineName`, `mainVarietal` and `ava` only — not the tasting note or home
-  region, which are what the filters are for. Each query term must match the **start of a
+  region, which are what the filters are for. The tasting note joins the search
+  when `notes=1` (the "Search tasting notes" checkbox under Advanced): each term
+  may then match a field *or* the note, folded and matched at a word start like
+  everything else. The folded note is cached per wine in a `WeakMap`, built on
+  first use, so a reader who leaves the box off pays nothing. Each query term must match the **start of a
   word** (accent-folded), and every term must match somewhere, though not
   necessarily in the same field. Matching only: results keep the source order
   unless a sort is given, and `/api/search` sorts by rating by default
@@ -130,7 +139,8 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
   broken by rating, highest first, in both directions
 - AVA filter: comma-separated list of expanded descendants via `expandAva()` in `ava-tree.ts`
 - Price slider: non-linear (piecewise) — 0–25% → $0–$15, 25–75% → $15–$100, 75–100% → $100–$300
-- Cases slider: same shape — 0–25% → 0–500, 25–75% → 500–5,000, 75–100% → 5,000–50,000.
+- Cases slider: same shape — 0–25% → 0–500, 25–75% → 500–5,000, 75–100% → 5,000–`casesMax`,
+  the highest production in the data (shown as the high-end placeholder rather than "Any").
   Blank/`0` cases mean "not reported" and are excluded from the range, never read as zero
 - The search box debounces 500ms and runs itself; Enter and Escape skip the wait.
   `App.tsx` skips its own 300ms request debounce for query changes
@@ -191,7 +201,16 @@ web/
 ## Key Conventions
 
 - Sidebar order: Wine Type, Varietal, Score, Vintage, Price, State/Province, then
-  Advanced (Appellation, Review Date, Cases, Home Region, Special Designation)
+  Advanced (Appellation, Review Date, Cases, Home Region, Special Designation,
+  Tasting Notes)
+- `Filters.searchNotes` is the odd one out: a boolean that *widens* the search
+  rather than narrowing it. It rides in `Filters` so it shows as an active chip,
+  counts in the mobile badge and clears with the rest — but `App.tsx` sends it
+  only on `/api/search` (as `notes=1`), never on `/api/meta`, where an unknown
+  param would be read as a field filter and empty every facet list. It is also
+  sent **only alongside a query** — with an empty search box it cannot change
+  the results, and including it moved `searchKey`, so ticking the box re-ran the
+  search and blinked the list away to redraw it identical
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
   Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
   the combobox and tree pickers stay single-select `string`

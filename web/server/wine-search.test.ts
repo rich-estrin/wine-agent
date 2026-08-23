@@ -33,6 +33,9 @@ const wines: Wine[] = [
 ];
 
 const search = (q: string) => ids(searchWines(wines, { query: q, limit: 99 }));
+/** The same search with the "include tasting notes" option turned on. */
+const searchNotes = (q: string) =>
+  ids(searchWines(wines, { query: q, limit: 99, searchNotes: true }));
 const filter = (filters: Record<string, string>) =>
   ids(filterWines(wines, { filters, limit: 99 })).sort();
 
@@ -92,6 +95,49 @@ describe('searchWines — searchable fields', () => {
   it('does not search the home region — that stays a filter', () => {
     // Abacela's home region is Southern Oregon; only its appellation is indexed.
     expect(search('Southern')).toEqual([]);
+  });
+});
+
+// Opt-in only: the default search deliberately ignores prose, because matching
+// it turns a search for a winery into every review that mentions one.
+describe('searchWines — including tasting notes', () => {
+  it('finds a word that appears only in the note', () => {
+    expect(search('herbs')).toEqual([]);
+    expect(searchNotes('herbs')).toEqual(['woodward']);
+  });
+
+  it('widens rather than replaces — name matches are still there', () => {
+    // Gård is a Merlot by varietal; Woodward's note merely mentions Merlot.
+    expect(search('Merlot')).toEqual(['gard']);
+    expect(searchNotes('Merlot')).toEqual(['gard', 'woodward']);
+  });
+
+  it('keeps the results in source order, for the caller to sort', () => {
+    expect(searchNotes('Merlot')).toEqual(['gard', 'woodward']);
+  });
+
+  it('still matches the start of a word, not the middle of one', () => {
+    expect(searchNotes('herb')).toEqual(['woodward']);
+    expect(searchNotes('erbs')).toEqual([]);
+  });
+
+  it('folds accents in the note, as everywhere else', () => {
+    const accented = [makeWine({ id: 'noted', review: 'Rhône-style, with crème brûlée richness.' })];
+    const find = (q: string) =>
+      ids(searchWines(accented, { query: q, limit: 9, searchNotes: true }));
+    expect(find('rhone')).toEqual(['noted']);
+    expect(find('creme')).toEqual(['noted']);
+  });
+
+  it('lets one term match a name and another the note', () => {
+    expect(searchNotes('Woodward garden')).toEqual(['woodward']);
+    expect(searchNotes('Kiona garden')).toEqual([]);
+  });
+
+  it('changes nothing when the option is off', () => {
+    for (const q of ['Kiona', 'Merlot', 'Red Mountain', 'Walla', '']) {
+      expect(search(q)).toEqual(ids(searchWines(wines, { query: q, limit: 99, searchNotes: false })));
+    }
   });
 });
 
