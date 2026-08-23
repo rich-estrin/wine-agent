@@ -18,6 +18,10 @@ import RegionTreeFilter from './RegionTreeFilter';
 // treats these fields as a comma-separated OR list. The combobox and the two
 // tree pickers stay single-select and so stay plain strings.
 export interface Filters {
+  /** Widens the search box to the tasting note. Not a filter — it adds wines
+   *  rather than removing them — but it lives here so it shows as an active
+   *  chip, counts in the mobile badge, and resets with Clear all. */
+  searchNotes: boolean;
   mainVarietal: string;
   ava: string;
   region: string;
@@ -36,6 +40,7 @@ export interface Filters {
 }
 
 export const emptyFilters: Filters = {
+  searchNotes: false,
   mainVarietal: '',
   ava: '',
   region: '',
@@ -58,12 +63,14 @@ export function hasAnyFilter(filters: Filters): boolean {
   return countActiveFilters(filters) > 0;
 }
 
-/** Number of active filters, counting each selection in a multi-select. */
+/** Number of active filters, counting each selection in a multi-select and a
+ *  switched-on toggle as one. */
 export function countActiveFilters(filters: Filters): number {
-  return Object.values(filters).reduce<number>(
-    (n, v) => n + (Array.isArray(v) ? v.length : v !== '' ? 1 : 0),
-    0,
-  );
+  return Object.values(filters).reduce<number>((n, v) => {
+    if (Array.isArray(v)) return n + v.length;
+    if (typeof v === 'boolean') return n + (v ? 1 : 0);
+    return n + (v !== '' ? 1 : 0);
+  }, 0);
 }
 
 const dateRangeOptions = [
@@ -708,6 +715,13 @@ export function ActiveChips({
   }
   multi('stateProvince');
   multi('specialDesignation');
+  if (filters.searchNotes) {
+    chips.push({
+      key: 'searchNotes',
+      label: 'Incl. tasting notes',
+      clear: () => onChange({ ...filters, searchNotes: false }),
+    });
+  }
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -786,7 +800,7 @@ function AdvancedSection({
       </button>
       {!open && (
         <p className="px-5 pb-3 text-[10px] text-muted opacity-50 leading-none -mt-1">
-          Appellation · Review Date · Region…
+          Tasting Notes · Appellation · Review Date…
         </p>
       )}
       {open && <div ref={contentRef}>{children}</div>}
@@ -807,6 +821,7 @@ export default function Sidebar({
 }) {
   const hasFilters = hasAnyFilter(filters);
   const hasAdvanced = !!(
+    filters.searchNotes ||
     filters.ava || filters.region ||
     filters.casesMin || filters.casesMax ||
     filters.dateRange || filters.specialDesignation.length
@@ -902,8 +917,27 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* Advanced — Appellation, Review Date, Cases, Home Region, Special Designation */}
+      {/* Advanced — Tasting Notes, Appellation, Review Date, Cases, Home Region,
+          Special Designation */}
       <AdvancedSection hasSelection={hasAdvanced}>
+        {/* Not a facet: it widens the search rather than narrowing the results.
+            It sits here because it is the one search setting a reader may want
+            to leave on, and because the search box has no room for it. */}
+        <FacetGroup
+          label="Tasting Notes"
+          hasSelection={filters.searchNotes}
+          defaultOpen={false}
+        >
+          <FacetOption
+            label="Search tasting notes"
+            selected={filters.searchNotes}
+            onSelect={() => onChange({ ...filters, searchNotes: !filters.searchNotes })}
+          />
+          <p className="mt-1.5 text-[10px] leading-[1.5] text-muted opacity-70">
+            Also matches the text of the review, not just the wine's name.
+          </p>
+        </FacetGroup>
+
         <FacetGroup
           label="Appellation"
           hasSelection={!!filters.ava}

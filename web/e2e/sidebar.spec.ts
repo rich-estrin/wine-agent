@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   openFilters, facetHeader, facetGroup, facetOption,
   varietalInput, varietalToggle, varietalClear, varietalOptions,
-  resultCount, withResults, gotoApp } from './helpers';
+  resultCount, withResults, gotoApp, searchBox, activeChips } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await gotoApp(page);
@@ -96,8 +96,8 @@ test.describe('facet groups', () => {
     const labels = await panel.getByTestId(/^facet-/).evaluateAll((els) =>
       els.map((el) => el.getAttribute('data-testid')),
     );
-    expect(labels.slice(-5)).toEqual([
-      'facet-appellation', 'facet-review-date', 'facet-cases',
+    expect(labels.slice(-6)).toEqual([
+      'facet-tasting-notes', 'facet-appellation', 'facet-review-date', 'facet-cases',
       'facet-home-region', 'facet-special-designation',
     ]);
   });
@@ -164,5 +164,47 @@ test.describe('range controls', () => {
 
     await expect(score.nth(0)).not.toHaveClass(/border-red/);
     await expect(score.nth(1)).not.toHaveClass(/border-red/);
+  });
+});
+
+// Prose is searched only on request: matching it by default turns a search for
+// a winery into every review that happens to mention one.
+test.describe('the tasting-note option', () => {
+  const notesToggle = (panel: import('@playwright/test').Locator) =>
+    panel.getByRole('checkbox', { name: 'Search tasting notes' });
+
+  async function openNotesGroup(page: import('@playwright/test').Page) {
+    const panel = await openFilters(page);
+    await facetHeader(panel, 'Advanced').click();
+    await facetHeader(panel, 'Tasting Notes').click();
+    await expect(notesToggle(panel)).toBeVisible();
+    return panel;
+  }
+
+  test('finds a word that only appears in a review', async ({ page }) => {
+    const panel = await openNotesGroup(page);
+
+    await withResults(page, () => searchBox(page).fill('bright'));
+    await expect(page.getByTestId('wine-card')).toHaveCount(0);
+
+    const total = await withResults(
+      page,
+      () => notesToggle(panel).click(),
+      (params) => params.get('notes') === '1',
+    );
+    expect(total).toBeGreaterThan(0);
+  });
+
+  test('shows an active chip and clears with the rest', async ({ page }) => {
+    const panel = await openNotesGroup(page);
+    await withResults(page, () => notesToggle(panel).click());
+
+    await expect(activeChips(page).filter({ hasText: /tasting notes/i })).toHaveCount(1);
+
+    // The panel's own Clear all: on mobile the sheet covers the results column.
+    await withResults(page, () =>
+      panel.getByRole('button', { name: /clear all/i }).first().click());
+    await expect(notesToggle(panel)).toHaveAttribute('aria-checked', 'false');
+    await expect(activeChips(page).filter({ hasText: /tasting notes/i })).toHaveCount(0);
   });
 });

@@ -30,6 +30,9 @@ export interface SearchParams {
   offset?: number;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
+  /** '1' widens the search to the tasting note. Search only — never sent to
+   *  /api/meta, which would read it as a filter. */
+  notes?: string;
 }
 
 export async function searchWines(params: SearchParams): Promise<{ wines: Wine[]; total: number }> {

@@ -22,10 +22,16 @@ export interface AppOptions {
 // Known junk varietal values (data-entry typos) to keep out of the dropdown.
 const VARIETAL_EXCLUSIONS = new Set(['Ca']);
 
+// Query params that steer the search rather than narrow it. Anything not
+// listed here is looked up as a wine field, so a stray param would match
+// nothing and silently empty the results — keep this in step with the routes.
+const NON_FILTER_PARAMS = new Set(['q', 'limit', 'offset', 'sort_by', 'sort_order', 'notes']);
+
 /** Pull the filter params out of a query string, dropping blanks. */
 function collectFilters(params: Record<string, unknown>): Record<string, string> {
   const filters: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
+    if (NON_FILTER_PARAMS.has(key)) continue;
     if (typeof value === 'string' && value.trim()) filters[key] = value;
   }
   return filters;
@@ -117,9 +123,12 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
   // Combined search + filter endpoint
   app.get('/api/search', requireApiKey, (req, res) => {
     try {
-      const { q, limit, offset, sort_by, sort_order, ...filterParams } = req.query;
+      const { q, limit, offset, sort_by, sort_order, notes, ...filterParams } = req.query;
       const query = typeof q === 'string' ? q.trim() : '';
       const filters = collectFilters(filterParams);
+      // Opt-in prose search. Off by default, so an embed that knows nothing
+      // about it keeps today's behaviour.
+      const searchNotes = notes === '1' || notes === 'true';
 
       const sortOrd = sort_order === 'asc' ? 'asc' : 'desc';
       // Newest reviews first when the caller doesn't say — matches the app's
@@ -130,7 +139,7 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
 
       let results = dataClient.getAllWines();
 
-      if (query) results = searchWines(results, { query, limit: Infinity });
+      if (query) results = searchWines(results, { query, limit: Infinity, searchNotes });
 
       if (Object.keys(filters).length > 0) {
         results = filterWines(results, { filters, limit: Infinity });

@@ -108,8 +108,11 @@ export default function App() {
       sort_order: sortOrder,
     };
     if (query.trim()) params.q = query.trim();
+    // Deliberately not in buildFilterParams: /api/meta takes the same shape,
+    // and a search setting has no business narrowing the facet lists.
+    if (filters.searchNotes) params.notes = '1';
     return params;
-  }, [query, buildFilterParams, sortBy, sortOrder]);
+  }, [query, buildFilterParams, filters.searchNotes, sortBy, sortOrder]);
 
   // Effects key off the *values* of the query, not the callback's identity.
   // buildFilterParams closes over `allMeta`, which arrives a beat after mount

@@ -141,6 +141,37 @@ describe('GET /api/search', () => {
   });
 });
 
+// The tasting note is searched only when the caller asks for it.
+describe('GET /api/search — notes=1', () => {
+  it('finds a note-only word only with the flag', async () => {
+    const plain = await search('q=bright');
+    const withNotes = await search('q=bright&notes=1');
+    expect(plain.total).toBe(0);
+    expect(withNotes.total).toBeGreaterThan(0);
+  });
+
+  it('widens the result set rather than replacing it', async () => {
+    const plain = await search('q=merlot&limit=100');
+    const withNotes = await search('q=merlot&notes=1&limit=100');
+    expect(withNotes.total).toBeGreaterThanOrEqual(plain.total);
+    const widened = new Set(withNotes.wines.map((w) => w.id));
+    for (const wine of plain.wines) expect(widened).toContain(wine.id);
+  });
+
+  // A stray param that reached collectFilters would be looked up as a wine
+  // field, match nothing, and empty the results.
+  it('is not treated as a filter', async () => {
+    const off = await search('notes=1&limit=5');
+    expect(off.total).toBe((await search('limit=5')).total);
+  });
+
+  it('leaves the facet lists alone', async () => {
+    const plain = await meta();
+    const withNotes = await meta('notes=1');
+    expect(withNotes.varietals).toEqual(plain.varietals);
+  });
+});
+
 describe('GET /api/meta — faceting', () => {
   it('returns every facet list', async () => {
     const m = await meta();

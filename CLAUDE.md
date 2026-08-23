@@ -117,7 +117,11 @@ The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode e
   and case, so "Ita" finds "Itä" and "semillon" finds "Sémillon"
 - Full-text search: `server/wine-search.ts` looks at `brandName`, `vintage`,
   `wineName`, `mainVarietal` and `ava` only — not the tasting note or home
-  region, which are what the filters are for. Each query term must match the **start of a
+  region, which are what the filters are for. The tasting note joins the search
+  when `notes=1` (the "Search tasting notes" checkbox under Advanced): each term
+  may then match a field *or* the note, folded and matched at a word start like
+  everything else. The folded note is cached per wine in a `WeakMap`, built on
+  first use, so a reader who leaves the box off pays nothing. Each query term must match the **start of a
   word** (accent-folded), and every term must match somewhere, though not
   necessarily in the same field. Matching only: results keep the source order
   unless a sort is given, and `/api/search` sorts by rating by default
@@ -197,7 +201,13 @@ web/
 ## Key Conventions
 
 - Sidebar order: Wine Type, Varietal, Score, Vintage, Price, State/Province, then
-  Advanced (Appellation, Review Date, Cases, Home Region, Special Designation)
+  Advanced (Tasting Notes, Appellation, Review Date, Cases, Home Region, Special
+  Designation)
+- `Filters.searchNotes` is the odd one out: a boolean that *widens* the search
+  rather than narrowing it. It rides in `Filters` so it shows as an active chip,
+  counts in the mobile badge and clears with the rest — but `App.tsx` sends it
+  only on `/api/search` (as `notes=1`), never on `/api/meta`, where an unknown
+  param would be read as a field filter and empty every facet list
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
   Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
   the combobox and tree pickers stay single-select `string`
