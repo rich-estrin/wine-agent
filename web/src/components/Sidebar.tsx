@@ -800,7 +800,7 @@ function AdvancedSection({
       </button>
       {!open && (
         <p className="px-5 pb-3 text-[10px] text-muted opacity-50 leading-none -mt-1">
-          Tasting Notes · Appellation · Review Date…
+          Appellation · Review Date · Region…
         </p>
       )}
       {open && <div ref={contentRef}>{children}</div>}
@@ -917,27 +917,9 @@ export default function Sidebar({
         </FacetGroup>
       )}
 
-      {/* Advanced — Tasting Notes, Appellation, Review Date, Cases, Home Region,
-          Special Designation */}
+      {/* Advanced — Appellation, Review Date, Cases, Home Region, Special
+          Designation, Tasting Notes */}
       <AdvancedSection hasSelection={hasAdvanced}>
-        {/* Not a facet: it widens the search rather than narrowing the results.
-            It sits here because it is the one search setting a reader may want
-            to leave on, and because the search box has no room for it. */}
-        <FacetGroup
-          label="Tasting Notes"
-          hasSelection={filters.searchNotes}
-          defaultOpen={false}
-        >
-          <FacetOption
-            label="Search tasting notes"
-            selected={filters.searchNotes}
-            onSelect={() => onChange({ ...filters, searchNotes: !filters.searchNotes })}
-          />
-          <p className="mt-1.5 text-[10px] leading-[1.5] text-muted opacity-70">
-            Also matches the text of the review, not just the wine's name.
-          </p>
-        </FacetGroup>
-
         <FacetGroup
           label="Appellation"
           hasSelection={!!filters.ava}
@@ -1006,6 +988,24 @@ export default function Sidebar({
             />
           </FacetGroup>
         )}
+
+        {/* Not a facet: it widens the search rather than narrowing the results.
+            It sits here because it is the one search setting a reader may want
+            to leave on, and because the search box has no room for it. */}
+        <FacetGroup
+          label="Tasting Notes"
+          hasSelection={filters.searchNotes}
+          defaultOpen={false}
+        >
+          <FacetOption
+            label="Search tasting notes"
+            selected={filters.searchNotes}
+            onSelect={() => onChange({ ...filters, searchNotes: !filters.searchNotes })}
+          />
+          <p className="mt-1.5 text-[10px] leading-[1.5] text-muted opacity-70">
+            Also matches the text of the review, not just the wine's name.
+          </p>
+        </FacetGroup>
 
       </AdvancedSection>
     </div>

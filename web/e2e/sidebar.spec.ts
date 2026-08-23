@@ -97,8 +97,8 @@ test.describe('facet groups', () => {
       els.map((el) => el.getAttribute('data-testid')),
     );
     expect(labels.slice(-6)).toEqual([
-      'facet-tasting-notes', 'facet-appellation', 'facet-review-date', 'facet-cases',
-      'facet-home-region', 'facet-special-designation',
+      'facet-appellation', 'facet-review-date', 'facet-cases',
+      'facet-home-region', 'facet-special-designation', 'facet-tasting-notes',
     ]);
   });
 
@@ -197,14 +197,45 @@ test.describe('the tasting-note option', () => {
 
   test('shows an active chip and clears with the rest', async ({ page }) => {
     const panel = await openNotesGroup(page);
-    await withResults(page, () => notesToggle(panel).click());
+    await notesToggle(panel).click();
 
     await expect(activeChips(page).filter({ hasText: /tasting notes/i })).toHaveCount(1);
+    await expect(notesToggle(panel)).toHaveAttribute('aria-checked', 'true');
 
     // The panel's own Clear all: on mobile the sheet covers the results column.
-    await withResults(page, () =>
-      panel.getByRole('button', { name: /clear all/i }).first().click());
+    await panel.getByRole('button', { name: /clear all/i }).first().click();
     await expect(notesToggle(panel)).toHaveAttribute('aria-checked', 'false');
     await expect(activeChips(page).filter({ hasText: /tasting notes/i })).toHaveCount(0);
+  });
+
+  // The flag cannot change a result set that has no query to widen, so ticking
+  // it must not re-run the search — a request there blanks the list to a
+  // skeleton and repaints it identical, which reads as a glitch.
+  test('does not re-run the search when the box is empty', async ({ page }) => {
+    const panel = await openNotesGroup(page);
+    const before = await resultCount(page).textContent();
+
+    const requests: string[] = [];
+    page.on('request', (r) => { if (r.url().includes('/api/search')) requests.push(r.url()); });
+
+    await notesToggle(panel).click();
+    await expect(notesToggle(panel)).toHaveAttribute('aria-checked', 'true');
+    await page.waitForTimeout(1_200); // longer than both debounces
+
+    expect(requests).toEqual([]);
+    await expect(resultCount(page)).toHaveText(before!);
+  });
+
+  // ...but it must still take effect the moment there is a query to widen.
+  test('re-runs the search when a query is already typed', async ({ page }) => {
+    const panel = await openNotesGroup(page);
+    await withResults(page, () => searchBox(page).fill('bright'));
+
+    const total = await withResults(
+      page,
+      () => notesToggle(panel).click(),
+      (params) => params.get('notes') === '1',
+    );
+    expect(total).toBeGreaterThan(0);
   });
 });

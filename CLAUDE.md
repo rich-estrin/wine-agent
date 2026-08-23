@@ -201,13 +201,16 @@ web/
 ## Key Conventions
 
 - Sidebar order: Wine Type, Varietal, Score, Vintage, Price, State/Province, then
-  Advanced (Tasting Notes, Appellation, Review Date, Cases, Home Region, Special
-  Designation)
+  Advanced (Appellation, Review Date, Cases, Home Region, Special Designation,
+  Tasting Notes)
 - `Filters.searchNotes` is the odd one out: a boolean that *widens* the search
   rather than narrowing it. It rides in `Filters` so it shows as an active chip,
   counts in the mobile badge and clears with the rest — but `App.tsx` sends it
   only on `/api/search` (as `notes=1`), never on `/api/meta`, where an unknown
-  param would be read as a field filter and empty every facet list
+  param would be read as a field filter and empty every facet list. It is also
+  sent **only alongside a query** — with an empty search box it cannot change
+  the results, and including it moved `searchKey`, so ticking the box re-ran the
+  search and blinked the list away to redraw it identical
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
   Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
   the combobox and tree pickers stay single-select `string`
