@@ -34,10 +34,11 @@ Read connection info from `web/.env`: `EC2_HOST`, `EC2_USER`, `EC2_KEY`, `EC2_PA
    rm -f wine-agent-api.zip; rm -f ./wine-agent-api-[0-9]*.zip   # drop older builds
    mkdir -p wine-agent-api/assets
    cp wine-agent-api.php wine-agent-api/
+   cp -r includes wine-agent-api/          # native search core — omitting it fatals on load
    cp ../web/dist/.vite/manifest.json wine-agent-api/assets/
    cp ../web/dist/assets/* wine-agent-api/assets/
    zip -rq "wine-agent-api-$VER.zip" wine-agent-api/ && rm -rf wine-agent-api
-   unzip -l "wine-agent-api-$VER.zip"
+   unzip -l "wine-agent-api-$VER.zip"       # confirm includes/ is in the listing
    cp "wine-agent-api-$VER.zip" ~/Downloads/    # where the user uploads it from
    ```
 
@@ -84,3 +85,47 @@ Read connection info from `web/.env`: `EC2_HOST`, `EC2_USER`, `EC2_KEY`, `EC2_PA
    ```
 
 10. Report status: backend live + verified; remind the user to upload the plugin zip (step 4) to push the UI, and what to check on the embedded page.
+
+## D. Native mode (search served from the WordPress database)
+
+As of plugin 2.27.0 the search can run entirely inside WordPress, reading an
+index table in the site's own database. Native mode makes steps 5–8 above
+unnecessary — no EC2 deploy, no cache rsync, no webhook — because there is no
+second server holding a copy of the data.
+
+**A site's mode is a plugin setting, not a property of the build.** Shipping the
+zip never changes it; the switch is deliberate and reversible from the settings
+page.
+
+### Rolling a site onto native mode
+
+1. Upload the plugin zip as in step 4 (it carries `includes/` — verify with
+   `unzip -l`).
+2. Settings → Wine Agent API → **Rebuild index**. Press Continue until it
+   reports done; an 18k-review site takes several passes.
+3. Tick **Allow `?wa_mode=` to override the mode per request**, then run the
+   live A/B from the repo:
+   ```bash
+   node scripts/parity/run-remote.mjs https://northwestwinereport.com/staging
+   ```
+   This asks the site every parity-battery query both ways and diffs the
+   answers over the real dataset. It must report all cases matching before the
+   switch. It also prints median latency per mode, which is the real answer to
+   "is native slower here" on that host.
+4. Set **Search Mode → Native** and save. Check the embedded page: search with
+   accents ("semillon") and apostrophes ("lecole"), tick Search tasting notes,
+   exercise each filter, and confirm the dropdowns now narrow each other.
+5. Save a review in the editor and confirm it appears in search immediately.
+6. Untick the mode-override setting.
+
+### Rollback
+
+Set Search Mode → Proxy. The EC2 webhook keeps firing while both are wired up,
+so the Node cache stays current and the rollback is immediate and lossless.
+
+### Decommissioning EC2
+
+Only after native mode has soaked. At that point steps 5–8 of this skill, the
+`web/cache/wines.json` rsync, the webhook, and the Search App URL setting are
+all dead weight — and the Cloudflare-blocks-EC2 problem that forces cache
+builds onto the Mac stops mattering, because WordPress reads its own database.
