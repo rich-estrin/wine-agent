@@ -80,6 +80,24 @@ describe('CSVClient — parsing', () => {
     expect(load().getAllWines()[0].wineName).toBe('cabernet sauvignon');
   });
 
+  // A blend carries no Varietal Label. The listing shows the label alone, so
+  // it must stay empty; the filter falls back to the style so the blend is
+  // still selectable under Varietal.
+  it('leaves varietalLabel empty for a blend but falls the varietal back to the style', () => {
+    writeCsv([row({ 5: 'Bordeaux-style Red Blend', 6: '' })]);
+    const [wine] = load().getAllWines();
+    expect(wine.varietalLabel).toBe('');
+    expect(wine.mainVarietal).toBe('Bordeaux-Style Red Blend');
+    expect(wine.varietyStyle).toBe('Bordeaux-Style Red Blend');
+  });
+
+  it('uses the Varietal Label for both when the wine has one', () => {
+    writeCsv([row({ 5: 'cabernet sauvignon', 6: 'cabernet sauvignon' })]);
+    const [wine] = load().getAllWines();
+    expect(wine.varietalLabel).toBe('Cabernet Sauvignon');
+    expect(wine.mainVarietal).toBe('Cabernet Sauvignon');
+  });
+
   it('normalises every spelling of "no price" to N/A', () => {
     writeCsv([row({ 0: '1', 9: '' }), row({ 0: '2', 9: 'NA' }), row({ 0: '3', 9: '0' })]);
     expect(load().getAllWines().map((w) => w.price)).toEqual(['N/A', 'N/A', 'N/A']);

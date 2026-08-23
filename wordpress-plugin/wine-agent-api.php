@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.23.1
+ * Version: 2.24.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -113,7 +113,10 @@ function wine_agent_get_reviews( WP_REST_Request $request ): WP_REST_Response {
             'price'            => (string) $row['price'],
             'vintage'          => (string) $row['vintage'],
             'wine_type'        => (string) $row['wine_type'],
-            'variety'          => (string) ( $row['variety'] ?: $row['variety_style'] ),
+            // Varietal Label alone — blank for a blend, whose name lives in
+            // variety_style. The app applies its own fallback for filtering, so
+            // sending the style here only made the listing repeat it.
+            'variety'          => (string) $row['variety'],
             'region'           => (string) $row['home_region'],
             'appellation'      => (string) $row['appellation'],
             'publication_date' => wine_agent_format_acf_date( $row['published_date'] )

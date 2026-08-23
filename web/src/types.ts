@@ -9,7 +9,12 @@ export interface Wine {
   review: string;
   region: string;
   type: string;
+  /** Varietal label with the variety-style fallback — what the Varietal filter
+   *  and the search index match on, so a blend is still findable by its style. */
   mainVarietal: string;
+  /** The Varietal Label field alone, blank for blends. Optional: caches and
+   *  fixtures written before this field existed don't carry it. */
+  varietalLabel?: string;
   varietyStyle: string;
   tastingDate: string;
   publicationDate: string;
@@ -45,4 +50,7 @@ export interface Meta {
   avaList: string[];
   stateProvinces: string[];
   specialDesignations: string[];
+  /** Highest reported case production in the data — the top of the Cases
+   *  slider. Optional: an older API build doesn't send it. */
+  casesMax?: number;
 }

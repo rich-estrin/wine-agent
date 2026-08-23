@@ -76,3 +76,22 @@ test('the shelf talker print button is present', async ({ page }) => {
   await page.getByTestId('wine-card').first().click();
   await expect(dialog(page).getByRole('button', { name: /print shelf talker/i })).toBeVisible();
 });
+
+// A blend has no Varietal Label, and the listing must not fill the gap with the
+// variety style — "DeLille Chaleur Estate Red Wine 2022", not "DeLille
+// Bordeaux-Style Red Blend Chaleur Estate Red Wine 2022". The style still shows
+// on the card's second line, next to the appellation.
+test.describe('a blend on the listing', () => {
+  test('names the wine without repeating its style', async ({ page }) => {
+    await gotoApp(page);
+    await search(page, 'Chaleur');
+
+    const card = page.getByTestId('wine-card').first();
+    await expect(card.getByTestId('wine-card-brand')).toHaveText('DeLille');
+    const line = (await card.innerText()).replace(/\s+/g, ' ');
+    expect(line).toContain('DeLille Chaleur Estate Red Wine 2022');
+    expect(line).not.toContain('DeLille Bordeaux-Style Red Blend');
+    // The style is still there — on the second line, beside the appellation.
+    expect(line).toMatch(/2022.*Bordeaux-Style Red Blend/);
+  });
+});

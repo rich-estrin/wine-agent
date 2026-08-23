@@ -119,7 +119,11 @@ export class CSVClient {
       review: (row['Review Input => Review Content'] ?? '').trim(),
       region: normalizeRegion(row['Review Input => Home Region'] ?? ''),
       type: toTitleCase(row['Review Input => Wine Type'] ?? ''),
-      mainVarietal: toTitleCase(varietalLabel),
+      // Blends carry no Varietal Label — the style is all they have, so the
+      // filter falls back to it. The label itself is kept separate so the
+      // listing can show the varietal without repeating a blend's style.
+      mainVarietal: toTitleCase(varietalLabel || varietyStyle),
+      varietalLabel: toTitleCase(varietalLabel),
       varietyStyle: toTitleCase(varietyStyle),
       publicationDate: (row['Date'] ?? '').trim(),
       tastingDate: '',
