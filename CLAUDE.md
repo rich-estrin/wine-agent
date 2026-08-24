@@ -56,7 +56,51 @@ The cache is invalidated automatically when the source path/URL changes. Both cl
 
 ## WordPress Plugin (`wordpress-plugin/`)
 
-- **`wine-agent-api.php`** — REST endpoint (`/wp-json/wine-agent/v1/reviews`), `[wine-search]` shortcode, webhook dispatcher
+- **`wine-agent-api.php`** — REST endpoints, `[wine-search]` shortcode, webhook dispatcher, index lifecycle, settings page
+- **`includes/`** — the native search backend. `text.php`, `wine-utils.php`,
+  `wine-map.php`, `wine-query.php` and `wine-api-core.php` are WordPress-free
+  ports of the Node pipeline (so the parity harness can run them);
+  `wine-index.php` is the WordPress half — schema, the postmeta pivot,
+  incremental upserts and the chunked rebuild
+
+### Search modes
+
+`/wp-json/wine-agent/v1/search` and `/meta` have two implementations, chosen by
+the **Search Mode** setting:
+
+| Mode | Serves from | Notes |
+|---|---|---|
+| **`native`** | the `{prefix}wine_agent_index` table in this site's own DB | no EC2, no cache sync; reviews appear as soon as they're saved |
+| **`proxy`** | forwards to the EC2 Node API | pre-2.27 behaviour, kept as the rollback path |
+
+Native mode is the direction of travel — it removes the EC2 server, the
+webhook, and the build-cache-on-a-Mac-and-rsync-it ritual that exists only
+because Cloudflare blocks EC2 from reaching WordPress.
+
+**Faceting differs between the modes:** proxy mode never forwarded query params
+on `/meta`, so its dropdowns are never narrowed. Native mode forwards them, so
+Wine Type narrows Varietal and State narrows Appellation — what the app was
+built for.
+
+### The index table
+
+A flat row per published review, holding pre-folded match columns, typed sort
+columns, and the display JSON the API returns verbatim. Because every value is
+folded in PHP at write time, the generated SQL only ever does binary
+comparisons — no collation dependence, no `REGEXP`, identical on MySQL and
+MariaDB.
+
+Maintained incrementally from the post lifecycle (save/publish upserts;
+unpublish, trash and delete remove; untrash restores) at hook priority 20, after
+ACF writes its fields. Every normalization is per-row and stateless, so an
+incremental upsert is equivalent to a full rebuild by construction. A nightly
+cron rebuild catches changes that bypass the hooks entirely — an importer, a
+direct SQL edit, a restored backup.
+
+Rebuilds run in time-budgeted slices resuming from a stored offset (so a large
+site doesn't hit `max_execution_time`), write into a staging table, and swap it
+in with a single `RENAME TABLE` — readers never see a half-built index.
+Settings → Wine Agent API shows index status and a Rebuild button.
 - **Always bump the version** in the plugin header and repackage the zip after any change:
   ```bash
   cd wordpress-plugin
@@ -64,10 +108,13 @@ The cache is invalidated automatically when the source path/URL changes. Both cl
   rm -f wine-agent-api.zip; rm -f ./wine-agent-api-[0-9]*.zip
   mkdir -p wine-agent-api/assets
   cp wine-agent-api.php wine-agent-api/
+  cp -r includes wine-agent-api/          # the native search core — required
   cp ../web/dist/.vite/manifest.json wine-agent-api/assets/
   cp ../web/dist/assets/* wine-agent-api/assets/
   zip -rq "wine-agent-api-$VER.zip" wine-agent-api/ && rm -rf wine-agent-api
   ```
+  Omitting `includes/` produces a zip that fatals on load — the plugin requires
+  `includes/wine-index.php` at the top.
 - The zip is named for the version inside it (`wine-agent-api-2.23.0.zip`), and the
   previous version's zip is deleted in the same step — there is never an
   unversioned `wine-agent-api.zip`
@@ -185,6 +232,23 @@ web/
 - **Unit tests** (`npm test`) cover text folding, search matching, sorting,
   filtering, the AVA/region/designation trees, both importers, and the API
   routes via `createApp()` over an ephemeral port
+- **Parity tests** (`npm run test:parity`) prove the WordPress-native PHP
+  search answers exactly what the Node reference answers. Both sides run the
+  same battery over the same fixture; the PHP side runs the *production*
+  handler core against in-memory SQLite with only the database executor
+  swapped. Run it whenever search logic changes on either side —
+  `web/server/` is the reference, so a disagreement means the PHP is wrong
+  unless `scripts/parity/battery.json` marks the case as an expected
+  divergence. See `scripts/parity/README.md`
+- **Plugin load test** (`npm run test:plugin`) loads the plugin against a stub
+  WordPress to catch what would fatal on activation — a redeclared function, a
+  missing include, a load-time call — and checks that the index row and the
+  schema agree on their column set and that every generated SQL statement has
+  one binding per placeholder. Cheap; run it after touching the plugin
+- **Live A/B** (`node scripts/parity/run-remote.mjs <site-url>`) asks a staging
+  site every battery query in both modes and diffs them, which is what
+  validates the switch over the real 18k-row dataset. Needs the parity-testing
+  override enabled in plugin settings
 - **End-to-end tests** (`npm run test:e2e`) run against the fixture app at two
   viewports. `e2e/helpers.ts` has the shared locators — use `withResults()`
   rather than a sleep, since the app debounces and fires a second search on load

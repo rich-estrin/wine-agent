@@ -16,6 +16,8 @@ credentials/
 !.claude/settings.json
 # Committed on purpose: the standalone/test dataset (see web/fixtures/README.md)
 !web/fixtures/wines.json
+# Committed on purpose: the search parity battery and its edge-case dataset
+!scripts/parity/*.json
 
 # Environment files
 .env
