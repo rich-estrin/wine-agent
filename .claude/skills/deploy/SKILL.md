@@ -1,7 +1,7 @@
 ---
 name: deploy
 description: Build and package the wine-agent WordPress plugin. Use when the user says /deploy, "deploy", "ship it", "push to server", or "build and deploy".
-version: 3.1.0
+version: 3.2.0
 ---
 
 # Deploy the wine-agent app
@@ -22,8 +22,7 @@ database. There is no EC2 server, no data cache to rsync and no webhook.
 
 3. **Repackage the plugin zip** (bundles the fresh assets):
    The zip is **named for the version it carries** — `wine-agent-api-2.23.0.zip` —
-   so the file on disk and in the user's Downloads is never ambiguous about what
-   it contains. Read the version out of the header rather than typing it:
+   so the file on disk is never ambiguous about what it contains. Read the version out of the header rather than typing it:
    ```bash
    cd /Users/rich/src/wine-agent/wordpress-plugin
    VER=$(grep -m1 -E '^\s*\*\s*Version:' wine-agent-api.php | sed -E 's/.*Version:[[:space:]]*//')
@@ -35,8 +34,11 @@ database. There is no EC2 server, no data cache to rsync and no webhook.
    cp ../web/dist/assets/* wine-agent-api/assets/
    zip -rq "wine-agent-api-$VER.zip" wine-agent-api/ && rm -rf wine-agent-api
    unzip -l "wine-agent-api-$VER.zip"       # confirm includes/ is in the listing
-   cp "wine-agent-api-$VER.zip" ~/Downloads/    # where the user uploads it from
    ```
+
+   Leave the zip in `wordpress-plugin/` — do not copy it to `~/Downloads`. The
+   user uploads it from the repo. (Copying it there also puts a second artifact
+   outside version control, which is how a stale version gets uploaded.)
 
 4. **Manual step (cannot be automated):** the user uploads the new zip via
    WP Admin → Plugins → Add New → Upload Plugin → replace + activate.
