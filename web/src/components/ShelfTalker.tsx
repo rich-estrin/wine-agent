@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Wine } from '../types';
 import { numericScore } from '../types';
-import nwrLogo from '../assets/nwr-logo.svg?raw';
+import nwrLogo from '../assets/blue_white.svg?raw';
 
 function formatShelfDate(raw: string): string {
   if (!raw) return '';
