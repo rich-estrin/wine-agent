@@ -52,35 +52,27 @@ WordPress is the source of truth. Two access modes, selected by `web/.env`:
 
 The cache is invalidated automatically when the source path/URL changes. Both clients expose identical `getAllWines()`, `upsertWine()`, `removeWine()` methods.
 
-**Live updates via webhook**: WordPress fires `POST /api/webhook/review` on publish/trash. Requires `WEBHOOK_SECRET` in `web/.env` matching the plugin setting.
+**Production doesn't use these.** The plugin serves search from the WordPress database (see below); the Node server in `web/server/` is the reference implementation the parity tests check the PHP against, and what `dev:fixture` runs.
 
 ## WordPress Plugin (`wordpress-plugin/`)
 
-- **`wine-agent-api.php`** — REST endpoints, `[wine-search]` shortcode, webhook dispatcher, index lifecycle, settings page
+- **`wine-agent-api.php`** — REST endpoints, `[wine-search]` shortcode, index lifecycle, settings page
 - **`includes/`** — the native search backend. `text.php`, `wine-utils.php`,
   `wine-map.php`, `wine-query.php` and `wine-api-core.php` are WordPress-free
   ports of the Node pipeline (so the parity harness can run them);
   `wine-index.php` is the WordPress half — schema, the postmeta pivot,
   incremental upserts and the chunked rebuild
 
-### Search modes
+### Search
 
-`/wp-json/wine-agent/v1/search` and `/meta` have two implementations, chosen by
-the **Search Mode** setting:
+`/wp-json/wine-agent/v1/search` and `/meta` are answered from the
+`{prefix}wine_agent_index` table in this site's own database. There is no
+external search server, no cache sync, and reviews appear as soon as they're
+saved. (Through 2.28 a `proxy` mode forwarded to an EC2 Node API; it was removed
+in 2.29.0.)
 
-| Mode | Serves from | Notes |
-|---|---|---|
-| **`native`** | the `{prefix}wine_agent_index` table in this site's own DB | no EC2, no cache sync; reviews appear as soon as they're saved |
-| **`proxy`** | forwards to the EC2 Node API | pre-2.27 behaviour, kept as the rollback path |
-
-Native mode is the direction of travel — it removes the EC2 server, the
-webhook, and the build-cache-on-a-Mac-and-rsync-it ritual that exists only
-because Cloudflare blocks EC2 from reaching WordPress.
-
-**Faceting differs between the modes:** proxy mode never forwarded query params
-on `/meta`, so its dropdowns are never narrowed. Native mode forwards them, so
-Wine Type narrows Varietal and State narrows Appellation — what the app was
-built for.
+`/meta` forwards the active filters, so the dropdowns narrow each other — Wine
+Type narrows Varietal and State narrows Appellation.
 
 ### The index table
 
@@ -119,22 +111,15 @@ Settings → Wine Agent API shows index status and a Rebuild button.
   previous version's zip is deleted in the same step — there is never an
   unversioned `wine-agent-api.zip`
 - The plugin zip bundles the built JS/CSS assets — no HTTP fetching at runtime
-- EC2 only exposes `/api/*`; no static files served from EC2
-- Plugin settings (WP Admin → Settings → Wine Agent API): API Key, Search App URL, Webhook URL, Webhook Secret
+- Plugin settings (WP Admin → Settings → Wine Agent API): API Key, plus search index status and the Rebuild button
 
-## Deployment (EC2)
+## Deployment
 
-Connection info lives in `web/.env` (`EC2_HOST`, `EC2_USER`, `EC2_KEY`, `EC2_PATH`, `EC2_BASE_PATH`). Use `/deploy` skill to build and push. Manual equivalent:
-
-```bash
-cd web && VITE_BASE_PATH=/wwr-search npm run build
-rsync -az -e "ssh -i $EC2_KEY" web/dist/        $EC2_USER@$EC2_HOST:$EC2_PATH/web/dist/
-rsync -az -e "ssh -i $EC2_KEY" web/server/      $EC2_USER@$EC2_HOST:$EC2_PATH/web/server/
-rsync -az -e "ssh -i $EC2_KEY" web/cache/wines.json $EC2_USER@$EC2_HOST:$EC2_PATH/web/cache/wines.json
-ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "cd $EC2_PATH/web && npm install --omit=dev --silent && pm2 restart wine-api --update-env"
-```
-
-The app is served at `/wwr-search` via Nginx. The `[wine-search]` WP shortcode embeds the app by loading its JS/CSS assets from the EC2 URL.
+Deploys are a plugin upload only — there is no server to push to. Use the
+`/deploy` skill to build and repackage the zip, then upload it at WP Admin →
+Plugins → Add New → Upload Plugin → Replace current. After the first upload (or
+after a schema change), press **Rebuild index** under Settings → Wine Agent API.
+The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 
 ## Architecture
 
@@ -245,10 +230,6 @@ web/
   missing include, a load-time call — and checks that the index row and the
   schema agree on their column set and that every generated SQL statement has
   one binding per placeholder. Cheap; run it after touching the plugin
-- **Live A/B** (`node scripts/parity/run-remote.mjs <site-url>`) asks a staging
-  site every battery query in both modes and diffs them, which is what
-  validates the switch over the real 18k-row dataset. Needs the parity-testing
-  override enabled in plugin settings
 - **End-to-end tests** (`npm run test:e2e`) run against the fixture app at two
   viewports. `e2e/helpers.ts` has the shared locators — use `withResults()`
   rather than a sleep, since the app debounces and fires a second search on load

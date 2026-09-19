@@ -84,10 +84,8 @@ $required_functions = [
 	'wine_agent_fetch_review_rows',
 	'wine_agent_shape_review_row',
 	// Plugin surface.
-	'wine_agent_search_mode',
 	'wine_agent_handle_search',
 	'wine_agent_handle_meta',
-	'wine_agent_proxy_request',
 	'wine_agent_get_reviews',
 	'wine_agent_settings_page',
 ];
