@@ -118,7 +118,9 @@ Settings → Wine Agent API shows index status and a Rebuild button.
 Deploys are a plugin upload only — there is no server to push to. Use the
 `/deploy` skill to build and repackage the zip, then upload it at WP Admin →
 Plugins → Add New → Upload Plugin → Replace current. After the first upload (or
-after a schema change), press **Rebuild index** under Settings → Wine Agent API.
+after a schema change) the next admin page load starts a background rebuild via
+cron; search answers 503 until it swaps in. **Rebuild index** under Settings →
+Wine Agent API runs it in the foreground instead.
 The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 
 ## Architecture

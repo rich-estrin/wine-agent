@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.29.0
+ * Version: 2.29.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -149,6 +149,10 @@ add_action( 'wine_agent_index_continue', 'wine_agent_index_run_rebuild_pass' );
  * Run one rebuild pass and schedule the next if there is more to do.
  */
 function wine_agent_index_run_rebuild_pass(): void {
+    // Cron unschedules the event before running it, so while a pass is running
+    // only this transient tells wine_agent_index_maybe_start_rebuild() a chain
+    // is live.
+    set_transient( 'wine_agent_index_auto_rebuild', 1, 5 * MINUTE_IN_SECONDS );
     if ( ! wine_agent_index_table_exists() ) {
         wine_agent_index_install();
     }
@@ -167,7 +171,30 @@ add_action( 'admin_init', function () {
     if ( ! wp_next_scheduled( 'wine_agent_index_nightly' ) ) {
         wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'wine_agent_index_nightly' );
     }
+    wine_agent_index_maybe_start_rebuild();
 } );
+
+/**
+ * Start a background rebuild when the index can't serve search — a first
+ * install, an upgrade from proxy mode that never built one, or a schema bump.
+ * Search answers 503 until the index exists, so waiting for someone to press
+ * Rebuild or for the nightly cron would leave the site without search.
+ *
+ * Scheduled rather than run inline so the admin page load isn't held for a
+ * full pass. The transient keeps two admin requests from starting two chains;
+ * it outlives the gap between passes, and if a chain dies it expires and the
+ * next admin load resumes from the stored offset.
+ */
+function wine_agent_index_maybe_start_rebuild(): void {
+    if ( ! wine_agent_index_needs_rebuild() ) {
+        return;
+    }
+    if ( wp_next_scheduled( 'wine_agent_index_continue' ) || get_transient( 'wine_agent_index_auto_rebuild' ) ) {
+        return;
+    }
+    set_transient( 'wine_agent_index_auto_rebuild', 1, 5 * MINUTE_IN_SECONDS );
+    wp_schedule_single_event( time(), 'wine_agent_index_continue' );
+}
 
 // ─── [wine-search] shortcode ─────────────────────────────────────────────────
 //
@@ -239,7 +266,7 @@ function wine_agent_handle_search( WP_REST_Request $request ): WP_REST_Response 
 
     if ( wine_agent_index_needs_rebuild() ) {
         return new WP_REST_Response(
-            [ 'error' => 'Search index is not built yet. Rebuild it under Settings → Wine Agent API.' ],
+            [ 'error' => 'Search index is being built. Try again in a few minutes.' ],
             503
         );
     }
@@ -253,7 +280,7 @@ function wine_agent_handle_meta( WP_REST_Request $request ): WP_REST_Response {
 
     if ( wine_agent_index_needs_rebuild() ) {
         return new WP_REST_Response(
-            [ 'error' => 'Search index is not built yet. Rebuild it under Settings → Wine Agent API.' ],
+            [ 'error' => 'Search index is being built. Try again in a few minutes.' ],
             503
         );
     }

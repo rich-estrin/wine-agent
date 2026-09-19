@@ -88,6 +88,7 @@ $required_functions = [
 	'wine_agent_handle_meta',
 	'wine_agent_get_reviews',
 	'wine_agent_settings_page',
+	'wine_agent_index_maybe_start_rebuild',
 ];
 foreach ( $required_functions as $name ) {
 	expect( function_exists( $name ), "function $name is not defined" );
