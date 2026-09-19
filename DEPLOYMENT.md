@@ -35,9 +35,22 @@ zip -rq "wine-agent-api-$VER.zip" wine-agent-api/ && rm -rf wine-agent-api
 
 ### 3. Upload the plugin to WordPress
 
+**Pick the target deliberately — the two are separate WordPress installs:**
+
+| Target | WP Admin |
+|---|---|
+| Staging (default for routine work) | `northwestwinereport.com/staging/wp-admin/` |
+| Production (live readers) | `northwestwinereport.com/wp-admin/` |
+
+Ship to staging first and verify there; production gets the same zip once it passes.
+
 1. Go to **WP Admin → Plugins → Add New → Upload Plugin**
 2. Upload `wordpress-plugin/wine-agent-api-<version>.zip`
 3. Click **Replace current with uploaded** and activate
+
+A **first-ever** install on a site is not this procedure — see
+[docs/production-rollout.md](docs/production-rollout.md) for preflight,
+initial index build and rollback.
 
 ### 4. Build the search index (first install, or after a schema change)
 

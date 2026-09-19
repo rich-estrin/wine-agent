@@ -1,7 +1,7 @@
 ---
 name: deploy
 description: Build and package the wine-agent WordPress plugin. Use when the user says /deploy, "deploy", "ship it", "push to server", or "build and deploy".
-version: 3.0.0
+version: 3.1.0
 ---
 
 # Deploy the wine-agent app
@@ -38,9 +38,22 @@ database. There is no EC2 server, no data cache to rsync and no webhook.
    cp "wine-agent-api-$VER.zip" ~/Downloads/    # where the user uploads it from
    ```
 
-4. **Manual step (cannot be automated):** the user uploads the new zip at
-   `northwestwinereport.com/staging/wp-admin/` → Plugins → Add New → Upload Plugin → replace + activate.
+4. **Manual step (cannot be automated):** the user uploads the new zip via
+   WP Admin → Plugins → Add New → Upload Plugin → replace + activate.
+
+   **Ask which site if the user has not said.** They are separate WordPress installs:
+
+   | Target | WP Admin |
+   |---|---|
+   | Staging — the default for routine work | `northwestwinereport.com/staging/wp-admin/` |
+   | Production — live readers | `northwestwinereport.com/wp-admin/` |
+
+   Default to staging and say so. Never name production unless the user asked for it.
+
    Tell the user to do this, then press **Rebuild index** if the plugin schema changed, and what UI changes to verify.
+
+   A **first-ever** install on a site that has never run this plugin is a different
+   procedure — point the user at `docs/production-rollout.md` instead of this skill.
 
 
 ## B. Verify

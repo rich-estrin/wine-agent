@@ -6,19 +6,23 @@ A wine search and discovery app embedded in the Northwest Wine Report WordPress 
 
 ```
 WordPress site (northwestwinereport.com)
-  └─ [wine-search] shortcode
-       ├─ Serves JS/CSS from plugin assets (bundled at build time)
-       ├─ Proxies /wp-json/wine-agent/v1/search → EC2 /api/search
-       └─ Proxies /wp-json/wine-agent/v1/meta   → EC2 /api/meta
+  └─ wine-agent-api plugin
+       ├─ [wine-search] shortcode — serves the React JS/CSS bundled in the plugin zip
+       ├─ GET /wp-json/wine-agent/v1/search — full-text search + filtering
+       ├─ GET /wp-json/wine-agent/v1/meta   — faceted filter values
+       ├─ GET /wp-json/wine-agent/v1/reviews — key-protected raw review export
+       └─ {prefix}wine_agent_index — flat index table, one row per published review
 
-EC2 API server (Express + PM2)
-  ├─ Loads wine data from WordPress CSV export → in-memory cache
-  ├─ GET /api/search  — full-text search + filtering
-  ├─ GET /api/meta    — filter dropdown values
-  └─ POST /api/webhook/review — receives publish/trash events from WP
+web/server/ (local + tests only)
+  └─ Express reference implementation of the same search, which the parity
+     tests check the plugin's PHP against. Not deployed anywhere.
 ```
 
-The React app calls `window.__WINE_AGENT_API_BASE__` (injected by the shortcode), so all API traffic goes through WordPress HTTPS — no direct HTTP calls to EC2 from the browser.
+There is no application server. Search is answered from an index table in the
+WordPress site's own database, maintained incrementally from the post lifecycle
+and rebuilt nightly by cron. Reviews appear in search as soon as they are saved.
+
+The React app calls `window.__WINE_AGENT_API_BASE__` (injected by the shortcode), so every request is same-origin WordPress HTTPS.
 
 ## Project Structure
 
@@ -36,16 +40,18 @@ wine-agent/
 │   ├── e2e/                # Playwright end-to-end tests
 │   └── src/                # React frontend (Vite + TypeScript + Tailwind)
 ├── wordpress-plugin/
-│   ├── wine-agent-api.php  # Plugin: shortcode, WP REST proxy, webhook dispatcher
-│   └── wine-agent-api.zip  # Deployable plugin zip (includes built JS/CSS)
-└── DEPLOYMENT.md           # EC2 + WordPress deployment guide
+│   ├── wine-agent-api.php  # Plugin: shortcode, REST endpoints, index lifecycle
+│   ├── includes/           # Native PHP search core (ports of the Node pipeline)
+│   └── wine-agent-api-<version>.zip  # Deployable zip (bundles built JS/CSS)
+├── DEPLOYMENT.md           # Deploy procedure
+└── docs/production-rollout.md  # First-time production install runbook
 ```
 
 ## Features
 
 - **Full-text search** across producer name, vintage, wine name and varietal, matching word prefixes
 - **Filters** — Wine type, appellation (hierarchical AVA tree), home region, varietal (with search box), price, score, vintage, review date
-- **Live updates** — WordPress fires a webhook on publish/trash; the API server updates in real time without a restart
+- **Live updates** — publishing, editing, trashing or deleting a review updates the search index in the same request; no cache to wait on
 - **Mobile-friendly** — slide-up filter sheet on small screens
 
 ## Local Development
@@ -112,20 +118,27 @@ See [CLAUDE.md](CLAUDE.md#testing) for what's covered and how the tests are laid
 
 ## Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the full deploy procedure. The short version:
+Deploys are a plugin upload — there is no server to push to. See
+[DEPLOYMENT.md](DEPLOYMENT.md), or run `/deploy` in Claude Code. The short version:
 
-1. Build the React app
-2. Repackage `wordpress-plugin/wine-agent-api.zip` with the new assets
-3. Upload the plugin zip to WP Admin → Plugins → Update
-4. rsync server files to EC2 and restart PM2
+1. `cd web && npm run build`
+2. Bump the version in the `wine-agent-api.php` header
+3. Repackage `wordpress-plugin/wine-agent-api-<version>.zip` with the fresh assets
+4. Upload it at WP Admin → Plugins → Add New → Upload Plugin → Replace current
+
+For a **first-time install on a site that has never run this plugin**, follow
+[docs/production-rollout.md](docs/production-rollout.md) instead — it covers the
+preflight checks, the initial index build and the rollback path.
 
 ## WordPress Plugin
 
 The plugin (`wordpress-plugin/wine-agent-api.php`) provides:
 
-- **`[wine-search]` shortcode** — embeds the React app on any page
-- **REST proxy** — forwards search/meta requests from the browser to EC2
-- **Webhook dispatcher** — fires `POST /api/webhook/review` on every publish or trash action
-- **Admin settings** (WP Admin → Settings → Wine Agent API) — configures the EC2 URL and shared secret
+- **`[wine-search]` shortcode** — embeds the React app on any page, from assets bundled in the zip
+- **Search endpoints** — `/wp-json/wine-agent/v1/search` and `/meta`, answered from the index table in this site's own database
+- **Index lifecycle** — incremental upserts on the post hooks, a time-budgeted chunked rebuild, and a nightly cron rebuild
+- **Admin settings** (WP Admin → Settings → Wine Agent API) — API key, index status, Rebuild button
+
+Requires WordPress 5.9+ and PHP 7.4+.
 
 See [wordpress-plugin/INSTALL.md](wordpress-plugin/INSTALL.md) for installation steps.
