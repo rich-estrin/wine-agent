@@ -61,6 +61,4 @@ Any time either implementation's search logic changes — the TS in
 reference: if the two disagree, the PHP is wrong unless the battery says
 otherwise.
 
-This harness covers semantics, not MySQL itself. Before flipping a site to
-native mode, also run the staging A/B check described in `DEPLOYMENT.md`, which
-compares proxy and native answers over the real dataset on the real database.
+This harness covers semantics, not MySQL itself. After uploading a new plugin, spot-check the embedded page on the real site (see `DEPLOYMENT.md`).

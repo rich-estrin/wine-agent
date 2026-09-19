@@ -2,139 +2,54 @@
 
 ## Architecture summary
 
-- **WordPress** serves the React app (JS/CSS bundled in the plugin zip) and proxies API calls to EC2
-- **EC2** runs the Express API server only — no static files served from EC2
-- Builds happen locally; assets ship via plugin zip upload (WP) and rsync (EC2)
-
-## Prerequisites
-
-Connection info lives in `web/.env`:
-
-```env
-EC2_HOST=<your-ec2-host>.compute.amazonaws.com
-EC2_USER=ec2-user
-EC2_KEY=/path/to/your-keypair.pem
-EC2_PATH=/home/ec2-user/wine-agent
-WEBHOOK_SECRET=<shared secret — must match WP plugin setting>
-```
-
-The EC2 `.env` (never committed, lives only on the server) also needs:
-```env
-WP_API_URL=https://your-wordpress-site.com   # or CSV_PATH for CSV mode
-WP_API_KEY=<wordpress api key>
-WEBHOOK_SECRET=<same secret as above>
-ANTHROPIC_API_KEY=<optional, for AI chat>
-PORT=3001
-```
+- **WordPress** serves the React app (JS/CSS bundled in the plugin zip) and answers `/wp-json/wine-agent/v1/search` and `/meta` from an index table in its own database
+- There is no other server. Builds happen locally; everything ships in the plugin zip
 
 ## Deploy procedure
 
 Use `/deploy` in Claude Code to run this automatically, or follow the steps manually.
 
-### 1. Build MCP tools
-
-```bash
-```
-
-### 2. Build the React app
+### 1. Build the React app
 
 ```bash
 cd web && npm run build
 ```
 
-No `VITE_BASE_PATH` needed — assets are served from WordPress, not from a subpath on EC2.
+No `VITE_BASE_PATH` needed — assets are served from the plugin directory.
 
-### 3. Repackage the WordPress plugin zip
+### 2. Repackage the WordPress plugin zip
+
+**Always bump the version** in the `wine-agent-api.php` plugin header first.
 
 ```bash
 cd wordpress-plugin
-rm -f wine-agent-api.zip
+VER=$(grep -m1 -E '^\s*\*\s*Version:' wine-agent-api.php | sed -E 's/.*Version:[[:space:]]*//')
+rm -f wine-agent-api.zip; rm -f ./wine-agent-api-[0-9]*.zip
 mkdir -p wine-agent-api/assets
 cp wine-agent-api.php wine-agent-api/
+cp -r includes wine-agent-api/          # the search core — omitting it fatals on load
 cp ../web/dist/.vite/manifest.json wine-agent-api/assets/
 cp ../web/dist/assets/* wine-agent-api/assets/
-zip -r wine-agent-api.zip wine-agent-api/ && rm -rf wine-agent-api
+zip -rq "wine-agent-api-$VER.zip" wine-agent-api/ && rm -rf wine-agent-api
 ```
 
-**Always bump the version** in the `wine-agent-api.php` plugin header before repackaging.
-
-### 4. Upload the plugin to WordPress
+### 3. Upload the plugin to WordPress
 
 1. Go to **WP Admin → Plugins → Add New → Upload Plugin**
-2. Upload `wordpress-plugin/wine-agent-api.zip`
+2. Upload `wordpress-plugin/wine-agent-api-<version>.zip`
 3. Click **Replace current with uploaded** and activate
 
-### 5. Deploy server files to EC2
+### 4. Build the search index (first install, or after a schema change)
 
-```bash
-EC2_USER=ec2-user
-EC2_HOST=<your-ec2-host>.compute.amazonaws.com
-EC2_KEY=/path/to/your-keypair.pem
-EC2_PATH=/home/ec2-user/wine-agent
+**WP Admin → Settings → Wine Agent API → Rebuild index.** Press Continue until
+it reports done; an 18k-review site takes several passes. Until the index is
+built, search returns 503. After that it is kept current automatically: saves,
+unpublishes, trashes and deletes update it, and a nightly cron rebuilds it in
+full.
 
-# MCP tools
+## Verify
 
-# API server source
-rsync -avz -e "ssh -i $EC2_KEY" web/server/ $EC2_USER@$EC2_HOST:$EC2_PATH/web/server/
-rsync -avz -e "ssh -i $EC2_KEY" web/package.json web/package-lock.json \
-  $EC2_USER@$EC2_HOST:$EC2_PATH/web/
-
-# Install production dependencies
-ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "cd $EC2_PATH/web && npm install --omit=dev --silent"
-
-# Wine data cache
-ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "mkdir -p $EC2_PATH/web/cache"
-rsync -avz -e "ssh -i $EC2_KEY" web/cache/wines.json \
-  $EC2_USER@$EC2_HOST:$EC2_PATH/web/cache/wines.json
-```
-
-### 6. Restart the API server
-
-```bash
-ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 restart wine-api --update-env"
-```
-
-## EC2 initial setup (first time only)
-
-```bash
-# Install Node.js 20
-curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
-sudo yum install -y nodejs
-
-# Install PM2
-sudo npm install -g pm2
-
-# Create app directory and .env
-mkdir -p ~/wine-agent/web/cache
-nano ~/wine-agent/web/.env   # add env vars from Prerequisites above
-
-# After first rsync deploy, start PM2
-cd ~/wine-agent/web
-pm2 start server/index.ts --name wine-api --interpreter tsx
-pm2 save
-pm2 startup   # follow the output command to persist across reboots
-```
-
-## WordPress plugin settings
-
-Go to **WP Admin → Settings → Wine Agent API**:
-
-| Setting | Value |
-|---------|-------|
-| Search API Key | Must match `WEBHOOK_SECRET` in EC2 `.env` |
-| Search App URL | `http://<your-ec2-host>.compute.amazonaws.com` |
-
-The webhook URL and search proxy are derived automatically from the App URL.
-
-## Maintenance
-
-```bash
-# View live API logs
-ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 logs wine-api --lines 50"
-
-# Restart API
-ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 restart wine-api"
-
-# Monitor
-ssh -i $EC2_KEY $EC2_USER@$EC2_HOST "pm2 monit"
-```
+Open the page with the `[wine-search]` shortcode. Search with accents
+("semillon") and apostrophes ("lecole"), tick Search tasting notes, exercise each
+filter, and confirm the dropdowns narrow each other. Save a review in the editor
+and confirm it appears in search immediately.
