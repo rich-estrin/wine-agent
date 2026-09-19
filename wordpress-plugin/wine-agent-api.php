@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.27.0
+ * Version: 2.28.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -250,7 +250,7 @@ add_action( 'admin_init', function () {
         'sanitize_callback' => function ( $value ) {
             return 'native' === $value ? 'native' : 'proxy';
         },
-        'default'           => 'proxy',
+        'default'           => 'native',
     ] );
     register_setting( 'wine_agent_settings', 'wine_agent_allow_mode_override', [
         'sanitize_callback' => function ( $value ) {
@@ -336,7 +336,7 @@ add_action( 'rest_api_init', function () {
  * before anyone commits to the switch. It stays off on a normal site.
  */
 function wine_agent_search_mode(): string {
-    $mode = get_option( 'wine_agent_search_mode', 'proxy' );
+    $mode = get_option( 'wine_agent_search_mode', 'native' );
 
     if ( '1' === (string) get_option( 'wine_agent_allow_mode_override', '' ) && isset( $_GET['wa_mode'] ) ) {
         $override = sanitize_text_field( wp_unslash( $_GET['wa_mode'] ) );
