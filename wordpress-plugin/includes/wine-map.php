@@ -170,7 +170,7 @@ function wine_agent_map_review_row( array $row ): array {
 	$raw_price = trim( (string) ( $row['price'] ?? '' ) );
 	if ( '' === $raw_price || 'NA' === $raw_price || '0' === $raw_price ) {
 		$price = 'N/A';
-	} elseif ( str_starts_with( $raw_price, '$' ) ) {
+	} elseif ( 0 === strncmp( $raw_price, '$', 1 ) ) {
 		$price = $raw_price;
 	} else {
 		$price = '$' . $raw_price;

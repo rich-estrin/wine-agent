@@ -345,20 +345,109 @@ function wine_agent_index_delete_post( int $post_id ): void {
 // ─── Rebuilding ──────────────────────────────────────────────────────────────
 
 /**
- * Run one slice of a full rebuild.
+ * Name of the advisory lock that serializes rebuild passes.
+ *
+ * MySQL scopes advisory locks to the whole server, not to a database, so the
+ * name carries the database and table prefix: staging and production sharing a
+ * MySQL instance must not block each other. MySQL caps lock names at 64 chars.
+ *
+ * @return string
+ */
+function wine_agent_index_lock_name(): string {
+	global $wpdb;
+	return substr( 'wine_agent_rebuild_' . $wpdb->dbname . '_' . $wpdb->prefix, 0, 64 );
+}
+
+/**
+ * Try to take the rebuild lock, without waiting.
+ *
+ * A rebuild has two independent drivers that can overlap: the admin Rebuild
+ * button, and the cron continuation chain that the first admin page load after
+ * activation kicks off. Two passes sharing one stored offset skip rows — each
+ * reads the offset once, then writes its own value back, so the higher one
+ * wins and the rows in between are never written. A pass can also RENAME the
+ * staging table out from under a pass still writing to it.
+ *
+ * An option or a transient cannot fix that: both are read-then-write, racy in
+ * exactly the way being fixed here. GET_LOCK is atomic, and the server drops it
+ * when the connection closes, so a PHP process dying mid-pass releases the lock
+ * instead of wedging every future rebuild.
+ *
+ * @return bool Whether the lock is now held by this connection.
+ */
+function wine_agent_index_lock(): bool {
+	global $wpdb;
+	return 1 === (int) $wpdb->get_var(
+		$wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', wine_agent_index_lock_name() )
+	);
+}
+
+/**
+ * Release the rebuild lock.
+ *
+ * @return void
+ */
+function wine_agent_index_unlock(): void {
+	global $wpdb;
+	$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', wine_agent_index_lock_name() ) );
+}
+
+/**
+ * How many published reviews a full rebuild has to cover.
+ *
+ * @return int
+ */
+function wine_agent_index_published_count(): int {
+	global $wpdb;
+	return (int) $wpdb->get_var(
+		"SELECT COUNT(DISTINCT p.ID) FROM {$wpdb->posts} p
+		 JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID
+		 WHERE p.post_type = 'reviews' AND p.post_status = 'publish'"
+	);
+}
+
+/**
+ * Run one slice of a full rebuild, under the rebuild lock.
  *
  * Rebuilds resume from a stored offset and stop when the time budget is spent,
  * so an 18k-review site finishes across several passes instead of hitting
  * max_execution_time. The caller (admin button or cron) keeps calling until
  * `done` comes back true.
  *
+ * Only one pass runs at a time. A caller that arrives while another pass holds
+ * the lock gets `busy` back rather than a second overlapping pass — see
+ * wine_agent_index_lock(). Serialized passes are still correct and still make
+ * progress, because each one resumes from the stored offset.
+ *
+ * @param int $budget_seconds Wall-clock budget for this pass.
+ * @return array{done:bool,busy:bool,processed:int,total:int}
+ */
+function wine_agent_index_rebuild_step( int $budget_seconds = 20 ): array {
+	if ( ! wine_agent_index_lock() ) {
+		return [
+			'done'      => false,
+			'busy'      => true,
+			'processed' => (int) get_option( 'wine_agent_index_rebuild_offset', 0 ),
+			'total'     => wine_agent_index_published_count(),
+		];
+	}
+	try {
+		return wine_agent_index_rebuild_step_locked( $budget_seconds );
+	} finally {
+		wine_agent_index_unlock();
+	}
+}
+
+/**
+ * The rebuild pass itself. Only ever called with the lock held.
+ *
  * Rows are written into a staging table and swapped in at the end, so the live
  * index is never half-rebuilt underneath a reader.
  *
  * @param int $budget_seconds Wall-clock budget for this pass.
- * @return array{done:bool,processed:int,total:int}
+ * @return array{done:bool,busy:bool,processed:int,total:int}
  */
-function wine_agent_index_rebuild_step( int $budget_seconds = 20 ): array {
+function wine_agent_index_rebuild_step_locked( int $budget_seconds ): array {
 	global $wpdb;
 
 	$staging = wine_agent_index_table() . '_new';
@@ -370,11 +459,7 @@ function wine_agent_index_rebuild_step( int $budget_seconds = 20 ): array {
 		$wpdb->query( 'CREATE TABLE ' . $staging . ' LIKE ' . wine_agent_index_table() );
 	}
 
-	$total = (int) $wpdb->get_var(
-		"SELECT COUNT(DISTINCT p.ID) FROM {$wpdb->posts} p
-		 JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID
-		 WHERE p.post_type = 'reviews' AND p.post_status = 'publish'"
-	);
+	$total = wine_agent_index_published_count();
 
 	while ( $offset < $total ) {
 		$rows = wine_agent_fetch_review_rows(
@@ -418,6 +503,7 @@ function wine_agent_index_rebuild_step( int $budget_seconds = 20 ): array {
 
 	return [
 		'done'      => $done,
+		'busy'      => false,
 		'processed' => $offset,
 		'total'     => $total,
 	];

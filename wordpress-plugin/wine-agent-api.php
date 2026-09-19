@@ -2,7 +2,9 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.29.4
+ * Version: 2.31.0
+ * Requires at least: 5.9
+ * Requires PHP: 7.4
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -138,12 +140,36 @@ register_deactivation_hook( __FILE__, function () {
 // without firing a post hook (a direct SQL edit, an importer, a restored
 // backup).
 add_action( 'wine_agent_index_nightly', function () {
+    // Take the lock before resetting progress: a rebuild already in flight has
+    // read the offset, and clearing it underneath that pass makes it rewrite
+    // rows it has already written. If one is running, it produces an equivalent
+    // index anyway, so there is nothing for the nightly pass to add.
+    if ( ! wine_agent_index_lock() ) {
+        return;
+    }
     delete_option( 'wine_agent_index_rebuild_offset' );
+    wine_agent_index_unlock();
     wine_agent_index_run_rebuild_pass();
 } );
 
 // Continuation for a rebuild that ran out of time budget.
-add_action( 'wine_agent_index_continue', 'wine_agent_index_run_rebuild_pass' );
+add_action( 'wine_agent_index_continue', 'wine_agent_index_continue_rebuild' );
+
+/**
+ * Resume a rebuild, unless there is nothing left to resume.
+ *
+ * A queued continuation can outlive the rebuild it belonged to — the admin
+ * Rebuild button may have finished the job first. Without this guard that stale
+ * event would find no stored offset, read it as 0 and rebuild the whole index
+ * from scratch for nothing.
+ */
+function wine_agent_index_continue_rebuild(): void {
+    $in_progress = (int) get_option( 'wine_agent_index_rebuild_offset', 0 );
+    if ( 0 === $in_progress && ! wine_agent_index_needs_rebuild() ) {
+        return;
+    }
+    wine_agent_index_run_rebuild_pass();
+}
 
 /**
  * Run one rebuild pass and schedule the next if there is more to do.
@@ -157,6 +183,14 @@ function wine_agent_index_run_rebuild_pass(): void {
         wine_agent_index_install();
     }
     $state = wine_agent_index_rebuild_step( 20 );
+    if ( ! empty( $state['busy'] ) ) {
+        // Another pass holds the lock — most likely someone pressing Rebuild in
+        // the admin. Come back later rather than hot-looping on the lock, and
+        // keep the chain alive so the rebuild still completes if they stop
+        // pressing Continue.
+        wp_schedule_single_event( time() + 30, 'wine_agent_index_continue' );
+        return;
+    }
     if ( ! $state['done'] ) {
         wp_schedule_single_event( time() + 5, 'wine_agent_index_continue' );
     }
@@ -289,23 +323,6 @@ function wine_agent_handle_meta( WP_REST_Request $request ): WP_REST_Response {
     return new WP_REST_Response( $result, 200 );
 }
 
-// ─── Debug endpoint (temporary) ──────────────────────────────────────────────
-
-add_action( 'rest_api_init', function () {
-    register_rest_route( 'wine-agent/v1', '/debug/(?P<id>\d+)', [
-        'methods'             => 'GET',
-        'callback'            => 'wine_agent_debug_post',
-        'permission_callback' => 'wine_agent_check_auth',
-        'args'                => [ 'id' => [ 'validate_callback' => 'is_numeric' ] ],
-    ] );
-} );
-
-function wine_agent_debug_post( WP_REST_Request $request ) {
-    $id   = (int) $request->get_param( 'id' );
-    $meta = get_post_meta( $id );
-    return rest_ensure_response( array( 'post_meta' => $meta ) );
-}
-
 // ─── Admin settings page ──────────────────────────────────────────────────────
 
 add_action( 'admin_menu', function () {
@@ -344,11 +361,20 @@ function wine_agent_settings_page(): void {
         if ( ! wine_agent_index_table_exists() ) {
             wine_agent_index_install();
         }
-        if ( isset( $_POST['wine_agent_rebuild_restart'] ) ) {
+        if ( isset( $_POST['wine_agent_rebuild_restart'] ) && wine_agent_index_lock() ) {
+            // Same reasoning as the nightly rebuild: only reset progress when no
+            // pass is mid-flight. If one is, the notice below says so.
             delete_option( 'wine_agent_index_rebuild_offset' );
+            wine_agent_index_unlock();
         }
         $state = wine_agent_index_rebuild_step( 20 );
-        if ( $state['done'] ) {
+        if ( ! empty( $state['busy'] ) ) {
+            printf(
+                '<div class="notice notice-info"><p>A rebuild is already running in the background (%s of %s reviews so far). Reload this page to follow it — there is no need to press anything.</p></div>',
+                esc_html( number_format_i18n( $state['processed'] ) ),
+                esc_html( number_format_i18n( $state['total'] ) )
+            );
+        } elseif ( $state['done'] ) {
             printf(
                 '<div class="notice notice-success"><p>Index rebuilt: %s reviews.</p></div>',
                 esc_html( number_format_i18n( $state['processed'] ) )

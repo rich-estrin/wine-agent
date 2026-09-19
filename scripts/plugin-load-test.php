@@ -80,6 +80,11 @@ $required_functions = [
 	'wine_agent_index_upsert_post',
 	'wine_agent_index_delete_post',
 	'wine_agent_index_rebuild_step',
+	'wine_agent_index_rebuild_step_locked',
+	'wine_agent_index_lock',
+	'wine_agent_index_unlock',
+	'wine_agent_index_lock_name',
+	'wine_agent_index_published_count',
 	'wine_agent_index_executor',
 	'wine_agent_fetch_review_rows',
 	'wine_agent_shape_review_row',
@@ -89,6 +94,7 @@ $required_functions = [
 	'wine_agent_get_reviews',
 	'wine_agent_settings_page',
 	'wine_agent_index_maybe_start_rebuild',
+	'wine_agent_index_continue_rebuild',
 ];
 foreach ( $required_functions as $name ) {
 	expect( function_exists( $name ), "function $name is not defined" );
