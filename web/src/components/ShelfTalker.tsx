@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Wine } from '../types';
 import { numericScore } from '../types';
@@ -16,6 +17,20 @@ function parseStarRating(rating: string): number | null {
   const full = (rating.match(/\*/g) || []).length;
   const half = /½|1\/2/.test(rating) ? 0.5 : 0;
   return full + half;
+}
+
+// Review type sizes tried, largest first. Below the last the card still clips,
+// but no real review comes close to needing it.
+const REVIEW_SIZES_PT = [9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5];
+
+/** Step the review text down until it fits the space left on the card. */
+function fitReview(review: HTMLElement) {
+  for (const size of REVIEW_SIZES_PT) {
+    review.style.setProperty('--st-review-size', `${size}pt`);
+    // Tighten the leading as the type shrinks: 1.5 at 9pt down to 1.35
+    review.style.setProperty('--st-review-leading', String(Math.max(1.35, 1.5 - (9 - size) * 0.05)));
+    if (review.scrollHeight <= review.clientHeight + 1) return;
+  }
 }
 
 export default function ShelfTalker({ wine }: { wine: Wine }) {
@@ -39,6 +54,22 @@ export default function ShelfTalker({ wine }: { wine: Wine }) {
 
   const reviewer = (wine.reviewer ?? '').trim();
   const pubDate = wine.publicationDate ? formatShelfDate(wine.publicationDate) : '';
+
+  const reviewRef = useRef<HTMLParagraphElement>(null);
+
+  useLayoutEffect(() => {
+    const fit = () => { if (reviewRef.current) fitReview(reviewRef.current); };
+    fit();
+    // Web fonts change the metrics once they land; re-fit then and just
+    // before printing so the measurement matches what goes on paper.
+    let live = true;
+    document.fonts?.ready.then(() => { if (live) fit(); });
+    window.addEventListener('beforeprint', fit);
+    return () => {
+      live = false;
+      window.removeEventListener('beforeprint', fit);
+    };
+  }, [wine]);
 
   return createPortal(
     <div id="shelf-talker" aria-hidden="true">
@@ -82,7 +113,7 @@ export default function ShelfTalker({ wine }: { wine: Wine }) {
         )}
 
         {/* Review */}
-        {wine.review && <p className="st-review">{wine.review}</p>}
+        {wine.review && <p ref={reviewRef} className="st-review">{wine.review}</p>}
 
         {/* Footer: reviewer + date */}
         {(reviewer || pubDate) && (
