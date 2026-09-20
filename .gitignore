@@ -45,4 +45,4 @@ yarn-error.log*
 # Playwright
 test-results/
 playwright-report/
-e2e/screenshots/
+**/e2e/screenshots/
