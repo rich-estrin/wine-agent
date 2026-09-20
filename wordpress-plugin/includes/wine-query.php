@@ -21,17 +21,70 @@ require_once __DIR__ . '/wine-utils.php';
 require_once __DIR__ . '/wine-map.php';
 
 /**
- * Query params that steer the search rather than narrow it. Anything else is
- * read as a wine field filter, mirroring `collectFilters`.
+ * The filter keys the app sends, and the only ones either endpoint honours.
  *
- * WordPress adds its own params to REST requests (`rest_route` on plain
- * permalinks, `_locale`, `_envelope`); left in, the unknown-param rule would
- * treat them as filters and silently empty every result.
+ * An allowlist rather than a denylist, because /search and /meta are public
+ * and unauthenticated. Anything else in the query string is ignored: a CDN
+ * cache-buster, a tracking tag, a typo, and WordPress's own REST params
+ * (`rest_route` on plain permalinks, `_locale`, `_envelope`) all used to be
+ * read as wine fields, where they matched no row and emptied the page.
+ *
+ * Mirrors `FILTER_PARAMS` in web/server/app.ts.
  *
  * @return string[]
  */
-function wine_agent_non_filter_params(): array {
-	return [ 'q', 'limit', 'offset', 'sort_by', 'sort_order', 'notes', 'rest_route', 'wa_mode' ];
+function wine_agent_filter_params(): array {
+	return [
+		'mainVarietal',
+		'ava',
+		'region',
+		'type',
+		'stateProvince',
+		'specialDesignation',
+		'priceMin',
+		'priceMax',
+		'scoreMin',
+		'scoreMax',
+		'vintageMin',
+		'vintageMax',
+		'casesMin',
+		'casesMax',
+		'publicationDate',
+	];
+}
+
+/**
+ * The largest page a caller may ask for, and the default when none is given.
+ * The app pages 40 at a time; the cap is what stops `?limit=100000` returning
+ * the whole index in one public response.
+ */
+const WINE_AGENT_MAX_LIMIT     = 100;
+const WINE_AGENT_DEFAULT_LIMIT = 20;
+
+/**
+ * Clamp the caller's page window.
+ *
+ * Both numbers reach SQL, so neither can be trusted: an unbounded limit dumps
+ * the index, and MySQL rejects a negative LIMIT outright with a syntax error
+ * that 500s the endpoint. (SQLite accepts it, which is why the parity harness
+ * cannot see this and scripts/plugin-query-test.php asserts it instead.)
+ *
+ * @param array $params Raw query params.
+ * @return array{limit:int,offset:int}
+ */
+function wine_agent_page_window( array $params ): array {
+	$limit = isset( $params['limit'] ) ? wine_agent_js_parse_int( (string) $params['limit'] ) : null;
+	$limit = ( null === $limit )
+		? WINE_AGENT_DEFAULT_LIMIT
+		: max( 1, min( (int) $limit, WINE_AGENT_MAX_LIMIT ) );
+
+	$offset = isset( $params['offset'] ) ? wine_agent_js_parse_int( (string) $params['offset'] ) : null;
+	$offset = ( null === $offset ) ? 0 : max( 0, (int) $offset );
+
+	return [
+		'limit'  => $limit,
+		'offset' => $offset,
+	];
 }
 
 /**
@@ -62,21 +115,16 @@ function wine_agent_sortable_columns(): array {
 }
 
 /**
- * Pull the filter params out of a request, dropping blanks and the params that
- * steer rather than narrow.
+ * Pull the recognised filter params out of a request, dropping blanks.
  *
  * @param array $params Raw query params.
  * @return array<string,string> Filters.
  */
 function wine_agent_collect_filters( array $params ): array {
-	$skip    = array_flip( wine_agent_non_filter_params() );
+	$allowed = array_flip( wine_agent_filter_params() );
 	$filters = [];
 	foreach ( $params as $key => $value ) {
-		if ( isset( $skip[ $key ] ) ) {
-			continue;
-		}
-		// WordPress's own REST plumbing params, never wine fields.
-		if ( '' !== $key && '_' === $key[0] ) {
+		if ( ! isset( $allowed[ $key ] ) ) {
 			continue;
 		}
 		if ( is_string( $value ) && '' !== trim( $value ) ) {
@@ -438,8 +486,9 @@ function wine_agent_build_search_sql( array $params ): array {
 		$sort_by = 'rating';
 	}
 
-	$limit  = isset( $params['limit'] ) ? (int) wine_agent_js_parse_int( (string) $params['limit'] ) : 20;
-	$offset = isset( $params['offset'] ) ? (int) wine_agent_js_parse_int( (string) $params['offset'] ) : 0;
+	$window = wine_agent_page_window( $params );
+	$limit  = $window['limit'];
+	$offset = $window['offset'];
 
 	$where = wine_agent_build_where( $query, $search_notes, $filters );
 

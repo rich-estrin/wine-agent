@@ -139,7 +139,11 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 - **`main.tsx`** — mounts to `#wine-agent-root` (WordPress embed) or `#root` (standalone)
 
 ### API Server (`web/server/index.ts`)
-- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`)
+- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `stateProvince`, `specialDesignation`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`).
+  Filter keys are an **allowlist** (`FILTER_PARAMS` in `app.ts`, `wine_agent_filter_params()`
+  in `wine-query.php`) — anything else in the query string is ignored rather than
+  read as a wine field. `limit` is clamped to 1–100 and `offset` to ≥ 0 on both
+  sides; the endpoints are public, so neither number is trusted
 - `GET /api/meta` — returns `{ varietals, regions, types, avaList, stateProvinces, specialDesignations, casesMax }`.
   `casesMax` is the largest reported case production, computed over **all** wines
   (never narrowed by the active filters) so the Cases slider's top end holds still
@@ -252,9 +256,8 @@ web/
 - `Filters.searchNotes` is the odd one out: a boolean that *widens* the search
   rather than narrowing it. It rides in `Filters` so it shows as an active chip,
   counts in the mobile badge and clears with the rest — but `App.tsx` sends it
-  only on `/api/search` (as `notes=1`), never on `/api/meta`, where an unknown
-  param would be read as a field filter and empty every facet list. It is also
-  sent **only alongside a query** — with an empty search box it cannot change
+  only on `/api/search` (as `notes=1`), never on `/api/meta`, which has no use
+  for a search setting. It is also sent **only alongside a query** — with an empty search box it cannot change
   the results, and including it moved `searchKey`, so ticking the box re-ran the
   search and blinked the list away to redraw it identical
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).

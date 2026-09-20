@@ -46,20 +46,12 @@
   { "name": "filter:casesMin",             "endpoint": "search", "query": "casesMin=500" },
   { "name": "filter:casesMax",             "endpoint": "search", "query": "casesMax=1000" },
   { "name": "filter:casesMin-excludes-0",  "endpoint": "search", "query": "casesMin=1" },
-  { "name": "filter:op-rating-gt",         "endpoint": "search", "query": "rating=%3E90" },
-  { "name": "filter:op-rating-gte",        "endpoint": "search", "query": "rating=%3E%3D93" },
-  { "name": "filter:op-rating-lt",         "endpoint": "search", "query": "rating=%3C90" },
-  { "name": "filter:op-price-gt",          "endpoint": "search", "query": "price=%3E50" },
-  { "name": "filter:op-price-eq",          "endpoint": "search", "query": "price=%3D%3D32" },
-  { "name": "filter:op-vintage-gt",        "endpoint": "search", "query": "vintage=%3E2020" },
-  { "name": "filter:op-cases-gt",          "endpoint": "search", "query": "cases=%3E1000" },
+  { "name": "ignored:op-syntax-rating",         "endpoint": "search", "query": "rating=%3E90" },
   { "name": "filter:op-pubdate-gt",        "endpoint": "search", "query": "publicationDate=%3E2024-01-01" },
   { "name": "filter:op-pubdate-lt",        "endpoint": "search", "query": "publicationDate=%3C2024-01-01" },
-  { "name": "filter:tastingDate-empty",    "endpoint": "search", "query": "tastingDate=%3E2020-01-01" },
-  { "name": "filter:unindexed-brand",      "endpoint": "search", "query": "brandName=ecole" },
-  { "name": "filter:unindexed-reviewer",   "endpoint": "search", "query": "reviewer=RE" },
-  { "name": "filter:unindexed-closure",    "endpoint": "search", "query": "closure=Cork" },
-  { "name": "filter:unindexed-accent",     "endpoint": "search", "query": "brandName=chateau" },
+  { "name": "ignored:unknown-key",      "endpoint": "search", "query": "brandName=ecole" },
+  { "name": "ignored:unknown-key-meta",   "endpoint": "meta",   "query": "reviewer=RE" },
+  { "name": "ignored:tracking-tag",      "endpoint": "search", "query": "type=Red&utm_source=newsletter" },
 
   { "name": "sort:price-asc",              "endpoint": "search", "query": "sort_by=price&sort_order=asc&limit=100" },
   { "name": "sort:price-desc",             "endpoint": "search", "query": "sort_by=price&sort_order=desc&limit=100" },
@@ -77,7 +69,10 @@
 
   { "name": "page:limit",                  "endpoint": "search", "query": "limit=5" },
   { "name": "page:limit-offset",           "endpoint": "search", "query": "limit=5&offset=10" },
-  { "name": "page:large-limit",            "endpoint": "search", "query": "limit=1000" },
+  { "name": "page:limit-capped",            "endpoint": "search", "query": "limit=1000" },
+  { "name": "page:limit-negative",       "endpoint": "search", "query": "limit=-5" },
+  { "name": "page:limit-zero",           "endpoint": "search", "query": "limit=0" },
+  { "name": "page:offset-negative",      "endpoint": "search", "query": "limit=5&offset=-10" },
   { "name": "page:offset-tail",            "endpoint": "search", "query": "offset=60" },
 
   { "name": "combo:query-filter-sort",     "endpoint": "search", "query": "q=red&type=Red&sort_by=price&sort_order=asc&limit=5" },
@@ -94,16 +89,6 @@
   { "name": "meta:ignores-q",              "endpoint": "meta",   "query": "q=semillon" },
   { "name": "meta:price-range",            "endpoint": "meta",   "query": "priceMin=20" },
 
-  {
-    "name": "meta:wp-locale-param",
-    "endpoint": "meta",
-    "query": "_locale=user&type=Red",
-    "expectDivergence": "WordPress injects _locale into REST requests. Node's collectFilters reads any unknown param as a wine field, so it matches nothing and empties every facet; the native handler skips WP's own params. Divergence is intentional and only reachable through WP, which never calls the Node API."
-  },
-  {
-    "name": "search:wp-rest-route-param",
-    "endpoint": "search",
-    "query": "rest_route=%2Fwine-agent%2Fv1%2Fsearch&type=Red",
-    "expectDivergence": "Same as meta:wp-locale-param — rest_route is present on plain-permalink sites and would otherwise empty all results."
-  }
+  { "name": "ignored:wp-locale-param",      "endpoint": "meta",   "query": "_locale=user&type=Red" },
+  { "name": "ignored:wp-rest-route-param",  "endpoint": "search", "query": "rest_route=%2Fwine-agent%2Fv1%2Fsearch&type=Red" }
 ]

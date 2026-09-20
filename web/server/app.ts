@@ -22,19 +22,45 @@ export interface AppOptions {
 // Known junk varietal values (data-entry typos) to keep out of the dropdown.
 const VARIETAL_EXCLUSIONS = new Set(['Ca']);
 
-// Query params that steer the search rather than narrow it. Anything not
-// listed here is looked up as a wine field, so a stray param would match
-// nothing and silently empty the results — keep this in step with the routes.
-const NON_FILTER_PARAMS = new Set(['q', 'limit', 'offset', 'sort_by', 'sort_order', 'notes']);
+// The filter keys the app sends, and the only ones either endpoint honours.
+// An allowlist rather than a denylist, because /search and /meta are public
+// and unauthenticated: anything else in the query string — a CDN cache-buster,
+// a tracking tag, WordPress's own REST params, a typo — is ignored rather than
+// read as a wine field. Read as a field, an unknown key matches no row and
+// silently empties the page.
+const FILTER_PARAMS = new Set([
+  'mainVarietal', 'ava', 'region', 'type', 'stateProvince', 'specialDesignation',
+  'priceMin', 'priceMax', 'scoreMin', 'scoreMax',
+  'vintageMin', 'vintageMax', 'casesMin', 'casesMax',
+  'publicationDate',
+]);
 
-/** Pull the filter params out of a query string, dropping blanks. */
+/** Pull the recognised filter params out of a query string, dropping blanks. */
 function collectFilters(params: Record<string, unknown>): Record<string, string> {
   const filters: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
-    if (NON_FILTER_PARAMS.has(key)) continue;
+    if (!FILTER_PARAMS.has(key)) continue;
     if (typeof value === 'string' && value.trim()) filters[key] = value;
   }
   return filters;
+}
+
+/** The largest page a caller may ask for. The app pages 40 at a time; the cap
+ *  is what keeps `?limit=100000` from serialising the whole index into one
+ *  response on a public endpoint. */
+const MAX_LIMIT = 100;
+const DEFAULT_LIMIT = 20;
+
+/** The page window, clamped. Both numbers are caller-supplied: an unbounded
+ *  limit is a free full-table dump, and a negative offset reaches the END of
+ *  the results through `Array.prototype.slice`. */
+function pageWindow(limitParam: unknown, offsetParam: unknown): { limit: number; offset: number } {
+  const limit = parseInt(String(limitParam ?? ''), 10);
+  const offset = parseInt(String(offsetParam ?? ''), 10);
+  return {
+    limit: Number.isNaN(limit) ? DEFAULT_LIMIT : Math.min(Math.max(limit, 1), MAX_LIMIT),
+    offset: Number.isNaN(offset) ? 0 : Math.max(offset, 0),
+  };
 }
 
 // ─── Filter dropdown metadata (faceted) ───────────────────────────────────────
@@ -147,8 +173,7 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
 
       results = sortWines(results, sortBy, sortOrd);
 
-      const finalLimit = limit ? parseInt(limit as string) : 20;
-      const finalOffset = offset ? parseInt(offset as string) : 0;
+      const { limit: finalLimit, offset: finalOffset } = pageWindow(limit, offset);
       res.json({ wines: results.slice(finalOffset, finalOffset + finalLimit), total: results.length });
     } catch (error) {
       res

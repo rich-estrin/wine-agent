@@ -4,6 +4,7 @@ import type { Server } from 'http';
 import { createApp } from './app.js';
 import { FixtureClient } from './fixture-client.js';
 import { readFileSync } from 'fs';
+import { makeWine } from '../test/factory.js';
 
 // Real routes, real fixture data, over real HTTP on an ephemeral port — the
 // same path the browser takes, without depending on WordPress or a CSV export.
@@ -345,5 +346,81 @@ describe('authentication', () => {
 
   it('allows everything when no secret is configured', async () => {
     expect((await fetch(`${base}/api/search`)).status).toBe(200);
+  });
+});
+
+// ─── Request bounds ───────────────────────────────────────────────────────────
+// /search and /meta are public and unauthenticated on the production site, so
+// every number and every key in the query string is attacker-controlled.
+
+describe('GET /api/search request bounds', () => {
+  // 150 wines, so the 100-row cap is observable — the committed fixture is
+  // smaller than the cap and could never show it.
+  const many = {
+    wines: Array.from({ length: 150 }, (_, i) =>
+      makeWine({ id: `bulk-${i}`, brandName: `Winery ${i}`, rating: '90' }),
+    ),
+    getAllWines() { return this.wines; },
+    upsertWine() {},
+    removeWine() {},
+  };
+
+  let bulkServer: Server;
+  let bulkBase: string;
+
+  beforeAll(async () => {
+    const app = createApp(many);
+    await new Promise<void>((resolve) => {
+      bulkServer = app.listen(0, () => {
+        const { port } = bulkServer.address() as AddressInfo;
+        bulkBase = `http://127.0.0.1:${port}`;
+        resolve();
+      });
+    });
+  });
+  afterAll(() => close(bulkServer));
+
+  const bulkSearch = async (qs: string) => {
+    const res = await fetch(`${bulkBase}/api/search?${qs}`);
+    expect(res.status).toBe(200);
+    return res.json() as Promise<{ wines: { id: string }[]; total: number }>;
+  };
+
+  it('caps the page size at 100 rows', async () => {
+    const { wines, total } = await bulkSearch('limit=100000');
+    expect(wines).toHaveLength(100);
+    // The match count is the real one — only the page is capped.
+    expect(total).toBe(150);
+  });
+
+  it('treats a zero or negative limit as a single row', async () => {
+    expect((await bulkSearch('limit=0')).wines).toHaveLength(1);
+    expect((await bulkSearch('limit=-5')).wines).toHaveLength(1);
+  });
+
+  it('treats a negative offset as zero', async () => {
+    const negative = await bulkSearch('limit=5&offset=-10');
+    const zero = await bulkSearch('limit=5&offset=0');
+    expect(negative.wines.map((w) => w.id)).toEqual(zero.wines.map((w) => w.id));
+  });
+});
+
+describe('unrecognised filter keys', () => {
+  it('are ignored by /api/search rather than emptying the results', async () => {
+    const plain = await search('limit=5');
+    const withJunk = await search('limit=5&brandName=ecole&utm_source=newsletter');
+    expect(withJunk.total).toBe(plain.total);
+    expect(withJunk.wines.map((w) => w.id)).toEqual(plain.wines.map((w) => w.id));
+  });
+
+  it('are ignored by /api/meta rather than emptying the facets', async () => {
+    expect(await meta('reviewer=RE')).toEqual(await meta());
+  });
+
+  it('do not disturb the filters that are recognised', async () => {
+    const red = await search('type=Red&limit=200');
+    const redWithJunk = await search('type=Red&limit=200&brandName=nonesuch');
+    expect(redWithJunk.total).toBe(red.total);
+    expect(red.total).toBeGreaterThan(0);
   });
 });

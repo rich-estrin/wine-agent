@@ -39,20 +39,26 @@ group.
 
 ## Battery
 
-`battery.json` — ~90 requests covering accent folding, word-start matching,
+`battery.json` — ~85 requests covering accent folding, word-start matching,
 apostrophe elision (`lecole` → `L'Ecole`), tasting-note widening (`notes=1`),
-every filter key, operator syntax (`rating=>90`), comma-separated OR lists,
-each range pair including star-rating and blank-cases exclusion, all sorts in
-both directions, the `relevance` alias, pagination, and faceted meta.
+every filter key the app sends, comma-separated OR lists, each range pair
+including star-rating and blank-cases exclusion, all sorts in both directions,
+the `relevance` alias, pagination and its clamps, unrecognised keys, and
+faceted meta.
 
 ### Expected divergences
 
-An entry carrying `expectDivergence` is *required* to differ, and the run fails
-if it stops differing. Both current entries are the same deliberate deviation:
-WordPress injects its own params (`_locale`, `rest_route`) into REST requests,
-and Node's `collectFilters` would read them as wine fields and silently empty
-every result. The native handler skips them. This is unreachable in the Node
-deployment, which never sees those params.
+An entry may carry `expectDivergence`, which makes the case *required* to
+differ — the run fails if it stops differing. There are none at present: both
+sides now ignore any query param outside the filter allowlist, which is what
+the two former entries (`_locale`, `rest_route`) existed to excuse.
+
+### What the battery cannot cover
+
+It runs the PHP against SQLite, so anything where SQLite and MySQL disagree is
+invisible to it. A negative `LIMIT` is the known case — SQLite reads it as "no
+limit", MySQL rejects it as a syntax error. Bounds like that are asserted on
+the query plan instead, in `scripts/plugin-query-test.php`.
 
 ## When to run it
 
