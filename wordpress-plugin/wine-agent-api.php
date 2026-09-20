@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.32.0
+ * Version: 2.33.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
@@ -339,7 +339,7 @@ function wine_agent_settings_page(): void {
     ) {
         $new_key = wp_generate_password( 40, false );
         update_option( 'wine_agent_search_key', $new_key );
-        echo '<div class="notice notice-success"><p>API key regenerated.</p></div>';
+        echo '<div class="notice notice-success"><p>Review export key regenerated.</p></div>';
     }
 
     // Handle rebuild action. Runs in slices so a large site doesn't hit
@@ -438,16 +438,23 @@ function wine_agent_settings_page(): void {
             </p>
         </form>
 
-        <h2>Endpoint</h2>
+        <h2>Review export endpoint</h2>
         <p><code><?php echo esc_html( $endpoint ); ?></code></p>
-        <p>Pass the API key in the <code>X-Wine-Agent-Key</code> request header.</p>
+        <p>A private endpoint that returns every published review as raw JSON, for
+        pulling the data out of this site. Pass the key below in the
+        <code>X-Wine-Agent-Key</code> request header.</p>
+        <p class="description">
+            The search app does not use this. <code>/search</code> and <code>/meta</code>
+            are public and answered from the index table, so the key is not needed to
+            run the site.
+        </p>
 
         <h2>Settings</h2>
         <form method="post" action="options.php">
             <?php settings_fields( 'wine_agent_settings' ); ?>
             <table class="form-table">
                 <tr>
-                    <th scope="row"><label for="wine_agent_search_key">Search API Key</label></th>
+                    <th scope="row"><label for="wine_agent_search_key">Review Export API Key</label></th>
                     <td>
                         <input
                             type="text"
@@ -456,19 +463,22 @@ function wine_agent_settings_page(): void {
                             value="<?php echo esc_attr( $search_key ); ?>"
                             class="regular-text"
                         />
-                        <p class="description">Authenticates requests to the <code>/reviews</code> endpoint.</p>
+                        <p class="description">
+                            Authenticates the private <code>/reviews</code> export endpoint.
+                            Not used for search.
+                        </p>
                     </td>
                 </tr>
             </table>
             <?php submit_button( 'Save Settings' ); ?>
         </form>
 
-        <h2>Regenerate Key</h2>
+        <h2>Regenerate export key</h2>
         <form method="post">
             <?php wp_nonce_field( 'wine_agent_regenerate_key' ); ?>
             <p>
                 <button type="submit" name="wine_agent_regenerate" class="button button-secondary">
-                    Regenerate API Key
+                    Regenerate Export Key
                 </button>
             </p>
             <p class="description">This immediately invalidates the old key.</p>
