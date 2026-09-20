@@ -115,12 +115,12 @@ Settings → Wine Agent API shows index status and a Rebuild button.
   unversioned `wine-agent-api.zip`. It is gitignored: build it when you deploy
 - The plugin zip bundles the built JS/CSS assets — no HTTP fetching at runtime
 - Plugin settings (WP Admin → Settings → Wine Agent API): API Key, plus search index status and the Rebuild button
-- The shortcode emits a hidden `<span id="wine-agent-version">wine-agent-api X.Y.Z</span>`
-  on every path, including the assets-missing one. It is how you confirm which
+- The shortcode injects `window.__WINE_AGENT_VERSION__` beside the API base, and
+  `main.tsx` logs `wine-agent-api X.Y.Z` on startup. It is how you confirm which
   build a page is serving without opening WP Admin — an upload that silently
-  failed to replace the old files looks exactly like one that worked. The
-  version is read back from the plugin header via `wine_agent_plugin_version()`,
-  never restated, so it cannot drift
+  failed to replace the old files looks exactly like one that worked. The version
+  is read back from the plugin header via `wine_agent_plugin_version()`, never
+  restated, so it cannot drift. Standalone it logs `wine-agent-api (dev)`
 
 ## Deployment
 

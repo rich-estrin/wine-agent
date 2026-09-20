@@ -51,9 +51,6 @@ function rest_url( $path = '' ) {
 function wp_json_encode( $value, $flags = 0 ) {
 	return json_encode( $value, $flags );
 }
-function esc_html( $text ) {
-	return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
-}
 /** Real get_file_data is close enough for a header read. */
 function get_file_data( $file, $headers, $context = '' ) {
 	$contents = file_get_contents( $file );
@@ -146,10 +143,11 @@ foreach ( $required_hooks as $hook ) {
 
 expect( isset( $GLOBALS['stub_shortcodes']['wine-search'] ), '[wine-search] shortcode not registered' );
 
-// ── The version marker ───────────────────────────────────────────────────────
-// The rendered page has to name the plugin version it is running, so a deploy
-// can be confirmed from the page itself rather than from WP Admin. Read the
-// expected version straight out of the header, so the two cannot drift.
+// ── The reported version ─────────────────────────────────────────────────────
+// The app logs the plugin version on startup, so a deploy can be confirmed
+// from the browser console. The version is read back from the header rather
+// than restated, and this checks the two agree — a stale number here would
+// make the console line lie in exactly the situation it exists for.
 preg_match( '/^\s*\*\s*Version:\s*(.+)$/m', file_get_contents( $plugin ), $header );
 $header_version = isset( $header[1] ) ? trim( $header[1] ) : '';
 
@@ -167,25 +165,7 @@ if ( function_exists( 'wine_agent_plugin_version' ) ) {
 
 $rendered = $GLOBALS['stub_shortcodes']['wine-search']();
 
-expect(
-	false !== strpos( $rendered, $header_version ),
-	"the shortcode output does not name the plugin version ($header_version)"
-);
-expect(
-	false !== strpos( $rendered, 'id="wine-agent-version"' ),
-	'the version marker has no stable id to look it up by'
-);
-// Non-visible: it is a verification aid, not page content.
-expect(
-	(bool) preg_match( '/<span id="wine-agent-version"[^>]*display:\s*none/', $rendered ),
-	'the version marker is not hidden — it would print on the page'
-);
-expect(
-	(bool) preg_match( '/<span id="wine-agent-version"[^>]*aria-hidden="true"/', $rendered ),
-	'the version marker is not hidden from screen readers'
-);
-// Emitted even when the assets are missing, which is exactly when knowing the
-// installed version matters most. This run has no assets/manifest.json.
+// A source checkout has no built assets, so this run takes the failure path.
 expect(
 	false !== strpos( $rendered, 'assets not found' ),
 	'expected the assets-missing path in a source checkout (no built assets present)'

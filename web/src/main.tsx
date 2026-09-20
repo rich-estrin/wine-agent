@@ -3,6 +3,12 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+// Which plugin build is serving this page. The shortcode injects the version
+// alongside the API base; standalone there is no plugin, so it reads as dev.
+// An upload that silently failed to replace the old files looks exactly like
+// one that worked, and this is how you tell them apart.
+console.log(`wine-agent-api ${(window as any).__WINE_AGENT_VERSION__ ?? '(dev)'}`);
+
 // Mount to #wine-agent-root when embedded in WordPress, otherwise #root
 const container = document.getElementById('wine-agent-root') ?? document.getElementById('root')!;
 createRoot(container).render(
