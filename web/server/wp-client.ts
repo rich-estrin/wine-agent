@@ -103,7 +103,6 @@ export function mapWPReview(row: WPReview): Wine {
     varietalLabel:     toTitleCase(variety),
     varietyStyle:      toTitleCase(varietyStyle),
     publicationDate:   normalizePubDate(row.publication_date ?? ''),
-    tastingDate:       '',
     setting:           '',
     purchasedProvided: '',
     temp:              '',

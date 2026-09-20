@@ -284,8 +284,6 @@ function wine_agent_sort_value( array $wine, string $sort_by ) {
 			// Day granularity, so same-day reviews tie and fall through to the
 			// rating tiebreak rather than being ordered by their timestamps.
 			return wine_agent_parse_day_or_null( $wine['publicationDate'] ?? '' );
-		case 'tastingDate':
-			return wine_agent_parse_date_or_null( $wine['tastingDate'] ?? '' );
 		default:
 			$v = (string) ( $wine[ $sort_by ] ?? '' );
 			return '' === $v ? null : $v;

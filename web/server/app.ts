@@ -43,6 +43,14 @@ function collectFilters(params: Record<string, unknown>): Record<string, string>
   return filters;
 }
 
+// The sorts a caller may ask for: exactly the ones the WordPress index has a
+// typed column for (`wine_agent_sortable_columns()`), so every sort is one SQL
+// can order by. Anything else falls back to the default — sorting on an
+// arbitrary wine field forced the native handler to read and decode every
+// matched row and sort them in PHP.
+const SORT_FIELDS = new Set(['rating', 'price', 'vintage', 'cases', 'publicationDate']);
+const DEFAULT_SORT = 'publicationDate';
+
 /** The largest page a caller may ask for. The app pages 40 at a time; the cap
  *  is what keeps `?limit=100000` from serialising the whole index into one
  *  response on a public endpoint. */
@@ -155,10 +163,10 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
 
       const sortOrd = sort_order === 'asc' ? 'asc' : 'desc';
       // Newest reviews first when the caller doesn't say — matches the app's
-      // own default, so an embed that omits sort_by sees the same order.
-      let sortBy = typeof sort_by === 'string' && sort_by ? sort_by : 'publicationDate';
-      // Relevance ranking is gone; older embeds may still ask for it by name.
+      // own default, so a caller that omits sort_by sees the same order.
+      let sortBy = typeof sort_by === 'string' ? sort_by : '';
       if (sortBy === 'relevance') sortBy = 'rating';
+      if (!SORT_FIELDS.has(sortBy)) sortBy = DEFAULT_SORT;
 
       let results = dataClient.getAllWines();
 

@@ -87,8 +87,12 @@ export function compareValues(actual: unknown, operator: string, expected: unkno
   }
 }
 
-/** The sortable value for a wine, or null when it has none. */
-function sortValue(wine: Wine, sortBy: string): number | string | null {
+/** The sortable value for a wine, or null when it has none.
+ *
+ *  Exhaustive over the sorts the API accepts (`SORT_FIELDS` in app.ts), which
+ *  are exactly the ones the WordPress index has a typed column for. Anything
+ *  else is rejected before it reaches here and sorts as a tie. */
+function sortValue(wine: Wine, sortBy: string): number | null {
   switch (sortBy) {
     case 'price':   return parsePriceOrNull(wine.price);
     case 'rating':  return parseRatingOrNull(wine.rating);
@@ -97,11 +101,7 @@ function sortValue(wine: Wine, sortBy: string): number | string | null {
     // Day granularity, so same-day reviews tie and fall through to the
     // rating tiebreak below rather than being ordered by their timestamps.
     case 'publicationDate': return parseDayOrNull(wine.publicationDate);
-    case 'tastingDate':     return parseDateOrNull(wine.tastingDate);
-    default: {
-      const v = (wine[sortBy as keyof Wine] as string) ?? '';
-      return v === '' ? null : v;
-    }
+    default: return null;
   }
 }
 

@@ -217,12 +217,14 @@ describe('sortWines — wines with no value sort last in BOTH directions', () =>
     expect(ids(sortWines(tied, 'price', 'desc'))).toEqual(['first', 'second', 'third']);
   });
 
-  it('sorts string fields alphabetically, blanks last', () => {
+  // Only the five sorts the index can order by reach sortWines; app.ts turns
+  // anything else into the default. An arbitrary field is therefore a tie.
+  it('treats a field it cannot sort on as a tie, leaving the order alone', () => {
     const byBrand = [
       makeWine({ id: 'blank', brandName: '' }),
       makeWine({ id: 'z', brandName: 'Zephyr' }),
       makeWine({ id: 'a', brandName: 'Abacela' }),
     ];
-    expect(ids(sortWines(byBrand, 'brandName', 'asc'))).toEqual(['a', 'z', 'blank']);
+    expect(ids(sortWines(byBrand, 'brandName', 'asc'))).toEqual(['blank', 'z', 'a']);
   });
 });

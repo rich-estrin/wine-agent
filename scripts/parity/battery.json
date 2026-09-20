@@ -65,7 +65,6 @@
   { "name": "sort:pubdate-desc",           "endpoint": "search", "query": "sort_by=publicationDate&sort_order=desc&limit=100" },
   { "name": "sort:relevance-alias",        "endpoint": "search", "query": "sort_by=relevance&limit=100" },
   { "name": "sort:string-field",           "endpoint": "search", "query": "sort_by=brandName&sort_order=asc&limit=100" },
-  { "name": "sort:tastingDate-all-null",   "endpoint": "search", "query": "sort_by=tastingDate&limit=100" },
 
   { "name": "page:limit",                  "endpoint": "search", "query": "limit=5" },
   { "name": "page:limit-offset",           "endpoint": "search", "query": "limit=5&offset=10" },

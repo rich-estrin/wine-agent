@@ -146,8 +146,11 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 - `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `stateProvince`, `specialDesignation`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`).
   Filter keys are an **allowlist** (`FILTER_PARAMS` in `app.ts`, `wine_agent_filter_params()`
   in `wine-query.php`) — anything else in the query string is ignored rather than
-  read as a wine field. `limit` is clamped to 1–100 and `offset` to ≥ 0 on both
-  sides; the endpoints are public, so neither number is trusted
+  read as a wine field. `sort_by` is an allowlist too (`SORT_FIELDS` /
+  `wine_agent_sortable_columns()`): exactly the five fields the index has a typed
+  column for, so every sort is one SQL can order by; anything else falls back to
+  the default. `limit` is clamped to 1–100 and `offset` to ≥ 0 on both sides;
+  the endpoints are public, so neither number is trusted
 - `GET /api/meta` — returns `{ varietals, regions, types, avaList, stateProvinces, specialDesignations, casesMax }`.
   `casesMax` is the largest reported case production, computed over **all** wines
   (never narrowed by the active filters) so the Cases slider's top end holds still
@@ -170,8 +173,10 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
   indexes as `l`, `ecole` *and* `lecole`, so all three spellings find it. Both the
   ASCII and typographic apostrophe count, since the export contains both. Query
   terms stay on `foldWords()`
-- Filtering: `server/wine-search.ts` — special-cased keys before generic field lookup.
-  Dropdown fields match a comma-separated OR list, which is what backs multi-select
+- Filtering: `server/wine-search.ts` — one branch per allowlisted key.
+  Dropdown fields match a comma-separated OR list, which is what backs multi-select.
+  Review Date is the only filter carrying a comparison operator
+  (`publicationDate=>=2024-01-01`), which is what the sidebar's control sends
 - Sorting: `server/wine-utils.ts` — wines with no price/vintage/date sort **last in
   both directions** (`parse*OrNull` returns null rather than a sentinel number).
   Default sort is `publicationDate` descending, in the app and on `/api/search`.

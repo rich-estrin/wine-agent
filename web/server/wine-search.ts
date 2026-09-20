@@ -1,6 +1,6 @@
 import type { Wine } from '../src/types.js';
 import {
-  parsePriceOrNull, parseRatingOrNull, parseVintageOrNull, parseDateOrNull, parseCasesOrNull,
+  parsePriceOrNull, parseVintageOrNull, parseDateOrNull, parseCasesOrNull,
   parseFilterValue, compareValues, sortWines,
 } from './wine-utils.js';
 import { fold, foldWords, foldSearchWords } from '../src/lib/text.js';
@@ -153,35 +153,16 @@ export function matchesFilter(wine: Wine, key: string, filterValue: string): boo
     return v !== null && v <= parseInt(filterValue);
   }
 
-  const wineValue = wine[key as keyof Wine] as string;
-  if (wineValue === undefined) return false;
-
-  const { operator, value } = parseFilterValue(filterValue);
-  switch (key) {
-    case 'price': {
-      const n = parsePriceOrNull(wineValue);
-      return n !== null && compareValues(n, operator, parseFloat(value));
-    }
-    case 'rating': {
-      const n = parseRatingOrNull(wineValue);
-      return n !== null && compareValues(n, operator, parseFloat(value));
-    }
-    case 'vintage': {
-      const v = parseVintageOrNull(wineValue);
-      return v !== null && compareValues(v, operator, parseInt(value) || 0);
-    }
-    case 'cases': {
-      const n = parseCasesOrNull(wineValue);
-      return n !== null && compareValues(n, operator, parseInt(value) || 0);
-    }
-    case 'publicationDate':
-    case 'tastingDate': {
-      const t = parseDateOrNull(wineValue);
-      const expected = parseDateOrNull(value);
-      return t !== null && expected !== null && compareValues(t, operator, expected);
-    }
-    default:
-      // Accent-insensitive substring — "Rhone" finds "Rhône".
-      return operator === '=' ? fold(wineValue).includes(fold(value)) : false;
+  // Review Date is the one filter that still carries an operator, because the
+  // sidebar's control sends one: `publicationDate=>=2024-01-01`.
+  if (key === 'publicationDate') {
+    const { operator, value } = parseFilterValue(filterValue);
+    const t = parseDateOrNull(wine.publicationDate);
+    const expected = parseDateOrNull(value);
+    return t !== null && expected !== null && compareValues(t, operator, expected);
   }
+
+  // Unreachable through the API: /api/search and /api/meta only pass keys from
+  // FILTER_PARAMS, every one of which is handled above.
+  return false;
 }

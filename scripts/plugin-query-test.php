@@ -68,11 +68,67 @@ $filters = wine_agent_collect_filters(
 );
 expect( [ 'type' => 'Red' ] === $filters, 'collect_filters kept: ' . wp_json( $filters ) );
 
-// An unknown key must not drag the request onto the in-memory fallback path,
-// which reads and decodes every row in the index.
-$plan = wine_agent_build_search_sql( [ 'brandName' => 'e' ] );
-expect( false === $plan['needs_php'], 'an unknown filter key still forces the PHP fallback path' );
-expect( empty( $plan['php_filters'] ), 'an unknown filter key still reaches php_filters' );
+// ── Every request is answerable in SQL ────────────────────────────────────────
+// There is no in-memory fallback any more: no plan may ask the caller to
+// materialise and filter the whole index.
+foreach ( [ [ 'brandName' => 'e' ], [ 'sort_by' => 'brandName' ], [ 'q' => 'red', 'type' => 'Red' ] ] as $params ) {
+	$plan = wine_agent_build_search_sql( $params );
+	foreach ( [ 'needs_php', 'php_filters', 'rows_sql_all', 'all_bindings' ] as $gone ) {
+		expect( ! isset( $plan[ $gone ] ), "query plan still carries the removed '$gone' fallback" );
+	}
+	expect(
+		false !== strpos( $plan['rows_sql'], 'LIMIT' ),
+		'a plan produced row SQL with no LIMIT: ' . $plan['rows_sql']
+	);
+}
+
+// ── Only sorts the index can order by ─────────────────────────────────────────
+foreach ( array_keys( wine_agent_sortable_columns() ) as $sortable ) {
+	$plan = wine_agent_build_search_sql( [ 'sort_by' => $sortable ] );
+	expect( $sortable === $plan['sort_by'], "sort_by=$sortable was not honoured" );
+}
+foreach ( [ 'brandName', 'tastingDate', 'reviewer', '', 'nonsense' ] as $unsortable ) {
+	$plan = wine_agent_build_search_sql( [ 'sort_by' => $unsortable ] );
+	expect(
+		'publicationDate' === $plan['sort_by'],
+		"sort_by=$unsortable should fall back to publicationDate, got {$plan['sort_by']}"
+	);
+}
+$plan = wine_agent_build_search_sql( [ 'sort_by' => 'relevance' ] );
+expect( 'rating' === $plan['sort_by'], 'the relevance alias no longer maps to rating' );
+
+// ── The allowlist and the clause builder cannot drift apart ───────────────────
+// An allowlisted key with no clause builder fails closed — it would match
+// nothing and empty the page, which is the failure this whole allowlist exists
+// to prevent. Every key must build a real clause.
+$sample = [
+	'mainVarietal'       => 'Merlot',
+	'ava'                => 'Columbia Valley',
+	'region'             => 'Yakima (WA)',
+	'type'               => 'Red',
+	'stateProvince'      => 'Washington',
+	'specialDesignation' => 'Value Pick',
+	'priceMin'           => '20',
+	'priceMax'           => '60',
+	'scoreMin'           => '88',
+	'scoreMax'           => '95',
+	'vintageMin'         => '2018',
+	'vintageMax'         => '2022',
+	'casesMin'           => '100',
+	'casesMax'           => '5000',
+	'publicationDate'    => '>=2024-01-01',
+];
+foreach ( wine_agent_filter_params() as $key ) {
+	expect( isset( $sample[ $key ] ), "no sample value for allowlisted key '$key' — add one to this test" );
+	if ( ! isset( $sample[ $key ] ) ) {
+		continue;
+	}
+	$clause = wine_agent_build_filter_clause( $key, $sample[ $key ] );
+	expect(
+		is_array( $clause ) && '1 = 0' !== $clause['sql'],
+		"filter key '$key' is allowlisted but builds no SQL clause — it would silently empty the results"
+	);
+}
 
 function wp_json( $value ): string {
 	return json_encode( $value );

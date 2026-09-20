@@ -197,7 +197,6 @@ function wine_agent_map_review_row( array $row ): array {
 		'varietalLabel'      => wine_agent_title_case( $variety ),
 		'varietyStyle'       => wine_agent_title_case( $variety_style ),
 		'publicationDate'    => wine_agent_normalize_pub_date( $row['publication_date'] ?? '' ),
-		'tastingDate'        => '',
 		'setting'            => '',
 		'purchasedProvided'  => '',
 		'temp'               => '',

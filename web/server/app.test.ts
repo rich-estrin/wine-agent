@@ -314,3 +314,28 @@ describe('unrecognised filter keys', () => {
     expect(red.total).toBeGreaterThan(0);
   });
 });
+
+describe('unrecognised sorts', () => {
+  // The field falls back; the requested direction is still honoured.
+  it('fall back to the default field rather than sorting on an arbitrary one', async () => {
+    for (const order of ['asc', 'desc']) {
+      const byBrand = await search(`sort_by=brandName&sort_order=${order}&limit=10`);
+      const byDefault = await search(`sort_by=publicationDate&sort_order=${order}&limit=10`);
+      expect(byBrand.wines.map((w) => w.id)).toEqual(byDefault.wines.map((w) => w.id));
+    }
+  });
+
+  it('keep the four sorts the app offers', async () => {
+    for (const sort of ['rating', 'price', 'vintage', 'publicationDate']) {
+      const sorted = await search(`sort_by=${sort}&sort_order=asc&limit=10`);
+      const byDefault = await search('limit=10');
+      expect(sorted.wines.map((w) => w.id)).not.toEqual(byDefault.wines.map((w) => w.id));
+    }
+  });
+
+  it('still treat the relevance alias as rating', async () => {
+    const alias = await search('sort_by=relevance&limit=5');
+    const rating = await search('sort_by=rating&limit=5');
+    expect(alias.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
+  });
+});

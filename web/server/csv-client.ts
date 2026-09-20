@@ -126,7 +126,6 @@ export class CSVClient {
       varietalLabel: toTitleCase(varietalLabel),
       varietyStyle: toTitleCase(varietyStyle),
       publicationDate: (row['Date'] ?? '').trim(),
-      tastingDate: '',
       setting: '',
       purchasedProvided: '',
       temp: '',

@@ -16,7 +16,6 @@ export interface Wine {
    *  fixtures written before this field existed don't carry it. */
   varietalLabel?: string;
   varietyStyle: string;
-  tastingDate: string;
   publicationDate: string;
   setting: string;
   purchasedProvided: string;
