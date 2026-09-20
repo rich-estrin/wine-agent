@@ -28,6 +28,14 @@ const WINE_AGENT_INDEX_VERSION = 1;
 const WINE_AGENT_REBUILD_BATCH = 500;
 
 /**
+ * How many mid-rebuild edits the catch-up list will hold. Past this the list
+ * stops growing and the nightly rebuild becomes the backstop — which is
+ * already its job for anything that bypasses the post hooks. Reaching it takes
+ * thousands of editor saves inside one rebuild window.
+ */
+const WINE_AGENT_REBUILD_DIRTY_MAX = 5000;
+
+/**
  * The index table name.
  *
  * @return string Prefixed table name.
@@ -306,6 +314,67 @@ function wine_agent_index_write_rows( array $index_rows, ?string $table = null )
 }
 
 /**
+ * Whether a rebuild is part-way through.
+ *
+ * A stored offset is the marker: it exists from the moment a rebuild builds
+ * its staging table until the pass that swaps it in deletes it.
+ *
+ * @return bool
+ */
+function wine_agent_index_rebuild_in_progress(): bool {
+	return null !== get_option( 'wine_agent_index_rebuild_offset', null );
+}
+
+/**
+ * Note a review whose index row changed while a rebuild was in flight.
+ *
+ * Incremental upserts write to the live table, but a rebuild accumulates into
+ * a staging table and then RENAMEs it over the live one. Without this list,
+ * anything saved between the first pass and the swap is written to the table
+ * about to be discarded, and disappears from search until the next nightly
+ * rebuild — up to a day after the editor watched it save.
+ *
+ * @param int $post_id Review post ID.
+ * @return void
+ */
+function wine_agent_index_note_dirty( int $post_id ): void {
+	if ( ! wine_agent_index_rebuild_in_progress() ) {
+		return;
+	}
+	$dirty = get_option( 'wine_agent_index_rebuild_dirty', [] );
+	if ( ! is_array( $dirty ) ) {
+		$dirty = [];
+	}
+	if ( count( $dirty ) >= WINE_AGENT_REBUILD_DIRTY_MAX || in_array( $post_id, $dirty, true ) ) {
+		return;
+	}
+	$dirty[] = $post_id;
+	update_option( 'wine_agent_index_rebuild_dirty', $dirty, false );
+}
+
+/**
+ * Re-apply the noted edits to the freshly swapped-in index.
+ *
+ * Runs after the RENAME, never before: applied to the staging table it would
+ * be writing to a table that is about to become `_old`. Each id goes back
+ * through the ordinary upsert, which re-reads the post and drops the row if
+ * the review no longer qualifies — so unpublishes and deletes replay as
+ * correctly as saves do.
+ *
+ * @return void
+ */
+function wine_agent_index_replay_dirty(): void {
+	$dirty = get_option( 'wine_agent_index_rebuild_dirty', [] );
+	delete_option( 'wine_agent_index_rebuild_dirty' );
+	if ( ! is_array( $dirty ) ) {
+		return;
+	}
+	foreach ( $dirty as $post_id ) {
+		wine_agent_index_upsert_post( (int) $post_id );
+	}
+}
+
+/**
  * Re-index a single review, or drop it from the index when it no longer
  * qualifies (unpublished, deleted, or carrying no meta).
  *
@@ -316,6 +385,8 @@ function wine_agent_index_upsert_post( int $post_id ): void {
 	if ( ! wine_agent_index_table_exists() ) {
 		return;
 	}
+
+	wine_agent_index_note_dirty( $post_id );
 
 	$rows = wine_agent_fetch_review_rows( [ 'ids' => [ $post_id ] ] );
 	if ( empty( $rows ) ) {
@@ -339,6 +410,7 @@ function wine_agent_index_delete_post( int $post_id ): void {
 	if ( ! wine_agent_index_table_exists() ) {
 		return;
 	}
+	wine_agent_index_note_dirty( $post_id );
 	$wpdb->delete( wine_agent_index_table(), [ 'id' => $post_id ], [ '%d' ] );
 }
 
@@ -457,6 +529,9 @@ function wine_agent_index_rebuild_step_locked( int $budget_seconds ): array {
 	if ( 0 === $offset ) {
 		$wpdb->query( "DROP TABLE IF EXISTS $staging" );
 		$wpdb->query( 'CREATE TABLE ' . $staging . ' LIKE ' . wine_agent_index_table() );
+		// Store the offset even at zero: its presence is what tells the post
+		// hooks a rebuild is in flight and their writes need noting for catch-up.
+		update_option( 'wine_agent_index_rebuild_offset', 0, false );
 	}
 
 	$total = wine_agent_index_published_count();
@@ -498,7 +573,10 @@ function wine_agent_index_rebuild_step_locked( int $budget_seconds ): array {
 
 		update_option( 'wine_agent_index_version', WINE_AGENT_INDEX_VERSION, false );
 		update_option( 'wine_agent_index_built_at', gmdate( 'c' ), false );
+		// Clear the in-progress marker before replaying, so the replay's own
+		// writes aren't noted as a fresh round of catch-up.
 		delete_option( 'wine_agent_index_rebuild_offset' );
+		wine_agent_index_replay_dirty();
 	}
 
 	return [

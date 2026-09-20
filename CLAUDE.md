@@ -92,6 +92,10 @@ direct SQL edit, a restored backup.
 Rebuilds run in time-budgeted slices resuming from a stored offset (so a large
 site doesn't hit `max_execution_time`), write into a staging table, and swap it
 in with a single `RENAME TABLE` — readers never see a half-built index.
+Incremental upserts write to the *live* table, so anything saved while a
+rebuild is in flight would be discarded by that swap; the post hooks note those
+ids in `wine_agent_index_rebuild_dirty` and the pass that swaps replays them
+onto the new table straight afterwards.
 Settings → Wine Agent API shows index status and a Rebuild button.
 - **Always bump the version** in the plugin header and repackage the zip after any change:
   ```bash
