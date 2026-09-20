@@ -4,6 +4,7 @@ import type { Server } from 'http';
 import { createApp } from './app.js';
 import { FixtureClient } from './fixture-client.js';
 import { readFileSync } from 'fs';
+import { makeWine } from '../test/factory.js';
 
 // Real routes, real fixture data, over real HTTP on an ephemeral port — the
 // same path the browser takes, without depending on WordPress or a CSV export.
@@ -103,12 +104,6 @@ describe('GET /api/search', () => {
     const noQuery = await search('limit=5');
     const dated = await search('sort_by=publicationDate&limit=5');
     expect(noQuery.wines.map((w) => w.id)).toEqual(dated.wines.map((w) => w.id));
-  });
-
-  it('treats a legacy sort_by=relevance as rating', async () => {
-    const legacy = await search('sort_by=relevance&limit=5');
-    const rating = await search('sort_by=rating&limit=5');
-    expect(legacy.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
   });
 
   it('narrows on a case-production range', async () => {
@@ -240,110 +235,95 @@ describe('GET /api/meta — faceting', () => {
   });
 });
 
-describe('POST /api/webhook/review', () => {
-  it('upserts a wine and refreshes the facet lists', async () => {
-    const { server: s, base: b } = await startApp();
-    try {
-      const before = await (await fetch(`${b}/api/meta`)).json();
-      expect(before.varietals).not.toContain('Zinfandel');
+// ─── Request bounds ───────────────────────────────────────────────────────────
+// /search and /meta are public and unauthenticated on the production site, so
+// every number and every key in the query string is attacker-controlled.
 
-      const res = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'upsert',
-          review: { id: 9001, brand_name: 'New Winery', wine_name: 'Zin', variety: 'Zinfandel',
-                    wine_type: 'Red', price: '33', rating: '90', vintage: '2022',
-                    appellation: 'Columbia Valley', region: 'Tri-Cities (WA)',
-                    state_or_province: 'Washington', tasting_note: 'Brambly.' },
-        }),
+describe('GET /api/search request bounds', () => {
+  // 150 wines, so the 100-row cap is observable — the committed fixture is
+  // smaller than the cap and could never show it.
+  const many = {
+    wines: Array.from({ length: 150 }, (_, i) =>
+      makeWine({ id: `bulk-${i}`, brandName: `Winery ${i}`, rating: '90' }),
+    ),
+    getAllWines() { return this.wines; },
+  };
+
+  let bulkServer: Server;
+  let bulkBase: string;
+
+  beforeAll(async () => {
+    const app = createApp(many);
+    await new Promise<void>((resolve) => {
+      bulkServer = app.listen(0, () => {
+        const { port } = bulkServer.address() as AddressInfo;
+        bulkBase = `http://127.0.0.1:${port}`;
+        resolve();
       });
-      expect(res.status).toBe(200);
-
-      const after = await (await fetch(`${b}/api/meta`)).json();
-      expect(after.varietals).toContain('Zinfandel');
-    } finally {
-      await close(s);
-    }
-  });
-
-  // casesMax is remembered across meta requests rather than rescanned per
-  // filter set, so the webhook has to drop it along with the facet lists.
-  it('re-scans the highest case production after a publish', async () => {
-    const { server: s, base: b } = await startApp();
-    try {
-      const before = await (await fetch(`${b}/api/meta`)).json();
-
-      const res = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'upsert',
-          review: { id: 9002, brand_name: 'Big Lot', wine_name: 'Everyday Red', variety: 'Merlot',
-                    wine_type: 'Red', price: '12', rating: '86', vintage: '2023',
-                    appellation: 'Columbia Valley', region: 'Tri-Cities (WA)',
-                    state_or_province: 'Washington', tasting_note: 'Plummy.',
-                    cases: String(before.casesMax + 1000) },
-        }),
-      });
-      expect(res.status).toBe(200);
-
-      const after = await (await fetch(`${b}/api/meta`)).json();
-      expect(after.casesMax).toBe(before.casesMax + 1000);
-    } finally {
-      await close(s);
-    }
-  });
-
-  it('deletes a wine', async () => {
-    const { server: s, base: b } = await startApp();
-    try {
-      const before = await (await fetch(`${b}/api/search?limit=1`)).json();
-      const res = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', review: { id: 1 } }),
-      });
-      expect(res.status).toBe(200);
-      const after = await (await fetch(`${b}/api/search?limit=1`)).json();
-      expect(after.total).toBe(before.total - 1);
-    } finally {
-      await close(s);
-    }
-  });
-
-  it('rejects a request with no action or id', async () => {
-    const res = await fetch(`${base}/api/webhook/review`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'upsert' }),
     });
-    expect(res.status).toBe(400);
+  });
+  afterAll(() => close(bulkServer));
+
+  const bulkSearch = async (qs: string) => {
+    const res = await fetch(`${bulkBase}/api/search?${qs}`);
+    expect(res.status).toBe(200);
+    return res.json() as Promise<{ wines: { id: string }[]; total: number }>;
+  };
+
+  it('caps the page size at 100 rows', async () => {
+    const { wines, total } = await bulkSearch('limit=100000');
+    expect(wines).toHaveLength(100);
+    // The match count is the real one — only the page is capped.
+    expect(total).toBe(150);
+  });
+
+  it('treats a zero or negative limit as a single row', async () => {
+    expect((await bulkSearch('limit=0')).wines).toHaveLength(1);
+    expect((await bulkSearch('limit=-5')).wines).toHaveLength(1);
+  });
+
+  it('treats a negative offset as zero', async () => {
+    const negative = await bulkSearch('limit=5&offset=-10');
+    const zero = await bulkSearch('limit=5&offset=0');
+    expect(negative.wines.map((w) => w.id)).toEqual(zero.wines.map((w) => w.id));
   });
 });
 
-describe('authentication', () => {
-  it('rejects unkeyed requests when a secret is configured', async () => {
-    const { server: s, base: b } = await startApp('s3cret');
-    try {
-      expect((await fetch(`${b}/api/search`)).status).toBe(401);
-      expect((await fetch(`${b}/api/meta`)).status).toBe(401);
+describe('unrecognised filter keys', () => {
+  it('are ignored by /api/search rather than emptying the results', async () => {
+    const plain = await search('limit=5');
+    const withJunk = await search('limit=5&brandName=ecole&utm_source=newsletter');
+    expect(withJunk.total).toBe(plain.total);
+    expect(withJunk.wines.map((w) => w.id)).toEqual(plain.wines.map((w) => w.id));
+  });
 
-      const ok = await fetch(`${b}/api/search`, { headers: { 'x-wine-agent-key': 's3cret' } });
-      expect(ok.status).toBe(200);
+  it('are ignored by /api/meta rather than emptying the facets', async () => {
+    expect(await meta('reviewer=RE')).toEqual(await meta());
+  });
 
-      const hookNoKey = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', review: { id: 1 } }),
-      });
-      expect(hookNoKey.status).toBe(401);
-    } finally {
-      await close(s);
+  it('do not disturb the filters that are recognised', async () => {
+    const red = await search('type=Red&limit=200');
+    const redWithJunk = await search('type=Red&limit=200&brandName=nonesuch');
+    expect(redWithJunk.total).toBe(red.total);
+    expect(red.total).toBeGreaterThan(0);
+  });
+});
+
+describe('unrecognised sorts', () => {
+  // The field falls back; the requested direction is still honoured.
+  it('fall back to the default field rather than sorting on an arbitrary one', async () => {
+    for (const order of ['asc', 'desc']) {
+      const byBrand = await search(`sort_by=brandName&sort_order=${order}&limit=10`);
+      const byDefault = await search(`sort_by=publicationDate&sort_order=${order}&limit=10`);
+      expect(byBrand.wines.map((w) => w.id)).toEqual(byDefault.wines.map((w) => w.id));
     }
   });
 
-  it('allows everything when no secret is configured', async () => {
-    expect((await fetch(`${base}/api/search`)).status).toBe(200);
+  it('keep the four sorts the app offers', async () => {
+    for (const sort of ['rating', 'price', 'vintage', 'publicationDate']) {
+      const sorted = await search(`sort_by=${sort}&sort_order=asc&limit=10`);
+      const byDefault = await search('limit=10');
+      expect(sorted.wines.map((w) => w.id)).not.toEqual(byDefault.wines.map((w) => w.id));
+    }
   });
 });

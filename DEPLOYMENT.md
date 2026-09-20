@@ -62,7 +62,18 @@ full.
 
 ## Verify
 
-Open the page with the `[wine-search]` shortcode. Search with accents
+First confirm the upload actually landed. Open the page with the shortcode and
+check the browser console — the app logs its version on startup:
+
+```
+wine-agent-api 2.41.0
+```
+
+That number comes from the plugin header of the build actually serving the
+page. A stale version there means the upload did not replace the old files,
+whatever WP Admin claims.
+
+Then, on the same page. Search with accents
 ("semillon") and apostrophes ("lecole"), tick Search tasting notes, exercise each
 filter, and confirm the dropdowns narrow each other. Save a review in the editor
 and confirm it appears in search immediately.

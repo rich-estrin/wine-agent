@@ -1,6 +1,7 @@
 <?php
 /**
- * Tests the rebuild lock that serializes index rebuild passes.
+ * Tests the index rebuild: the lock that serializes passes, and the catch-up
+ * that keeps edits made during a rebuild from being swapped away.
  *
  * A rebuild has two independent drivers — the admin Rebuild button and the cron
  * continuation chain — and before the lock they could overlap on one shared
@@ -16,7 +17,7 @@
  * Unlike plugin-load-test.php this one does stub $wpdb, because the lock is
  * nothing but its database calls.
  *
- * Usage: php scripts/plugin-rebuild-lock-test.php
+ * Usage: php scripts/plugin-rebuild-test.php
  */
 
 define( 'ABSPATH', __DIR__ . '/../' );
@@ -66,6 +67,12 @@ class Stub_WPDB {
 
 	/** Whether GET_LOCK should succeed. */
 	public $lock_granted = true;
+	/** What COUNT(*) over published reviews answers. */
+	public $published = '18355';
+	/** Whether the index table appears to exist. */
+	public $table_exists = true;
+	/** Rows wine_agent_fetch_review_rows() should return. */
+	public $review_rows = [];
 	/** Substring of a statement that should throw when run. */
 	public $explode_on = null;
 
@@ -84,8 +91,11 @@ class Stub_WPDB {
 		if ( false !== strpos( $sql, 'GET_LOCK' ) ) {
 			return $this->lock_granted ? '1' : '0';
 		}
+		if ( false !== strpos( $sql, 'SHOW TABLES' ) ) {
+			return $this->table_exists ? 'wp_wine_agent_index' : null;
+		}
 		if ( false !== strpos( $sql, 'COUNT' ) ) {
-			return '18355';
+			return $this->published;
 		}
 		return null;
 	}
@@ -100,7 +110,12 @@ class Stub_WPDB {
 
 	public function get_results( $sql, $mode = null ) {
 		$this->statements[] = $sql;
-		return [];
+		return $this->review_rows;
+	}
+
+	public function delete( $table, $where, $formats = null ) {
+		$this->statements[] = 'DELETE FROM ' . $table . ' WHERE id = ' . $where['id'];
+		return 1;
 	}
 
 	public function get_charset_collate() {
@@ -214,14 +229,88 @@ expect(
 	'expected exactly one RELEASE_LOCK per pass'
 );
 
+// ── 5. Edits made during a rebuild survive the swap ──────────────────────────
+//
+// Incremental upserts write to the LIVE table, but a multi-pass rebuild
+// accumulates into a staging table and then RENAMEs it over the live one. Any
+// review saved between the first pass and the swap was therefore written to a
+// table that was about to be thrown away, and vanished from search until the
+// next nightly rebuild — up to 24 hours for an edit the editor watched save.
+
+$wpdb->reset();
+$wpdb->lock_granted = true;
+$wpdb->explode_on   = null;
+$GLOBALS['stub_options'] = [];
+
+// A rebuild is part-way through: pass one has run and stored its offset.
+update_option( 'wine_agent_index_rebuild_offset', 500 );
+
+// An editor saves a review while that rebuild is in flight.
+wine_agent_index_upsert_post( 4242 );
+
+$dirty = get_option( 'wine_agent_index_rebuild_dirty', [] );
+expect(
+	in_array( 4242, array_map( 'intval', (array) $dirty ), true ),
+	'a review saved during a rebuild was not recorded for catch-up'
+);
+
+// The rebuild now finishes and swaps the staging table in.
+$wpdb->reset();
+$wpdb->published = '500';
+$state = wine_agent_index_rebuild_step( 20 );
+
+expect( ! empty( $state['done'] ), 'the final pass did not report done' );
+expect( 1 === count( $wpdb->matching( 'RENAME TABLE' ) ), 'the final pass did not swap the staging table in' );
+
+$replayed = $wpdb->matching( '4242' );
+expect(
+	! empty( $replayed ),
+	'the review saved mid-rebuild was not re-indexed after the swap — it is gone from search until the next nightly'
+);
+
+// The replay must land AFTER the rename, or it writes to the table being
+// discarded and achieves nothing.
+$order       = $wpdb->statements;
+$rename_at   = null;
+$replay_at   = null;
+foreach ( $order as $i => $sql ) {
+	if ( null === $rename_at && false !== strpos( $sql, 'RENAME TABLE' ) ) {
+		$rename_at = $i;
+	}
+	if ( null === $replay_at && false !== strpos( $sql, '4242' ) ) {
+		$replay_at = $i;
+	}
+}
+expect(
+	null !== $rename_at && null !== $replay_at && $replay_at > $rename_at,
+	'the catch-up ran before the swap, so it wrote to the table being discarded'
+);
+
+expect(
+	empty( get_option( 'wine_agent_index_rebuild_dirty', [] ) ),
+	'the catch-up list was not cleared after being replayed'
+);
+
+// ── 6. Nothing is recorded when no rebuild is running ────────────────────────
+//
+// The list exists only to bridge a rebuild. Recording every ordinary save
+// would grow an option on every edit, forever.
+
+$GLOBALS['stub_options'] = [];
+wine_agent_index_upsert_post( 77 );
+expect(
+	empty( get_option( 'wine_agent_index_rebuild_dirty', [] ) ),
+	'an ordinary save outside a rebuild was recorded for catch-up'
+);
+
 // ── Report ───────────────────────────────────────────────────────────────────
 
 if ( empty( $GLOBALS['failures'] ) ) {
-	echo "rebuild lock test: ok\n";
+	echo "rebuild test: ok\n";
 	exit( 0 );
 }
 
-echo 'rebuild lock test: ' . count( $GLOBALS['failures'] ) . " failure(s)\n";
+echo 'rebuild test: ' . count( $GLOBALS['failures'] ) . " failure(s)\n";
 foreach ( $GLOBALS['failures'] as $failure ) {
 	echo "  - $failure\n";
 }

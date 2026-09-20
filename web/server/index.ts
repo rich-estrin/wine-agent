@@ -31,9 +31,10 @@ async function start() {
   const { client, label } = selectDataClient();
   await client.initialize();
 
-  // Fixture mode is for local work and tests, so it deliberately ignores
-  // WEBHOOK_SECRET — otherwise a stray .env would 401 every request.
-  const secret = process.env.WINE_FIXTURE ? undefined : process.env.WEBHOOK_SECRET;
+  // The key /api/search and /api/meta require, which the Vite dev proxy sends
+  // as X-Wine-Agent-Key. Fixture mode deliberately ignores it — otherwise a
+  // stray .env would 401 every request in the mode meant to need no setup.
+  const secret = process.env.WINE_FIXTURE ? undefined : process.env.WINE_AGENT_KEY;
   const app = createApp(client, { secret });
 
   console.log(`Data source: ${label}`);

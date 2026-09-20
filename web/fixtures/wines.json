@@ -12,9 +12,7 @@
       "region": "Walla Walla Valley (WA/OR)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -26,7 +24,8 @@
       "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "2",
@@ -40,9 +39,7 @@
       "region": "Ancient Lakes (WA)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -54,7 +51,8 @@
       "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "3",
@@ -68,9 +66,7 @@
       "region": "Tri-Cities (WA)",
       "type": "White",
       "mainVarietal": "Sémillon",
-      "varietalLabel": "Sémillon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -82,7 +78,8 @@
       "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Sémillon"
     },
     {
       "id": "4",
@@ -96,9 +93,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Pinot Noir",
-      "varietalLabel": "Pinot Noir",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -110,7 +105,8 @@
       "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Noir"
     },
     {
       "id": "5",
@@ -124,9 +120,7 @@
       "region": "Walla Walla Valley (WA/OR)",
       "type": "Red",
       "mainVarietal": "Carménère",
-      "varietalLabel": "Carménère",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -138,7 +132,8 @@
       "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Carménère"
     },
     {
       "id": "6",
@@ -152,9 +147,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Grenache",
-      "varietalLabel": "Grenache",
       "varietyStyle": "Rhône-Style Blend",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -166,7 +159,8 @@
       "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Grenache"
     },
     {
       "id": "7",
@@ -180,9 +174,7 @@
       "region": "Walla Walla Valley (WA/OR)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -194,7 +186,8 @@
       "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "8",
@@ -208,9 +201,7 @@
       "region": "Sunnyslope (ID)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -222,7 +213,8 @@
       "cases": "150",
       "stateProvince": "Idaho",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "9",
@@ -236,9 +228,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -250,7 +240,8 @@
       "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "10",
@@ -264,9 +255,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -278,7 +267,8 @@
       "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "11",
@@ -292,9 +282,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -306,7 +294,8 @@
       "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "12",
@@ -320,9 +309,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -334,7 +321,8 @@
       "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "13",
@@ -348,9 +336,7 @@
       "region": "Walla Walla Valley (WA/OR)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -362,7 +348,8 @@
       "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "14",
@@ -376,9 +363,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -390,7 +375,8 @@
       "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "15",
@@ -404,9 +390,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -418,7 +402,8 @@
       "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "16",
@@ -432,9 +417,7 @@
       "region": "Woodinville (WA)",
       "type": "White",
       "mainVarietal": "Chardonnay",
-      "varietalLabel": "Chardonnay",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -446,7 +429,8 @@
       "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Chardonnay"
     },
     {
       "id": "17",
@@ -460,9 +444,7 @@
       "region": "Ancient Lakes (WA)",
       "type": "White",
       "mainVarietal": "Riesling",
-      "varietalLabel": "Riesling",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -474,7 +456,8 @@
       "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Riesling"
     },
     {
       "id": "18",
@@ -488,9 +471,7 @@
       "region": "Gorge (WA)",
       "type": "Rosé",
       "mainVarietal": "Cabernet Franc",
-      "varietalLabel": "Cabernet Franc",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -502,7 +483,8 @@
       "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Franc"
     },
     {
       "id": "19",
@@ -516,9 +498,7 @@
       "region": "Seattle & NW (WA)",
       "type": "White",
       "mainVarietal": "Siegerrebe",
-      "varietalLabel": "Siegerrebe",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -530,7 +510,8 @@
       "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Siegerrebe"
     },
     {
       "id": "20",
@@ -544,9 +525,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Cabernet Franc",
-      "varietalLabel": "Cabernet Franc",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -558,7 +537,8 @@
       "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Franc"
     },
     {
       "id": "21",
@@ -572,9 +552,7 @@
       "region": "Yakima (WA)",
       "type": "White",
       "mainVarietal": "Cabernet Franc",
-      "varietalLabel": "Cabernet Franc",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -586,7 +564,8 @@
       "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Franc"
     },
     {
       "id": "22",
@@ -600,9 +579,7 @@
       "region": "Willamette (OR)",
       "type": "Sparkling",
       "mainVarietal": "Pinot Noir",
-      "varietalLabel": "Pinot Noir",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -614,7 +591,8 @@
       "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Noir"
     },
     {
       "id": "23",
@@ -628,9 +606,7 @@
       "region": "Imported (Other)",
       "type": "Red",
       "mainVarietal": "Tempranillo",
-      "varietalLabel": "Tempranillo",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -642,7 +618,8 @@
       "cases": "2500",
       "stateProvince": "America",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Tempranillo"
     },
     {
       "id": "24",
@@ -656,9 +633,7 @@
       "region": "Imported (Other)",
       "type": "Red",
       "mainVarietal": "Sangiovese",
-      "varietalLabel": "Sangiovese",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -670,7 +645,8 @@
       "cases": "12000",
       "stateProvince": "America",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Sangiovese"
     },
     {
       "id": "25",
@@ -684,9 +660,7 @@
       "region": "Sunnyslope (ID)",
       "type": "White",
       "mainVarietal": "Riesling",
-      "varietalLabel": "Riesling",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -698,7 +672,8 @@
       "cases": "48",
       "stateProvince": "Idaho",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Riesling"
     },
     {
       "id": "26",
@@ -712,9 +687,7 @@
       "region": "Sunnyslope (ID)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -726,7 +699,8 @@
       "cases": "150",
       "stateProvince": "Idaho",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "27",
@@ -740,9 +714,7 @@
       "region": "Okanagan (BC)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -754,7 +726,8 @@
       "cases": "420",
       "stateProvince": "British Columbia",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "28",
@@ -768,9 +741,7 @@
       "region": "Okanagan (BC)",
       "type": "White",
       "mainVarietal": "Pinot Gris",
-      "varietalLabel": "Pinot Gris",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -782,7 +753,8 @@
       "cases": "",
       "stateProvince": "British Columbia",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Gris"
     },
     {
       "id": "29",
@@ -796,9 +768,7 @@
       "region": "Umpqua (OR)",
       "type": "White",
       "mainVarietal": "Albariño",
-      "varietalLabel": "Albariño",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -810,7 +780,8 @@
       "cases": "2500",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Albariño"
     },
     {
       "id": "30",
@@ -824,9 +795,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Pinot Noir",
-      "varietalLabel": "Pinot Noir",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -838,7 +807,8 @@
       "cases": "12000",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Noir"
     },
     {
       "id": "31",
@@ -852,9 +822,7 @@
       "region": "Rogue (OR)",
       "type": "Red",
       "mainVarietal": "Tempranillo",
-      "varietalLabel": "Tempranillo",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -866,7 +834,8 @@
       "cases": "48",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Tempranillo"
     },
     {
       "id": "32",
@@ -880,9 +849,7 @@
       "region": "Umpqua (OR)",
       "type": "Dessert",
       "mainVarietal": "Gewürztraminer",
-      "varietalLabel": "Gewürztraminer",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -894,7 +861,8 @@
       "cases": "150",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Gewürztraminer"
     },
     {
       "id": "33",
@@ -908,9 +876,7 @@
       "region": "Walla Walla Valley (WA/OR)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -922,7 +888,8 @@
       "cases": "420",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "34",
@@ -936,9 +903,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-01-12",
       "setting": "",
       "purchasedProvided": "",
@@ -950,7 +915,8 @@
       "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "35",
@@ -964,9 +930,7 @@
       "region": "Tri-Cities (WA)",
       "type": "White",
       "mainVarietal": "Pinot Gris",
-      "varietalLabel": "Pinot Gris",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-02-12",
       "setting": "",
       "purchasedProvided": "",
@@ -978,7 +942,8 @@
       "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Gris"
     },
     {
       "id": "36",
@@ -992,9 +957,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Rosé",
       "mainVarietal": "Sangiovese",
-      "varietalLabel": "Sangiovese",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-03-12",
       "setting": "",
       "purchasedProvided": "",
@@ -1006,7 +969,8 @@
       "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Sangiovese"
     },
     {
       "id": "37",
@@ -1020,9 +984,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-04-12",
       "setting": "",
       "purchasedProvided": "",
@@ -1034,7 +996,8 @@
       "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "38",
@@ -1048,9 +1011,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-05-12",
       "setting": "",
       "purchasedProvided": "",
@@ -1062,7 +1023,8 @@
       "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "39",
@@ -1076,9 +1038,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-06-12",
       "setting": "",
       "purchasedProvided": "",
@@ -1090,7 +1050,8 @@
       "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "40",
@@ -1104,9 +1065,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2022-01-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1118,7 +1077,8 @@
       "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "41",
@@ -1132,9 +1092,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-02-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1146,7 +1104,8 @@
       "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "42",
@@ -1160,9 +1119,7 @@
       "region": "Tri-Cities (WA)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-03-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1174,7 +1131,8 @@
       "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "43",
@@ -1188,9 +1146,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-02-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1202,7 +1158,8 @@
       "cases": "48",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "44",
@@ -1216,9 +1173,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-03-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1230,7 +1185,8 @@
       "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "45",
@@ -1244,9 +1200,7 @@
       "region": "Yakima (WA)",
       "type": "White",
       "mainVarietal": "Chardonnay",
-      "varietalLabel": "Chardonnay",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-04-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1258,7 +1212,8 @@
       "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Chardonnay"
     },
     {
       "id": "46",
@@ -1272,9 +1227,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-03-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1286,7 +1239,8 @@
       "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "47",
@@ -1300,9 +1254,7 @@
       "region": "Yakima (WA)",
       "type": "White",
       "mainVarietal": "Chardonnay",
-      "varietalLabel": "Chardonnay",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-04-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1314,7 +1266,8 @@
       "cases": "2500",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Chardonnay"
     },
     {
       "id": "48",
@@ -1328,9 +1281,7 @@
       "region": "Yakima (WA)",
       "type": "White",
       "mainVarietal": "Riesling",
-      "varietalLabel": "Riesling",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2022-05-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1342,7 +1293,8 @@
       "cases": "12000",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Riesling"
     },
     {
       "id": "49",
@@ -1356,9 +1308,7 @@
       "region": "Chelan (WA)",
       "type": "White",
       "mainVarietal": "Chardonnay",
-      "varietalLabel": "Chardonnay",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-04-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1370,7 +1320,8 @@
       "cases": "",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Chardonnay"
     },
     {
       "id": "50",
@@ -1384,9 +1335,7 @@
       "region": "Chelan (WA)",
       "type": "White",
       "mainVarietal": "Riesling",
-      "varietalLabel": "Riesling",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2022-05-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1398,7 +1347,8 @@
       "cases": "150",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Riesling"
     },
     {
       "id": "51",
@@ -1412,9 +1362,7 @@
       "region": "Chelan (WA)",
       "type": "Red",
       "mainVarietal": "Pinot Noir",
-      "varietalLabel": "Pinot Noir",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-06-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1426,7 +1374,8 @@
       "cases": "420",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Noir"
     },
     {
       "id": "52",
@@ -1440,9 +1389,7 @@
       "region": "Willamette (OR)",
       "type": "White",
       "mainVarietal": "Riesling",
-      "varietalLabel": "Riesling",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2022-05-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1454,7 +1401,8 @@
       "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Riesling"
     },
     {
       "id": "53",
@@ -1468,9 +1416,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Pinot Noir",
-      "varietalLabel": "Pinot Noir",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-06-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1482,7 +1428,8 @@
       "cases": "2500",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Noir"
     },
     {
       "id": "54",
@@ -1496,9 +1443,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-07-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1510,7 +1455,8 @@
       "cases": "12000",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "55",
@@ -1524,9 +1470,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Pinot Noir",
-      "varietalLabel": "Pinot Noir",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-06-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1538,7 +1482,8 @@
       "cases": "48",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Pinot Noir"
     },
     {
       "id": "56",
@@ -1552,9 +1497,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-07-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1566,7 +1509,8 @@
       "cases": "",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "57",
@@ -1580,9 +1524,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-08-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1594,7 +1536,8 @@
       "cases": "420",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "58",
@@ -1608,9 +1551,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Cabernet Sauvignon",
-      "varietalLabel": "Cabernet Sauvignon",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2024-07-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1622,7 +1563,8 @@
       "cases": "900",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Cabernet Sauvignon"
     },
     {
       "id": "59",
@@ -1636,9 +1578,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-08-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1650,7 +1590,8 @@
       "cases": "2500",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "60",
@@ -1664,9 +1605,7 @@
       "region": "Willamette (OR)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2022-09-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1678,7 +1617,8 @@
       "cases": "12000",
       "stateProvince": "Oregon",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "61",
@@ -1692,9 +1632,7 @@
       "region": "Fraser (BC)",
       "type": "Red",
       "mainVarietal": "Merlot",
-      "varietalLabel": "Merlot",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2025-08-01",
       "setting": "",
       "purchasedProvided": "",
@@ -1706,7 +1644,8 @@
       "cases": "48",
       "stateProvince": "British Columbia",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Merlot"
     },
     {
       "id": "62",
@@ -1720,9 +1659,7 @@
       "region": "Fraser (BC)",
       "type": "Red",
       "mainVarietal": "Syrah",
-      "varietalLabel": "Syrah",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2022-09-02",
       "setting": "",
       "purchasedProvided": "",
@@ -1734,7 +1671,8 @@
       "cases": "150",
       "stateProvince": "British Columbia",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Syrah"
     },
     {
       "id": "63",
@@ -1748,9 +1686,7 @@
       "region": "Fraser (BC)",
       "type": "White",
       "mainVarietal": "Chardonnay",
-      "varietalLabel": "Chardonnay",
       "varietyStyle": "",
-      "tastingDate": "",
       "publicationDate": "2023-01-03",
       "setting": "",
       "purchasedProvided": "",
@@ -1762,10 +1698,11 @@
       "cases": "",
       "stateProvince": "British Columbia",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": "Chardonnay"
     },
     {
-      "id": "9001",
+      "id": "64",
       "brandName": "DeLille",
       "wineName": "Chaleur Estate Red Wine",
       "ava": "Yakima Valley",
@@ -1776,9 +1713,7 @@
       "region": "Yakima (WA)",
       "type": "Red",
       "mainVarietal": "Bordeaux-Style Red Blend",
-      "varietalLabel": "",
       "varietyStyle": "Bordeaux-Style Red Blend",
-      "tastingDate": "",
       "publicationDate": "2025-06-15",
       "setting": "",
       "purchasedProvided": "",
@@ -1787,10 +1722,11 @@
       "specialDesignation": "",
       "alcohol": "14.1%",
       "closure": "Cork",
-      "cases": "12000",
+      "cases": "900",
       "stateProvince": "Washington",
       "source": "Sample",
-      "reviewer": "A. Taster"
+      "reviewer": "A. Taster",
+      "varietalLabel": ""
     }
   ]
 }

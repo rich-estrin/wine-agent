@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: env.API_PROXY_TARGET || 'http://localhost:3001',
           changeOrigin: true,
-          headers: env.WEBHOOK_SECRET
-            ? { 'x-wine-agent-key': env.WEBHOOK_SECRET }
+          headers: env.WINE_AGENT_KEY
+            ? { 'x-wine-agent-key': env.WINE_AGENT_KEY }
             : {},
         },
       },

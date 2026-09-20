@@ -30,7 +30,7 @@ The React app calls `window.__WINE_AGENT_API_BASE__` (injected by the shortcode)
 wine-agent/
 ├── web/
 │   ├── server/             # Express API server (port 3001)
-│   │   ├── app.ts          # Routes: /api/search, /api/meta, /api/webhook/review
+│   │   ├── app.ts          # Routes: /api/search, /api/meta
 │   │   ├── index.ts        # Picks a data source and listens
 │   │   ├── wine-search.ts  # Search and filter over the loaded wines
 │   │   ├── csv-client.ts   # Loads WordPress CSV export → wines.json cache
@@ -42,7 +42,7 @@ wine-agent/
 ├── wordpress-plugin/
 │   ├── wine-agent-api.php  # Plugin: shortcode, REST endpoints, index lifecycle
 │   ├── includes/           # Native PHP search core (ports of the Node pipeline)
-│   └── wine-agent-api-<version>.zip  # Deployable zip (bundles built JS/CSS)
+│   └── wine-agent-api-<version>.zip  # Deployable zip (gitignored; built by /deploy)
 ├── DEPLOYMENT.md           # Deploy procedure
 └── docs/production-rollout.md  # First-time production install runbook
 ```
@@ -82,7 +82,7 @@ cd web && npm install
 
 cat > .env <<EOF
 CSV_PATH=/path/to/your/wordpress-export.csv
-WEBHOOK_SECRET=any-local-secret
+WINE_AGENT_KEY=any-local-secret
 EOF
 
 npm run dev:all

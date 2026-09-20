@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { searchWines, filterWines, matchesFilter, getWineDetails } from './wine-search.js';
+import { searchWines, filterWines, matchesFilter } from './wine-search.js';
 import { makeWine, ids } from '../test/factory.js';
 import type { Wine } from '../src/types.js';
 
@@ -306,46 +306,27 @@ describe('matchesFilter', () => {
   const wine = makeWine({ price: '$40', rating: '92', vintage: '2020',
                           publicationDate: '2025-06-15', brandName: 'Gård Vintners' });
 
-  it('supports comparison operators on numeric fields', () => {
-    expect(matchesFilter(wine, 'price', '>30')).toBe(true);
-    expect(matchesFilter(wine, 'price', '>50')).toBe(false);
-    expect(matchesFilter(wine, 'rating', '>=92')).toBe(true);
-    expect(matchesFilter(wine, 'vintage', '<2019')).toBe(false);
-  });
-
   it('supports date comparison, which is how the Review Date facet works', () => {
     expect(matchesFilter(wine, 'publicationDate', '>=2025-01-01')).toBe(true);
     expect(matchesFilter(wine, 'publicationDate', '>=2026-01-01')).toBe(false);
   });
 
-  it('excludes wines with no value rather than treating them as zero', () => {
-    const noPrice = makeWine({ price: 'N/A', vintage: '', rating: '' });
-    expect(matchesFilter(noPrice, 'price', '<10')).toBe(false);
-    expect(matchesFilter(noPrice, 'vintage', '<2000')).toBe(false);
-    expect(matchesFilter(noPrice, 'rating', '<50')).toBe(false);
+  it('excludes a wine with no review date rather than treating it as the epoch', () => {
+    const undated = makeWine({ publicationDate: '' });
+    expect(matchesFilter(undated, 'publicationDate', '>=2000-01-01')).toBe(false);
   });
 
-  it('falls back to accent-insensitive substring on free-text fields', () => {
-    expect(matchesFilter(wine, 'brandName', 'gard')).toBe(true);
+  // The operator syntax on price/rating/vintage/cases, and substring matching
+  // on arbitrary fields, were an agent-era query language no control sends.
+  // Both endpoints now drop any key outside the allowlist before this is called.
+  it('ignores the keys the API no longer accepts', () => {
+    for (const [key, value] of [
+      ['price', '>30'], ['rating', '>=92'], ['vintage', '<2019'],
+      ['cases', '>100'], ['tastingDate', '>2020-01-01'],
+      ['brandName', 'gard'], ['reviewer', 'RE'], ['nonsense', 'x'],
+    ]) {
+      expect(matchesFilter(wine, key, value)).toBe(false);
+    }
   });
 
-  it('is false for a field the Wine type does not have', () => {
-    expect(matchesFilter(wine, 'nonsense', 'x')).toBe(false);
-  });
-});
-
-describe('getWineDetails', () => {
-  it('finds by partial name across brand and wine name', () => {
-    expect(ids(getWineDetails(wines, { wine_name: 'Old Vines' }))).toEqual(['woodward']);
-    expect(ids(getWineDetails(wines, { wine_name: 'Woodward Canyon Old Vines' }))).toEqual(['woodward']);
-  });
-
-  it('folds accents', () => {
-    expect(ids(getWineDetails(wines, { wine_name: 'semillon' }))).toEqual(['semillon']);
-  });
-
-  it('honours exact_match', () => {
-    expect(getWineDetails(wines, { wine_name: 'Old', exact_match: true })).toHaveLength(0);
-    expect(ids(getWineDetails(wines, { wine_name: 'Old Vines', exact_match: true }))).toEqual(['woodward']);
-  });
 });

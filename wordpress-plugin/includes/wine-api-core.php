@@ -17,119 +17,6 @@ require_once __DIR__ . '/wine-map.php';
 require_once __DIR__ . '/wine-query.php';
 
 /**
- * Whether a wine satisfies one filter — the PHP port of `matchesFilter`.
- *
- * The SQL builder handles every filter the frontend actually sends; this is
- * the fallback for unindexed fields, and doubles as the reference definition
- * of what those filters mean.
- *
- * @param array  $wine         Wine array.
- * @param string $key          Filter key.
- * @param string $filter_value Filter value.
- * @return bool Whether the wine matches.
- */
-function wine_agent_matches_filter( array $wine, string $key, string $filter_value ): bool {
-	$rating = (string) ( $wine['rating'] ?? '' );
-
-	if ( 'scoreMin' === $key || 'scoreMax' === $key ) {
-		$n     = wine_agent_js_parse_float( $rating );
-		$bound = wine_agent_js_parse_float( $filter_value );
-		if ( false !== strpos( $rating, '*' ) || null === $n || null === $bound ) {
-			return false;
-		}
-		return 'scoreMin' === $key ? $n >= $bound : $n <= $bound;
-	}
-
-	if ( 'priceMin' === $key || 'priceMax' === $key ) {
-		$n     = wine_agent_parse_price_or_null( (string) ( $wine['price'] ?? '' ) );
-		$bound = wine_agent_js_parse_float( $filter_value );
-		if ( null === $n || null === $bound ) {
-			return false;
-		}
-		return 'priceMin' === $key ? $n >= $bound : $n <= $bound;
-	}
-
-	if ( 'casesMin' === $key || 'casesMax' === $key ) {
-		$n     = wine_agent_parse_cases_or_null( (string) ( $wine['cases'] ?? '' ) );
-		$bound = wine_agent_js_parse_float( $filter_value );
-		if ( null === $n || null === $bound ) {
-			return false;
-		}
-		return 'casesMin' === $key ? $n >= $bound : $n <= $bound;
-	}
-
-	if ( 'ava' === $key ) {
-		$allowed = array_map(
-			function ( $s ) {
-				return wine_agent_fold( trim( $s ) );
-			},
-			explode( ',', $filter_value )
-		);
-		return in_array( wine_agent_fold( (string) ( $wine['ava'] ?? '' ) ), $allowed, true );
-	}
-
-	if ( in_array( $key, wine_agent_exact_match_fields(), true ) ) {
-		$wine_value = wine_agent_fold( (string) ( $wine[ $key ] ?? '' ) );
-		$allowed    = [];
-		foreach ( explode( ',', $filter_value ) as $s ) {
-			$folded = wine_agent_fold( trim( $s ) );
-			if ( '' !== $folded ) {
-				$allowed[] = $folded;
-			}
-		}
-		return in_array( $wine_value, $allowed, true );
-	}
-
-	if ( 'vintageMin' === $key || 'vintageMax' === $key ) {
-		$v     = wine_agent_parse_vintage_or_null( (string) ( $wine['vintage'] ?? '' ) );
-		$bound = wine_agent_js_parse_int( $filter_value );
-		if ( null === $v || null === $bound ) {
-			return false;
-		}
-		return 'vintageMin' === $key ? $v >= $bound : $v <= $bound;
-	}
-
-	if ( ! array_key_exists( $key, $wine ) ) {
-		return false;
-	}
-	$wine_value = (string) $wine[ $key ];
-
-	$parsed   = wine_agent_parse_filter_value( $filter_value );
-	$operator = $parsed['operator'];
-	$value    = $parsed['value'];
-
-	switch ( $key ) {
-		case 'price':
-			$n = wine_agent_parse_price_or_null( $wine_value );
-			$e = wine_agent_js_parse_float( $value );
-			return null !== $n && null !== $e && wine_agent_compare_values( $n, $operator, $e );
-		case 'rating':
-			$n = wine_agent_parse_rating_or_null( $wine_value );
-			$e = wine_agent_js_parse_float( $value );
-			return null !== $n && null !== $e && wine_agent_compare_values( $n, $operator, $e );
-		case 'vintage':
-			$v = wine_agent_parse_vintage_or_null( $wine_value );
-			$e = wine_agent_js_parse_int( $value );
-			return null !== $v && wine_agent_compare_values( $v, $operator, null === $e ? 0 : $e );
-		case 'cases':
-			$n = wine_agent_parse_cases_or_null( $wine_value );
-			$e = wine_agent_js_parse_int( $value );
-			return null !== $n && wine_agent_compare_values( $n, $operator, null === $e ? 0 : $e );
-		case 'publicationDate':
-		case 'tastingDate':
-			$t = wine_agent_parse_date_or_null( $wine_value );
-			$e = wine_agent_parse_date_or_null( $value );
-			return null !== $t && null !== $e && wine_agent_compare_values( $t, $operator, $e );
-		default:
-			// Accent-insensitive substring — "Rhone" finds "Rhône".
-			if ( '=' !== $operator ) {
-				return false;
-			}
-			return false !== strpos( wine_agent_fold( $wine_value ), wine_agent_fold( $value ) );
-	}
-}
-
-/**
  * Run a search and return the page of wines plus the total match count.
  *
  * @param callable $db     Executor: ( string $sql, array $bindings ) => rows.
@@ -137,40 +24,13 @@ function wine_agent_matches_filter( array $wine, string $key, string $filter_val
  * @return array{wines:array,total:int}
  */
 function wine_agent_run_search( callable $db, array $params ): array {
-	$plan = wine_agent_build_search_sql( $params );
-
-	if ( ! $plan['needs_php'] ) {
-		$rows  = $db( $plan['rows_sql'], $plan['rows_bindings'] );
-		$count = $db( $plan['count_sql'], $plan['count_bindings'] );
-		return [
-			'wines' => wine_agent_decode_rows( $rows ),
-			'total' => (int) wine_agent_first_scalar( $count ),
-		];
-	}
-
-	// Fallback: an unindexed filter or an unindexed sort. Materialise the
-	// SQL-matched rows and finish the job in memory, exactly as Node does.
-	$rows  = $db( $plan['rows_sql_all'], $plan['all_bindings'] );
-	$wines = wine_agent_decode_rows( $rows );
-
-	foreach ( $plan['php_filters'] as $key => $value ) {
-		$wines = array_values(
-			array_filter(
-				$wines,
-				function ( $wine ) use ( $key, $value ) {
-					return wine_agent_matches_filter( $wine, (string) $key, (string) $value );
-				}
-			)
-		);
-	}
-
-	$wines = wine_agent_sort_wines( $wines, $plan['sort_by'], $plan['sort_order'] );
-	$total = count( $wines );
-	$page  = array_slice( $wines, $plan['offset'], $plan['limit'] );
+	$plan  = wine_agent_build_search_sql( $params );
+	$rows  = $db( $plan['rows_sql'], $plan['rows_bindings'] );
+	$count = $db( $plan['count_sql'], $plan['count_bindings'] );
 
 	return [
-		'wines' => $page,
-		'total' => $total,
+		'wines' => wine_agent_decode_rows( $rows ),
+		'total' => (int) wine_agent_first_scalar( $count ),
 	];
 }
 

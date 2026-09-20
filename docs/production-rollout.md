@@ -22,7 +22,7 @@ So you know exactly what is being introduced, and what to remove if you back out
 |---|---|
 | Plugin directory | `wp-content/plugins/wine-agent-api/` |
 | Database table | `{prefix}wine_agent_index` (plus `_new` / `_old` transiently during a rebuild) |
-| Options | `wine_agent_search_key`, `wine_agent_index_version`, `wine_agent_index_built_at`, `wine_agent_index_rebuild_offset` |
+| Options | `wine_agent_search_key`, `wine_agent_index_version`, `wine_agent_index_built_at`, `wine_agent_index_rebuild_offset`, `wine_agent_index_rebuild_dirty` |
 | Cron events | `wine_agent_index_nightly` (daily rebuild), `wine_agent_index_continue` (rebuild continuation) |
 | REST routes | `GET /wp-json/wine-agent/v1/search`, `/meta` (public), `/reviews` (API-key protected) |
 | Database lock | A MySQL advisory lock named `wine_agent_rebuild_<db>_<prefix>`, held only while a rebuild pass runs |
@@ -124,7 +124,9 @@ before anything is public.
 
 The work is sliced deliberately so a large site never hits `max_execution_time`.
 Rows are written to a staging table and swapped in atomically at the end, so
-readers never see a half-built index.
+readers never see a half-built index. Reviews saved while a rebuild is running
+are re-applied to the new index immediately after the swap, so an edit made
+mid-rebuild is not lost with the table it was written to.
 
 ### 5.1 Verify the count
 

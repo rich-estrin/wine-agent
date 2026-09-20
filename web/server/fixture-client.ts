@@ -5,8 +5,7 @@ import type { Wine } from '../src/types.js';
  *
  *  Deliberately in-memory only: unlike CSVClient and WPClient this never writes
  *  to `cache/wines.json`, so running in fixture mode can't clobber the cache a
- *  developer built from real WordPress data. Mutations last until the process
- *  exits, which is what a test wants anyway. */
+ *  developer built from real WordPress data. */
 export class FixtureClient {
   private wines: Wine[] = [];
   private fixturePath: string;
@@ -26,15 +25,5 @@ export class FixtureClient {
 
   getAllWines(): Wine[] {
     return this.wines;
-  }
-
-  upsertWine(wine: Wine): void {
-    const idx = this.wines.findIndex((w) => w.id === wine.id);
-    if (idx >= 0) this.wines[idx] = wine;
-    else this.wines.push(wine);
-  }
-
-  removeWine(id: string): void {
-    this.wines = this.wines.filter((w) => w.id !== id);
   }
 }

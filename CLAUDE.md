@@ -50,7 +50,7 @@ WordPress is the source of truth. Two access modes, selected by `web/.env`:
 | **WP CSV export** | `CSV_PATH` | `CSVClient` — parses export, caches to `web/cache/wines.json` |
 | **WP REST API** | `WP_API_URL` + `WP_API_KEY` | `WPClient` — fetches paginated, caches to `web/cache/wines.json` |
 
-The cache is invalidated automatically when the source path/URL changes. Both clients expose identical `getAllWines()`, `upsertWine()`, `removeWine()` methods.
+The cache is invalidated automatically when the source path/URL changes. All three clients expose the same read-only `getAllWines()`; the dataset is loaded once at startup and never mutated while the server runs.
 
 **Production doesn't use these.** The plugin serves search from the WordPress database (see below); the Node server in `web/server/` is the reference implementation the parity tests check the PHP against, and what `dev:fixture` runs.
 
@@ -67,9 +67,8 @@ The cache is invalidated automatically when the source path/URL changes. Both cl
 
 `/wp-json/wine-agent/v1/search` and `/meta` are answered from the
 `{prefix}wine_agent_index` table in this site's own database. There is no
-external search server, no cache sync, and reviews appear as soon as they're
-saved. (Through 2.28 a `proxy` mode forwarded to an EC2 Node API; it was removed
-in 2.29.0.)
+external search server and no cache to sync, so reviews appear as soon as
+they're saved.
 
 `/meta` forwards the active filters, so the dropdowns narrow each other — Wine
 Type narrows Varietal and State narrows Appellation.
@@ -92,6 +91,10 @@ direct SQL edit, a restored backup.
 Rebuilds run in time-budgeted slices resuming from a stored offset (so a large
 site doesn't hit `max_execution_time`), write into a staging table, and swap it
 in with a single `RENAME TABLE` — readers never see a half-built index.
+Incremental upserts write to the *live* table, so anything saved while a
+rebuild is in flight would be discarded by that swap; the post hooks note those
+ids in `wine_agent_index_rebuild_dirty` and the pass that swaps replays them
+onto the new table straight afterwards.
 Settings → Wine Agent API shows index status and a Rebuild button.
 - **Always bump the version** in the plugin header and repackage the zip after any change:
   ```bash
@@ -109,9 +112,15 @@ Settings → Wine Agent API shows index status and a Rebuild button.
   `includes/wine-index.php` at the top.
 - The zip is named for the version inside it (`wine-agent-api-2.23.0.zip`), and the
   previous version's zip is deleted in the same step — there is never an
-  unversioned `wine-agent-api.zip`
+  unversioned `wine-agent-api.zip`. It is gitignored: build it when you deploy
 - The plugin zip bundles the built JS/CSS assets — no HTTP fetching at runtime
 - Plugin settings (WP Admin → Settings → Wine Agent API): API Key, plus search index status and the Rebuild button
+- The shortcode injects `window.__WINE_AGENT_VERSION__` beside the API base, and
+  `main.tsx` logs `wine-agent-api X.Y.Z` on startup. It is how you confirm which
+  build a page is serving without opening WP Admin — an upload that silently
+  failed to replace the old files looks exactly like one that worked. The version
+  is read back from the plugin header via `wine_agent_plugin_version()`, never
+  restated, so it cannot drift. Standalone it logs `wine-agent-api (dev)`
 
 ## Deployment
 
@@ -139,11 +148,17 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 - **`main.tsx`** — mounts to `#wine-agent-root` (WordPress embed) or `#root` (standalone)
 
 ### API Server (`web/server/index.ts`)
-- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`)
+- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `stateProvince`, `specialDesignation`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`).
+  Filter keys are an **allowlist** (`FILTER_PARAMS` in `app.ts`, `wine_agent_filter_params()`
+  in `wine-query.php`) — anything else in the query string is ignored rather than
+  read as a wine field. `sort_by` is an allowlist too (`SORT_FIELDS` /
+  `wine_agent_sortable_columns()`): exactly the five fields the index has a typed
+  column for, so every sort is one SQL can order by; anything else falls back to
+  the default. `limit` is clamped to 1–100 and `offset` to ≥ 0 on both sides;
+  the endpoints are public, so neither number is trusted
 - `GET /api/meta` — returns `{ varietals, regions, types, avaList, stateProvinces, specialDesignations, casesMax }`.
   `casesMax` is the largest reported case production, computed over **all** wines
   (never narrowed by the active filters) so the Cases slider's top end holds still
-- `POST /api/webhook/review` — receives `{ action: 'upsert'|'delete', review: WPReview }` from WP plugin; authenticated via `X-Webhook-Secret` header
 
 ### Search/Filter Logic
 - All text comparison goes through `fold()` in `src/lib/text.ts` — strips accents
@@ -163,8 +178,10 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
   indexes as `l`, `ecole` *and* `lecole`, so all three spellings find it. Both the
   ASCII and typographic apostrophe count, since the export contains both. Query
   terms stay on `foldWords()`
-- Filtering: `server/wine-search.ts` — special-cased keys before generic field lookup.
-  Dropdown fields match a comma-separated OR list, which is what backs multi-select
+- Filtering: `server/wine-search.ts` — one branch per allowlisted key.
+  Dropdown fields match a comma-separated OR list, which is what backs multi-select.
+  Review Date is the only filter carrying a comparison operator
+  (`publicationDate=>=2024-01-01`), which is what the sidebar's control sends
 - Sorting: `server/wine-utils.ts` — wines with no price/vintage/date sort **last in
   both directions** (`parse*OrNull` returns null rather than a sentinel number).
   Default sort is `publicationDate` descending, in the app and on `/api/search`.
@@ -252,14 +269,14 @@ web/
 - `Filters.searchNotes` is the odd one out: a boolean that *widens* the search
   rather than narrowing it. It rides in `Filters` so it shows as an active chip,
   counts in the mobile badge and clears with the rest — but `App.tsx` sends it
-  only on `/api/search` (as `notes=1`), never on `/api/meta`, where an unknown
-  param would be read as a field filter and empty every facet list. It is also
-  sent **only alongside a query** — with an empty search box it cannot change
+  only on `/api/search` (as `notes=1`), never on `/api/meta`, which has no use
+  for a search setting. It is also sent **only alongside a query** — with an empty search box it cannot change
   the results, and including it moved `searchKey`, so ticking the box re-ran the
   search and blinked the list away to redraw it identical
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
   Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
   the combobox and tree pickers stay single-select `string`
-- `FilterPanel.tsx` is unused — superseded by `Sidebar.tsx`
-- Never commit `web/.env` or `web/cache/`
-- `WPReview` interface and `mapWPReview()` are exported from `wp-client.ts` and shared with the webhook endpoint in `index.ts`
+- Never commit `web/.env`, `web/cache/`, or the built plugin zip — all three are
+  gitignored. The zip is a release artifact `/deploy` rebuilds from source on
+  every version bump
+- `WPReview` and `mapWPReview()` are internal to `wp-client.ts` — the shape the WordPress REST loader maps from

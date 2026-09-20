@@ -4,10 +4,10 @@
  * on activation — a redeclared function, a missing include, a call made at load
  * time rather than on a hook.
  *
- * This is not a functional test of the WordPress integration (that needs a real
- * $wpdb; see the staging A/B in scripts/parity/run-remote.mjs). It is the cheap
- * check that the file WordPress is about to run parses, loads, and registers
- * what it means to.
+ * This is not a functional test of the WordPress integration — that needs a
+ * real $wpdb, and is what the post-upload spot-check in DEPLOYMENT.md covers.
+ * It is the cheap check that the file WordPress is about to run parses, loads,
+ * and registers what it means to.
  *
  * Usage: php scripts/plugin-load-test.php
  */
@@ -37,6 +37,30 @@ function register_activation_hook( $file, $callback ) {
 }
 function register_deactivation_hook( $file, $callback ) {
 	$GLOBALS['stub_hooks']['deactivate'][] = $callback;
+}
+
+function wp_dequeue_script( $handle ) {}
+function wp_enqueue_script( $handle, $src = '', $deps = [], $ver = null, $footer = false ) {}
+function wp_enqueue_style( $handle, $src = '', $deps = [], $ver = null ) {}
+function plugins_url( $path = '', $file = '' ) {
+	return 'https://example.test/wp-content/plugins/wine-agent-api/' . ltrim( $path, '/' );
+}
+function rest_url( $path = '' ) {
+	return 'https://example.test/wp-json/' . ltrim( $path, '/' );
+}
+function wp_json_encode( $value, $flags = 0 ) {
+	return json_encode( $value, $flags );
+}
+/** Real get_file_data is close enough for a header read. */
+function get_file_data( $file, $headers, $context = '' ) {
+	$contents = file_get_contents( $file );
+	$found    = [];
+	foreach ( $headers as $key => $label ) {
+		$found[ $key ] = preg_match( '/^[ \t\/*#@]*' . preg_quote( $label, '/' ) . ':(.*)$/mi', $contents, $m )
+			? trim( $m[1] )
+			: '';
+	}
+	return $found;
 }
 
 $plugin = __DIR__ . '/../wordpress-plugin/wine-agent-api.php';
@@ -118,6 +142,34 @@ foreach ( $required_hooks as $hook ) {
 }
 
 expect( isset( $GLOBALS['stub_shortcodes']['wine-search'] ), '[wine-search] shortcode not registered' );
+
+// ── The reported version ─────────────────────────────────────────────────────
+// The app logs the plugin version on startup, so a deploy can be confirmed
+// from the browser console. The version is read back from the header rather
+// than restated, and this checks the two agree — a stale number here would
+// make the console line lie in exactly the situation it exists for.
+preg_match( '/^\s*\*\s*Version:\s*(.+)$/m', file_get_contents( $plugin ), $header );
+$header_version = isset( $header[1] ) ? trim( $header[1] ) : '';
+
+expect( '' !== $header_version, 'could not read a Version out of the plugin header' );
+expect(
+	function_exists( 'wine_agent_plugin_version' ),
+	'function wine_agent_plugin_version is not defined'
+);
+if ( function_exists( 'wine_agent_plugin_version' ) ) {
+	expect(
+		$header_version === wine_agent_plugin_version(),
+		"wine_agent_plugin_version() returned '" . wine_agent_plugin_version() . "', header says '$header_version'"
+	);
+}
+
+$rendered = $GLOBALS['stub_shortcodes']['wine-search']();
+
+// A source checkout has no built assets, so this run takes the failure path.
+expect(
+	false !== strpos( $rendered, 'assets not found' ),
+	'expected the assets-missing path in a source checkout (no built assets present)'
+);
 expect( defined( 'WINE_AGENT_INDEX_VERSION' ), 'WINE_AGENT_INDEX_VERSION not defined' );
 
 // The index row and the schema have to agree on the column set, or every

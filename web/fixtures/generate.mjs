@@ -26,16 +26,23 @@ let nextId = 1;
 const wines = [];
 
 function wine(o) {
-  wines.push({
+  const row = {
     id: String(nextId++),
     brandName: '', wineName: '', ava: '', vintage: '', price: '', rating: '',
     review: '', region: '', type: '', mainVarietal: '', varietyStyle: '',
-    tastingDate: '', publicationDate: '2025-06-15', setting: '',
+    publicationDate: '2025-06-15', setting: '',
     purchasedProvided: '', temp: '', hyperlink: '', specialDesignation: '',
     alcohol: '14.1%', closure: 'Cork', cases: '', stateProvince: '', source: 'Sample',
     reviewer: 'A. Taster',
     ...o,
-  });
+  };
+  // Match what the importers produce: `varietalLabel` is the label on its own
+  // and is blank on a blend, where `mainVarietal` falls back to the style. A
+  // fixture row that omitted the field wouldn't exercise what the app renders.
+  if (row.varietalLabel === undefined) {
+    row.varietalLabel = row.mainVarietal === row.varietyStyle ? '' : row.mainVarietal;
+  }
+  wines.push(row);
 }
 
 // ── Accent cases ───────────────────────────────────────────────────────────
@@ -219,6 +226,15 @@ fillers.forEach(([brand, ava, state, region], i) => {
     });
   }
 });
+
+// A blend: no varietal label of its own, so the listing must name it by the
+// wine name and leave the style to the second line. e2e/detail.spec.ts asserts
+// on this row by name.
+wine({ brandName: 'DeLille', wineName: 'Chaleur Estate Red Wine', ava: 'Yakima Valley',
+       vintage: '2022', price: '$95', rating: '95', type: 'Red',
+       mainVarietal: 'Bordeaux-Style Red Blend', varietyStyle: 'Bordeaux-Style Red Blend',
+       stateProvince: 'Washington', region: 'Yakima (WA)',
+       review: 'Cassis, cedar and graphite, with fine-grained tannin.' });
 
 // Case production: a spread from tiny lots to industrial volume, with every
 // seventh row reporting none — the filter has to exclude those rather than

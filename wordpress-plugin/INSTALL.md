@@ -34,7 +34,7 @@ Add `[wine-search]` to any page or post. The app renders inside a `#wine-agent-r
 
 | Field | Purpose |
 |-------|---------|
-| **Search API Key** | Authenticates requests to the `/reviews` endpoint (`X-Wine-Agent-Key` header) |
+| **Review Export API Key** | Authenticates the private `/reviews` export endpoint (`X-Wine-Agent-Key` header). Not used by search — `/search` and `/meta` are public. |
 
 ## Updating the plugin
 

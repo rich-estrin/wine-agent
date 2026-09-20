@@ -21,17 +21,70 @@ require_once __DIR__ . '/wine-utils.php';
 require_once __DIR__ . '/wine-map.php';
 
 /**
- * Query params that steer the search rather than narrow it. Anything else is
- * read as a wine field filter, mirroring `collectFilters`.
+ * The filter keys the app sends, and the only ones either endpoint honours.
  *
- * WordPress adds its own params to REST requests (`rest_route` on plain
- * permalinks, `_locale`, `_envelope`); left in, the unknown-param rule would
- * treat them as filters and silently empty every result.
+ * An allowlist rather than a denylist, because /search and /meta are public
+ * and unauthenticated. Anything else in the query string is ignored — a CDN
+ * cache-buster, a tracking tag, a typo, or one of WordPress's own REST params
+ * (`rest_route` on plain permalinks, `_locale`, `_envelope`). Read as a wine
+ * field instead, any of them would match no row and empty the page.
+ *
+ * Mirrors `FILTER_PARAMS` in web/server/app.ts.
  *
  * @return string[]
  */
-function wine_agent_non_filter_params(): array {
-	return [ 'q', 'limit', 'offset', 'sort_by', 'sort_order', 'notes', 'rest_route', 'wa_mode' ];
+function wine_agent_filter_params(): array {
+	return [
+		'mainVarietal',
+		'ava',
+		'region',
+		'type',
+		'stateProvince',
+		'specialDesignation',
+		'priceMin',
+		'priceMax',
+		'scoreMin',
+		'scoreMax',
+		'vintageMin',
+		'vintageMax',
+		'casesMin',
+		'casesMax',
+		'publicationDate',
+	];
+}
+
+/**
+ * The largest page a caller may ask for, and the default when none is given.
+ * The app pages 40 at a time; the cap is what stops `?limit=100000` returning
+ * the whole index in one public response.
+ */
+const WINE_AGENT_MAX_LIMIT     = 100;
+const WINE_AGENT_DEFAULT_LIMIT = 20;
+
+/**
+ * Clamp the caller's page window.
+ *
+ * Both numbers reach SQL, so neither can be trusted: an unbounded limit dumps
+ * the index, and MySQL rejects a negative LIMIT outright with a syntax error
+ * that 500s the endpoint. (SQLite accepts it, which is why the parity harness
+ * cannot see this and scripts/plugin-query-test.php asserts it instead.)
+ *
+ * @param array $params Raw query params.
+ * @return array{limit:int,offset:int}
+ */
+function wine_agent_page_window( array $params ): array {
+	$limit = isset( $params['limit'] ) ? wine_agent_js_parse_int( (string) $params['limit'] ) : null;
+	$limit = ( null === $limit )
+		? WINE_AGENT_DEFAULT_LIMIT
+		: max( 1, min( (int) $limit, WINE_AGENT_MAX_LIMIT ) );
+
+	$offset = isset( $params['offset'] ) ? wine_agent_js_parse_int( (string) $params['offset'] ) : null;
+	$offset = ( null === $offset ) ? 0 : max( 0, (int) $offset );
+
+	return [
+		'limit'  => $limit,
+		'offset' => $offset,
+	];
 }
 
 /**
@@ -62,21 +115,16 @@ function wine_agent_sortable_columns(): array {
 }
 
 /**
- * Pull the filter params out of a request, dropping blanks and the params that
- * steer rather than narrow.
+ * Pull the recognised filter params out of a request, dropping blanks.
  *
  * @param array $params Raw query params.
  * @return array<string,string> Filters.
  */
 function wine_agent_collect_filters( array $params ): array {
-	$skip    = array_flip( wine_agent_non_filter_params() );
+	$allowed = array_flip( wine_agent_filter_params() );
 	$filters = [];
 	foreach ( $params as $key => $value ) {
-		if ( isset( $skip[ $key ] ) ) {
-			continue;
-		}
-		// WordPress's own REST plumbing params, never wine fields.
-		if ( '' !== $key && '_' === $key[0] ) {
+		if ( ! isset( $allowed[ $key ] ) ) {
 			continue;
 		}
 		if ( is_string( $value ) && '' !== trim( $value ) ) {
@@ -223,76 +271,26 @@ function wine_agent_build_filter_clause( string $key, string $value ) {
 		return wine_agent_in_clause( 'f_' . wine_agent_column( $key ), $allowed );
 	}
 
-	// ── Operator-syntax fields ("rating=>90") ────────────────────────────────
+	// ── Review Date ──────────────────────────────────────────────────────────
+	// The one filter that still carries an operator, because the sidebar's
+	// Review Date control sends one: `publicationDate=>=2024-01-01`.
 	$parsed   = wine_agent_parse_filter_value( $value );
-	$operator = $parsed['operator'];
-	$operand  = $parsed['value'];
+	$sql_op   = wine_agent_sql_operator( $parsed['operator'] );
+	$expected = wine_agent_parse_date_or_null( $parsed['value'] );
 
-	$sql_op = wine_agent_sql_operator( $operator );
-	if ( null === $sql_op ) {
-		// An operator JS `compareValues` doesn't know is false for every row.
-		if ( in_array( $key, [ 'price', 'rating', 'vintage', 'cases', 'publicationDate', 'tastingDate' ], true ) ) {
-			return wine_agent_never();
-		}
-		return wine_agent_never();
+	if ( 'publicationDate' === $key ) {
+		return ( null === $sql_op || null === $expected )
+			? wine_agent_never()
+			: [
+				'sql'      => "(pub_ms IS NOT NULL AND pub_ms $sql_op %d)",
+				'bindings' => [ $expected ],
+			];
 	}
 
-	switch ( $key ) {
-		case 'price':
-			$n = wine_agent_js_parse_float( $operand );
-			return null === $n
-				? wine_agent_never()
-				: [
-					'sql'      => "(price_num IS NOT NULL AND price_num $sql_op %f)",
-					'bindings' => [ $n ],
-				];
-
-		case 'rating':
-			$n = wine_agent_js_parse_float( $operand );
-			return null === $n
-				? wine_agent_never()
-				: [
-					'sql'      => "(rating_sort IS NOT NULL AND rating_sort $sql_op %f)",
-					'bindings' => [ $n ],
-				];
-
-		case 'vintage':
-			// `parseInt(value) || 0` in the Node port: a junk bound becomes 0
-			// rather than disqualifying the filter.
-			$n = wine_agent_js_parse_int( $operand );
-			$n = ( null === $n ) ? 0 : $n;
-			return [
-				'sql'      => "(vintage_num IS NOT NULL AND vintage_num $sql_op %d)",
-				'bindings' => [ $n ],
-			];
-
-		case 'cases':
-			$n = wine_agent_js_parse_int( $operand );
-			$n = ( null === $n ) ? 0 : $n;
-			return [
-				'sql'      => "(cases_num IS NOT NULL AND cases_num $sql_op %d)",
-				'bindings' => [ $n ],
-			];
-
-		case 'publicationDate':
-			$expected = wine_agent_parse_date_or_null( $operand );
-			return null === $expected
-				? wine_agent_never()
-				: [
-					'sql'      => "(pub_ms IS NOT NULL AND pub_ms $sql_op %d)",
-					'bindings' => [ $expected ],
-				];
-
-		case 'tastingDate':
-			// Never populated on the WordPress path, so it parses to null for
-			// every row and matches nothing — same as Node.
-			return wine_agent_never();
-	}
-
-	// Unindexed field: the accent-insensitive substring fallback. The frontend
-	// never sends these, so correctness beats speed — the caller applies them
-	// in PHP over the matched rows.
-	return null;
+	// Unreachable: every key in wine_agent_filter_params() is handled above, and
+	// wine_agent_collect_filters() drops everything else. Fails closed, and
+	// plugin-query-test.php asserts the two lists cannot drift apart.
+	return wine_agent_never();
 }
 
 /**
@@ -345,12 +343,11 @@ function wine_agent_in_clause( string $column, array $values ): array {
  * @param string $query        Free-text query.
  * @param bool   $search_notes Widen to tasting notes.
  * @param array  $filters      Field filters.
- * @return array{sql:string,bindings:array,php_filters:array<string,string>}
+ * @return array{sql:string,bindings:array}
  */
 function wine_agent_build_where( string $query, bool $search_notes, array $filters ): array {
-	$clauses     = [];
-	$bindings    = [];
-	$php_filters = [];
+	$clauses  = [];
+	$bindings = [];
 
 	if ( '' !== trim( $query ) ) {
 		$q = wine_agent_build_query_clauses( $query, $search_notes );
@@ -361,19 +358,14 @@ function wine_agent_build_where( string $query, bool $search_notes, array $filte
 	}
 
 	foreach ( $filters as $key => $value ) {
-		$clause = wine_agent_build_filter_clause( (string) $key, (string) $value );
-		if ( null === $clause ) {
-			$php_filters[ $key ] = $value;
-			continue;
-		}
+		$clause    = wine_agent_build_filter_clause( (string) $key, (string) $value );
 		$clauses[] = $clause['sql'];
 		$bindings  = array_merge( $bindings, $clause['bindings'] );
 	}
 
 	return [
-		'sql'         => empty( $clauses ) ? '1 = 1' : implode( ' AND ', $clauses ),
-		'bindings'    => $bindings,
-		'php_filters' => $php_filters,
+		'sql'      => empty( $clauses ) ? '1 = 1' : implode( ' AND ', $clauses ),
+		'bindings' => $bindings,
 	];
 }
 
@@ -411,13 +403,11 @@ function wine_agent_build_order_by( string $sort_by, string $sort_order ): strin
 }
 
 /**
- * Build the search query: the row SQL, the matching count SQL, and whatever
- * has to be finished in PHP.
+ * Build the search query: the row SQL and the matching count SQL.
  *
- * When `php_filters` is non-empty or the sort isn't one SQL can express, the
- * caller must take the fallback path: run `rows_sql_all` (no LIMIT), decode
- * every matched row, apply the remaining filters and sort in PHP. Otherwise
- * `rows_sql` is complete and returns exactly the requested page.
+ * Every filter key and every sort field is one the index has a column for, so
+ * the plan is always complete — `rows_sql` returns exactly the requested page
+ * and nothing is finished in memory.
  *
  * @param array $params Request query params.
  * @return array Query plan.
@@ -430,38 +420,30 @@ function wine_agent_build_search_sql( array $params ): array {
 	$filters      = wine_agent_collect_filters( $params );
 
 	$sort_order = ( isset( $params['sort_order'] ) && 'asc' === $params['sort_order'] ) ? 'asc' : 'desc';
-	$sort_by    = ( isset( $params['sort_by'] ) && '' !== (string) $params['sort_by'] )
-		? (string) $params['sort_by']
-		: 'publicationDate';
-	// Relevance ranking is gone; older embeds may still ask for it by name.
-	if ( 'relevance' === $sort_by ) {
-		$sort_by = 'rating';
+	$sort_by    = isset( $params['sort_by'] ) ? (string) $params['sort_by'] : '';
+	// Only sorts the index has a typed column for. Anything else falls back to
+	// the default rather than being sorted in memory over every matched row.
+	// Mirrors SORT_FIELDS in web/server/app.ts.
+	if ( ! isset( wine_agent_sortable_columns()[ $sort_by ] ) ) {
+		$sort_by = 'publicationDate';
 	}
 
-	$limit  = isset( $params['limit'] ) ? (int) wine_agent_js_parse_int( (string) $params['limit'] ) : 20;
-	$offset = isset( $params['offset'] ) ? (int) wine_agent_js_parse_int( (string) $params['offset'] ) : 0;
+	$window = wine_agent_page_window( $params );
+	$limit  = $window['limit'];
+	$offset = $window['offset'];
 
-	$where = wine_agent_build_where( $query, $search_notes, $filters );
-
-	$sortable   = wine_agent_sortable_columns();
-	$sort_in_php = ! isset( $sortable[ $sort_by ] ) && 'tastingDate' !== $sort_by;
-	$needs_php   = ! empty( $where['php_filters'] ) || $sort_in_php;
-
+	$where    = wine_agent_build_where( $query, $search_notes, $filters );
 	$order_by = wine_agent_build_order_by( $sort_by, $sort_order );
 
 	return [
-		'rows_sql'     => "SELECT display_json FROM $table WHERE {$where['sql']} ORDER BY $order_by LIMIT %d OFFSET %d",
-		'rows_bindings' => array_merge( $where['bindings'], [ $limit, $offset ] ),
-		'rows_sql_all' => "SELECT display_json FROM $table WHERE {$where['sql']} ORDER BY $order_by",
-		'all_bindings' => $where['bindings'],
-		'count_sql'    => "SELECT COUNT(*) FROM $table WHERE {$where['sql']}",
+		'rows_sql'       => "SELECT display_json FROM $table WHERE {$where['sql']} ORDER BY $order_by LIMIT %d OFFSET %d",
+		'rows_bindings'  => array_merge( $where['bindings'], [ $limit, $offset ] ),
+		'count_sql'      => "SELECT COUNT(*) FROM $table WHERE {$where['sql']}",
 		'count_bindings' => $where['bindings'],
-		'php_filters'  => $where['php_filters'],
-		'needs_php'    => $needs_php,
-		'sort_by'      => $sort_by,
-		'sort_order'   => $sort_order,
-		'limit'        => $limit,
-		'offset'       => $offset,
+		'sort_by'        => $sort_by,
+		'sort_order'     => $sort_order,
+		'limit'          => $limit,
+		'offset'         => $offset,
 	];
 }
 
@@ -502,18 +484,16 @@ function wine_agent_build_meta_sqls( array $filters ): array {
 		// array, which is what its Set preserves before the sort — so ties in
 		// the case-insensitive sort below land the same way in both.
 		$plans[ $key ] = [
-			'sql'         => "SELECT $column AS value, MIN(id) AS first_id FROM $table WHERE {$where['sql']} AND $column <> '' GROUP BY $column ORDER BY first_id ASC",
-			'bindings'    => $where['bindings'],
-			'php_filters' => $where['php_filters'],
-			'field'       => $controls,
+			'sql'      => "SELECT $column AS value, MIN(id) AS first_id FROM $table WHERE {$where['sql']} AND $column <> '' GROUP BY $column ORDER BY first_id ASC",
+			'bindings' => $where['bindings'],
+			'field'    => $controls,
 		];
 	}
 
 	$plans['casesMax'] = [
-		'sql'         => "SELECT COALESCE(MAX(cases_num), 0) FROM $table",
-		'bindings'    => [],
-		'php_filters' => [],
-		'field'       => 'cases',
+		'sql'      => "SELECT COALESCE(MAX(cases_num), 0) FROM $table",
+		'bindings' => [],
+		'field'    => 'cases',
 	];
 
 	return $plans;

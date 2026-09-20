@@ -23,6 +23,7 @@ cases that have actually caused bugs:
 | `price: "N/A"` and `price: "0"` | Both mean "no price" and must sort last in both directions |
 | Star ratings (`****`, `***1/2`) alongside numeric scores | Two rating scales on one axis |
 | Missing `vintage` | Must sort last, not as year zero |
+| A blend with no varietal label (`DeLille Chaleur Estate Red Wine`) | The listing names it by wine name; the style goes on line 2 |
 | White `Cabernet Franc`, Rosé of a red grape | Faceting must follow the data, not a taxonomy |
 | `stateProvince: "America"` with a non-PNW appellation | Appellations outside the fixed PNW tree must stay filterable |
 | Regions spanning two states, e.g. `Walla Walla Valley (WA/OR)` | Must appear under both states |
@@ -30,9 +31,10 @@ cases that have actually caused bugs:
 | Long winery + wine + appellation names | Text overflow in cards and chips |
 | Case production from 48 to 12,000, and every seventh row blank | The Cases range filter must exclude "not reported", not read it as zero |
 
-Regenerate with `node fixtures/generate.mjs` after editing that script. The
-output is committed so tests are deterministic and the app runs on a fresh
-clone with no setup.
+Add cases by editing `generate.mjs` and regenerating with
+`node fixtures/generate.mjs` — never by hand-editing `wines.json`, which the
+next regeneration would silently discard. The output is committed so tests are
+deterministic and the app runs on a fresh clone with no setup.
 
 To work against real data instead, set `CSV_PATH` or `WP_API_URL` in
 `web/.env` and use `npm run dev:all` as usual — fixture mode is only active
