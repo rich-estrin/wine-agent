@@ -83,7 +83,6 @@ cd web && npm install
 cat > .env <<EOF
 CSV_PATH=/path/to/your/wordpress-export.csv
 WEBHOOK_SECRET=any-local-secret
-ANTHROPIC_API_KEY=sk-ant-...   # optional, for AI chat (disabled by default)
 EOF
 
 npm run dev:all

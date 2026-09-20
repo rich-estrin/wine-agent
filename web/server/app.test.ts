@@ -347,14 +347,3 @@ describe('authentication', () => {
     expect((await fetch(`${base}/api/search`)).status).toBe(200);
   });
 });
-
-describe('GET /api/chat', () => {
-  it('is disabled', async () => {
-    const res = await fetch(`${base}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [] }),
-    });
-    expect(res.status).toBe(503);
-  });
-});

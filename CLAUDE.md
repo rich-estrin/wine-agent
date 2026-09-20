@@ -126,7 +126,7 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 ## Architecture
 
 ### Frontend (`web/src/`)
-- **`App.tsx`** — top-level state (filters, query, sort, pagination), layout. AI chat is implemented but disabled — re-enable by uncommenting in `App.tsx` and `server/index.ts`.
+- **`App.tsx`** — top-level state (filters, query, sort, pagination), layout
 - **`components/Sidebar.tsx`** — dark collapsible filter panel; also exports `Filters` type, `emptyFilters`, `getDateFilter`
 - **`components/WineCard.tsx`** — card with score badge or star row, serif names, price
 - **`components/AvaTreeFilter.tsx`** — hierarchical AVA dropdown with search
@@ -144,7 +144,6 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
   `casesMax` is the largest reported case production, computed over **all** wines
   (never narrowed by the active filters) so the Cases slider's top end holds still
 - `POST /api/webhook/review` — receives `{ action: 'upsert'|'delete', review: WPReview }` from WP plugin; authenticated via `X-Webhook-Secret` header
-- `POST /api/chat` — **disabled (503)**; full implementation preserved in comment
 
 ### Search/Filter Logic
 - All text comparison goes through `fold()` in `src/lib/text.ts` — strips accents

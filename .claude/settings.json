@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash scripts/deploy-ec2.sh)",
       "Bash(git *)"
     ]
   }
