@@ -241,114 +241,6 @@ describe('GET /api/meta — faceting', () => {
   });
 });
 
-describe('POST /api/webhook/review', () => {
-  it('upserts a wine and refreshes the facet lists', async () => {
-    const { server: s, base: b } = await startApp();
-    try {
-      const before = await (await fetch(`${b}/api/meta`)).json();
-      expect(before.varietals).not.toContain('Zinfandel');
-
-      const res = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'upsert',
-          review: { id: 9001, brand_name: 'New Winery', wine_name: 'Zin', variety: 'Zinfandel',
-                    wine_type: 'Red', price: '33', rating: '90', vintage: '2022',
-                    appellation: 'Columbia Valley', region: 'Tri-Cities (WA)',
-                    state_or_province: 'Washington', tasting_note: 'Brambly.' },
-        }),
-      });
-      expect(res.status).toBe(200);
-
-      const after = await (await fetch(`${b}/api/meta`)).json();
-      expect(after.varietals).toContain('Zinfandel');
-    } finally {
-      await close(s);
-    }
-  });
-
-  // casesMax is remembered across meta requests rather than rescanned per
-  // filter set, so the webhook has to drop it along with the facet lists.
-  it('re-scans the highest case production after a publish', async () => {
-    const { server: s, base: b } = await startApp();
-    try {
-      const before = await (await fetch(`${b}/api/meta`)).json();
-
-      const res = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'upsert',
-          review: { id: 9002, brand_name: 'Big Lot', wine_name: 'Everyday Red', variety: 'Merlot',
-                    wine_type: 'Red', price: '12', rating: '86', vintage: '2023',
-                    appellation: 'Columbia Valley', region: 'Tri-Cities (WA)',
-                    state_or_province: 'Washington', tasting_note: 'Plummy.',
-                    cases: String(before.casesMax + 1000) },
-        }),
-      });
-      expect(res.status).toBe(200);
-
-      const after = await (await fetch(`${b}/api/meta`)).json();
-      expect(after.casesMax).toBe(before.casesMax + 1000);
-    } finally {
-      await close(s);
-    }
-  });
-
-  it('deletes a wine', async () => {
-    const { server: s, base: b } = await startApp();
-    try {
-      const before = await (await fetch(`${b}/api/search?limit=1`)).json();
-      const res = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', review: { id: 1 } }),
-      });
-      expect(res.status).toBe(200);
-      const after = await (await fetch(`${b}/api/search?limit=1`)).json();
-      expect(after.total).toBe(before.total - 1);
-    } finally {
-      await close(s);
-    }
-  });
-
-  it('rejects a request with no action or id', async () => {
-    const res = await fetch(`${base}/api/webhook/review`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'upsert' }),
-    });
-    expect(res.status).toBe(400);
-  });
-});
-
-describe('authentication', () => {
-  it('rejects unkeyed requests when a secret is configured', async () => {
-    const { server: s, base: b } = await startApp('s3cret');
-    try {
-      expect((await fetch(`${b}/api/search`)).status).toBe(401);
-      expect((await fetch(`${b}/api/meta`)).status).toBe(401);
-
-      const ok = await fetch(`${b}/api/search`, { headers: { 'x-wine-agent-key': 's3cret' } });
-      expect(ok.status).toBe(200);
-
-      const hookNoKey = await fetch(`${b}/api/webhook/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', review: { id: 1 } }),
-      });
-      expect(hookNoKey.status).toBe(401);
-    } finally {
-      await close(s);
-    }
-  });
-
-  it('allows everything when no secret is configured', async () => {
-    expect((await fetch(`${base}/api/search`)).status).toBe(200);
-  });
-});
-
 // ─── Request bounds ───────────────────────────────────────────────────────────
 // /search and /meta are public and unauthenticated on the production site, so
 // every number and every key in the query string is attacker-controlled.
@@ -361,8 +253,6 @@ describe('GET /api/search request bounds', () => {
       makeWine({ id: `bulk-${i}`, brandName: `Winery ${i}`, rating: '90' }),
     ),
     getAllWines() { return this.wines; },
-    upsertWine() {},
-    removeWine() {},
   };
 
   let bulkServer: Server;

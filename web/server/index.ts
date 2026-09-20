@@ -33,6 +33,7 @@ async function start() {
 
   // Fixture mode is for local work and tests, so it deliberately ignores
   // WEBHOOK_SECRET — otherwise a stray .env would 401 every request.
+  // (The Vite dev proxy sends the same value as X-Wine-Agent-Key.)
   const secret = process.env.WINE_FIXTURE ? undefined : process.env.WEBHOOK_SECRET;
   const app = createApp(client, { secret });
 

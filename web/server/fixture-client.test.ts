@@ -40,36 +40,15 @@ describe('FixtureClient', () => {
 
   // The point of this client: it must never touch the on-disk cache that a
   // developer built from real WordPress data.
-  it('writes nothing to disk, even after mutations', () => {
+  it('writes nothing to disk', () => {
     const cacheDir = join(dir, 'cache');
     writeFileSync(path(), JSON.stringify({ wines: [makeWine({ id: 'a' })] }));
     const client = new FixtureClient(path());
     client.initialize();
 
-    client.upsertWine(makeWine({ id: 'new' }));
-    client.removeWine('a');
-
+    expect(client.getAllWines().map((w) => w.id)).toEqual(['a']);
     expect(existsSync(cacheDir)).toBe(false);
     expect(readdirSync(dir)).toEqual(['wines.json']);
-  });
-
-  it('upserts by id, replacing rather than duplicating', () => {
-    writeFileSync(path(), JSON.stringify({ wines: [makeWine({ id: 'a', brandName: 'Old' })] }));
-    const client = new FixtureClient(path());
-    client.initialize();
-
-    client.upsertWine(makeWine({ id: 'a', brandName: 'New' }));
-    expect(client.getAllWines()).toHaveLength(1);
-    expect(client.getAllWines()[0].brandName).toBe('New');
-  });
-
-  it('removes by id', () => {
-    writeFileSync(path(), JSON.stringify({ wines: [makeWine({ id: 'a' }), makeWine({ id: 'b' })] }));
-    const client = new FixtureClient(path());
-    client.initialize();
-
-    client.removeWine('a');
-    expect(client.getAllWines().map((w) => w.id)).toEqual(['b']);
   });
 });
 

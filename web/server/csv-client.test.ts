@@ -148,21 +148,6 @@ describe('CSVClient — cache', () => {
     client.initialize();
     expect(client.getAllWines()[0].brandName).toBe('Other Winery');
   });
-
-  it('upserts and removes in memory and persists', () => {
-    writeCsv([row()]);
-    const client = load();
-    client.upsertWine({ ...client.getAllWines()[0], id: '99', brandName: 'Added' });
-    expect(client.getAllWines()).toHaveLength(2);
-
-    client.removeWine('99');
-    expect(client.getAllWines().map((w) => w.id)).toEqual(['1']);
-
-    // A fresh client reading the same cache sees the removal.
-    const reopened = new CSVClient(csvPath(), cachePath());
-    reopened.initialize();
-    expect(reopened.getAllWines().map((w) => w.id)).toEqual(['1']);
-  });
 });
 
 describe('case production', () => {

@@ -201,29 +201,4 @@ export class WPClient {
     return this.wines;
   }
 
-  upsertWine(wine: Wine): void {
-    const idx = this.wines.findIndex((w) => w.id === wine.id);
-    if (idx >= 0) {
-      this.wines[idx] = wine;
-    } else {
-      this.wines.push(wine);
-    }
-    this.persist();
-  }
-
-  removeWine(id: string): void {
-    this.wines = this.wines.filter((w) => w.id !== id);
-    this.persist();
-  }
-
-  private persist(): void {
-    mkdirSync(dirname(this.cachePath), { recursive: true });
-    writeFileSync(this.cachePath, JSON.stringify({
-      fetchedAt: new Date().toISOString(),
-      wpUrl: this.wpUrl,
-      wines: this.wines,
-      version: CACHE_VERSION,
-    }));
-  }
-
 }

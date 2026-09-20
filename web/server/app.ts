@@ -1,21 +1,19 @@
 import express from 'express';
 import type { Wine } from '../src/types.js';
-import { mapWPReview, type WPReview } from './wp-client.js';
-import { searchWines, filterWines, getWineDetails, matchesFilter } from './wine-search.js';
+import { searchWines, filterWines, matchesFilter } from './wine-search.js';
 import { sortWines, parseCasesOrNull } from './wine-utils.js';
 import { designationGroupLabels } from '../src/data/designation-groups.js';
 
 /** The subset of a data client the API depends on. CSVClient, WPClient and
  *  FixtureClient all satisfy it, which is what lets tests run the real routes
- *  against a static dataset. */
+ *  against a static dataset. Read-only: the dataset is loaded once at startup
+ *  and never mutated while the server runs. */
 export interface DataClient {
   getAllWines(): Wine[];
-  upsertWine(wine: Wine): void;
-  removeWine(id: string): void;
 }
 
 export interface AppOptions {
-  /** Shared secret for X-Wine-Agent-Key / X-Webhook-Secret. Unset disables the check. */
+  /** Shared secret for X-Wine-Agent-Key. Unset disables the check. */
   secret?: string;
 }
 
@@ -102,11 +100,10 @@ const unique = (values: string[]) =>
 export function createApp(dataClient: DataClient, options: AppOptions = {}) {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json());
 
   const secret = options.secret;
 
-  // Middleware: validate X-Wine-Agent-Key on search/meta endpoints
+  // Validate X-Wine-Agent-Key on the search/meta endpoints.
   function requireApiKey(req: express.Request, res: express.Response, next: express.NextFunction) {
     if (secret && req.headers['x-wine-agent-key'] !== secret) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -115,12 +112,12 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
     next();
   }
 
-  // Keyed by the active filter set. Cleared wholesale by the webhook.
-  let metaCache = new Map<string, MetaResponse>();
+  // Keyed by the active filter set.
+  const metaCache = new Map<string, MetaResponse>();
   // The largest production doesn't depend on the filters, so it is a property
-  // of the dataset, not of a meta request. Scanned once and kept until a
-  // webhook changes the data — otherwise every new filter combination paid for
-  // another full pass over every wine to reach the same number.
+  // of the dataset, not of a meta request. Scanned once — otherwise every new
+  // filter combination paid for another full pass over every wine to reach the
+  // same number.
   let casesMax: number | null = null;
 
   function buildMeta(filters: Record<string, string>): MetaResponse {
@@ -201,50 +198,6 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
         .status(500)
         .json({ error: error instanceof Error ? error.message : String(error) });
     }
-  });
-
-  // Wine detail lookup
-  app.get('/api/wine/:name', (req, res) => {
-    try {
-      const exactMatch = req.query.exact_match === 'true';
-      const results = getWineDetails(dataClient.getAllWines(), {
-        wine_name: req.params.name,
-        exact_match: exactMatch,
-      });
-      res.json(results);
-    } catch (error) {
-      res
-        .status(500)
-        .json({ error: error instanceof Error ? error.message : String(error) });
-    }
-  });
-
-  // ─── Webhook: receive live updates from WordPress ─────────────────────────────
-  app.post('/api/webhook/review', (req, res) => {
-    if (secret && req.headers['x-webhook-secret'] !== secret) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    const { action, review } = req.body as { action: 'upsert' | 'delete'; review: WPReview };
-
-    if (!action || !review?.id) {
-      res.status(400).json({ error: 'Missing action or review.id' });
-      return;
-    }
-
-    if (action === 'delete') {
-      dataClient.removeWine(String(review.id));
-      console.log(`[Webhook] Removed wine ${review.id}`);
-    } else {
-      dataClient.upsertWine(mapWPReview(review));
-      console.log(`[Webhook] Upserted wine ${review.id}: ${review.brand_name}`);
-    }
-
-    metaCache.clear(); // force rebuild so filter dropdowns reflect the change
-    casesMax = null;   // a published wine can raise (or a trashed one lower) it
-
-    res.json({ ok: true, total: dataClient.getAllWines().length });
   });
 
   return app;

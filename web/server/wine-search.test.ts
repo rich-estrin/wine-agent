@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { searchWines, filterWines, matchesFilter, getWineDetails } from './wine-search.js';
+import { searchWines, filterWines, matchesFilter } from './wine-search.js';
 import { makeWine, ids } from '../test/factory.js';
 import type { Wine } from '../src/types.js';
 
@@ -331,21 +331,5 @@ describe('matchesFilter', () => {
 
   it('is false for a field the Wine type does not have', () => {
     expect(matchesFilter(wine, 'nonsense', 'x')).toBe(false);
-  });
-});
-
-describe('getWineDetails', () => {
-  it('finds by partial name across brand and wine name', () => {
-    expect(ids(getWineDetails(wines, { wine_name: 'Old Vines' }))).toEqual(['woodward']);
-    expect(ids(getWineDetails(wines, { wine_name: 'Woodward Canyon Old Vines' }))).toEqual(['woodward']);
-  });
-
-  it('folds accents', () => {
-    expect(ids(getWineDetails(wines, { wine_name: 'semillon' }))).toEqual(['semillon']);
-  });
-
-  it('honours exact_match', () => {
-    expect(getWineDetails(wines, { wine_name: 'Old', exact_match: true })).toHaveLength(0);
-    expect(ids(getWineDetails(wines, { wine_name: 'Old Vines', exact_match: true }))).toEqual(['woodward']);
   });
 });

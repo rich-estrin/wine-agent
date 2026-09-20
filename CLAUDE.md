@@ -50,7 +50,7 @@ WordPress is the source of truth. Two access modes, selected by `web/.env`:
 | **WP CSV export** | `CSV_PATH` | `CSVClient` — parses export, caches to `web/cache/wines.json` |
 | **WP REST API** | `WP_API_URL` + `WP_API_KEY` | `WPClient` — fetches paginated, caches to `web/cache/wines.json` |
 
-The cache is invalidated automatically when the source path/URL changes. Both clients expose identical `getAllWines()`, `upsertWine()`, `removeWine()` methods.
+The cache is invalidated automatically when the source path/URL changes. All three clients expose the same read-only `getAllWines()`; the dataset is loaded once at startup and never mutated while the server runs.
 
 **Production doesn't use these.** The plugin serves search from the WordPress database (see below); the Node server in `web/server/` is the reference implementation the parity tests check the PHP against, and what `dev:fixture` runs.
 
@@ -151,7 +151,6 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 - `GET /api/meta` — returns `{ varietals, regions, types, avaList, stateProvinces, specialDesignations, casesMax }`.
   `casesMax` is the largest reported case production, computed over **all** wines
   (never narrowed by the active filters) so the Cases slider's top end holds still
-- `POST /api/webhook/review` — receives `{ action: 'upsert'|'delete', review: WPReview }` from WP plugin; authenticated via `X-Webhook-Secret` header
 
 ### Search/Filter Logic
 - All text comparison goes through `fold()` in `src/lib/text.ts` — strips accents
@@ -267,6 +266,5 @@ web/
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
   Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
   the combobox and tree pickers stay single-select `string`
-- `FilterPanel.tsx` is unused — superseded by `Sidebar.tsx`
 - Never commit `web/.env` or `web/cache/`
-- `WPReview` interface and `mapWPReview()` are exported from `wp-client.ts` and shared with the webhook endpoint in `index.ts`
+- `WPReview` and `mapWPReview()` are internal to `wp-client.ts` — the shape the WordPress REST loader maps from

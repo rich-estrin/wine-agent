@@ -30,7 +30,7 @@ The React app calls `window.__WINE_AGENT_API_BASE__` (injected by the shortcode)
 wine-agent/
 ├── web/
 │   ├── server/             # Express API server (port 3001)
-│   │   ├── app.ts          # Routes: /api/search, /api/meta, /api/webhook/review
+│   │   ├── app.ts          # Routes: /api/search, /api/meta
 │   │   ├── index.ts        # Picks a data source and listens
 │   │   ├── wine-search.ts  # Search and filter over the loaded wines
 │   │   ├── csv-client.ts   # Loads WordPress CSV export → wines.json cache

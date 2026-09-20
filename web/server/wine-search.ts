@@ -20,9 +20,8 @@ const EXACT_MATCH_FIELDS = new Set(['mainVarietal', 'type', 'region', 'stateProv
 const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName', 'mainVarietal', 'ava'];
 
 // Folding 3,000+ rows on every keystroke would be wasteful, so each wine's
-// searchable words are computed once and remembered. A WeakMap keyed on the
-// wine object means webhook upserts (which replace the object) invalidate their
-// own entry for free.
+// searchable words are computed once and remembered. Keyed on the wine object
+// itself, so a cache entry cannot outlive the row it describes.
 const wordCache = new WeakMap<Wine, string[]>();
 
 function searchWords(wine: Wine): string[] {
@@ -36,9 +35,8 @@ function searchWords(wine: Wine): string[] {
 // The tasting note, folded once per wine and remembered. Prose is 2.6 MB
 // across the export — folding it on every keystroke would be wasteful, and
 // tokenising it into words costs several times the memory of keeping the
-// string. Like `wordCache`, a WeakMap means a webhook upsert (which replaces
-// the wine object) invalidates its own entry, and a reader who never ticks the
-// box never pays for any of this.
+// string. Built on first use, so a reader who never ticks the box never pays
+// for any of this.
 const noteCache = new WeakMap<Wine, string>();
 
 function foldedNote(wine: Wine): string {
@@ -186,19 +184,4 @@ export function matchesFilter(wine: Wine, key: string, filterValue: string): boo
       // Accent-insensitive substring — "Rhone" finds "Rhône".
       return operator === '=' ? fold(wineValue).includes(fold(value)) : false;
   }
-}
-
-export function getWineDetails(
-  wines: Wine[],
-  params: { wine_name: string; exact_match?: boolean },
-): Wine[] {
-  const { wine_name, exact_match = false } = params;
-  const search = fold(wine_name);
-  return wines.filter((wine) => {
-    const name = fold(wine.wineName);
-    const full = fold(`${wine.brandName} ${wine.wineName}`);
-    return exact_match
-      ? name === search || full === search
-      : name.includes(search) || full.includes(search);
-  });
 }
