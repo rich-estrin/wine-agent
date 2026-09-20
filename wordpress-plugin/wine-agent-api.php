@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.38.0
+ * Version: 2.39.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
