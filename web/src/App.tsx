@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import type { Wine, Meta } from './types';
-import type { SearchParams, ChatMessage } from './api';
-import { searchWines, fetchMeta, sendChatMessage } from './api';
+import type { SearchParams } from './api';
+import { searchWines, fetchMeta } from './api';
 import SearchBar from './components/SearchBar';
 import { expandAva } from './data/ava-tree';
 import { expandRegion } from './data/region-tree';
@@ -17,7 +17,6 @@ import Sidebar, {
 } from './components/Sidebar';
 import WineList from './components/WineList';
 import WineDetail from './components/WineDetail';
-import Chat from './components/Chat';
 import BottomSheet from './components/BottomSheet';
 
 // ── App ────────────────────────────────────────────────────────────────────
@@ -42,7 +41,6 @@ export default function App() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [initialLoad, setInitialLoad] = useState(true);
-  const [activeTab, setActiveTab] = useState<'search' | 'chat'>('search');
   const [sheetOpen, setSheetOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   // Bumped on every reset. Both fetches capture it and drop their response if it
@@ -56,8 +54,6 @@ export default function App() {
   // that the scroll sentinel is already in view when the query changes.
   const loadedGen = useRef(0);
   const PAGE_SIZE = 40;
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatLoading, setChatLoading] = useState(false);
   const [totalResults, setTotalResults] = useState<number | null>(null);
   const activeFilterCount = countActiveFilters(filters);
 
@@ -138,31 +134,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [buildFilterParams]);
 
-  // Handle chat message sending
-  const handleChatSend = async (content: string) => {
-    const userMessage: ChatMessage = { role: 'user', content };
-    const newMessages = [...chatMessages, userMessage];
-    setChatMessages(newMessages);
-    setChatLoading(true);
-    try {
-      const response = await sendChatMessage(newMessages);
-      setChatMessages([...newMessages, { role: 'assistant', content: response }]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      setChatMessages([
-        ...newMessages,
-        {
-          role: 'assistant',
-          content: `Sorry, I encountered an error: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        },
-      ]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
   // The search box debounces its own input, so a query change is already
   // settled by the time it lands here; only filter changes need the extra wait.
   const prevQuery = useRef(query);
@@ -228,117 +199,108 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#faf7f2] font-sans text-ink">
 
-      {/* Tab navigation — Chat hidden until ready to launch */}
+      {/* Page body: sidebar + main */}
+      <div className="flex">
+        {/* Desktop sidebar */}
+        <aside data-testid="sidebar-desktop" className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,146,74,0.2) transparent' }}>
+          <Sidebar meta={meta} filters={filters} onChange={setFilters} />
+        </aside>
 
-      {/* Search tab */}
-      {activeTab === 'search' && (
-        <>
-          {/* Page body: sidebar + main */}
-          <div className="flex">
-            {/* Desktop sidebar */}
-            <aside data-testid="sidebar-desktop" className="hidden lg:block w-[234px] flex-shrink-0 bg-[#faf7f2] border-r border-warm-border sticky top-0 self-start max-h-screen overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,146,74,0.2) transparent' }}>
-              <Sidebar meta={meta} filters={filters} onChange={setFilters} />
-            </aside>
-
-            {/* Main content */}
-            <main data-testid="results" className="flex-1 min-w-0 px-5 md:px-7 py-5 md:py-6">
-              {/* Search bar + desktop sort */}
-              <div className="flex gap-2 mb-3">
-                <div className="flex-1">
-                  <SearchBar value={query} onSearch={setQuery} />
-                </div>
-                <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-                  <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] outline-none cursor-pointer"
-                  >
-                    <option value="rating">Rating</option>
-                    <option value="price">Price</option>
-                    <option value="vintage">Vintage</option>
-                    <option value="publicationDate">Review Date</option>
-                  </select>
-                  <button
-                    onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
-                  >
-                    {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Mobile: Filters button + sort controls */}
-              <div className="lg:hidden flex items-center gap-2 mb-3">
-                <button
-                  onClick={() => setSheetOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-[7px] text-[11px] font-medium tracking-[0.06em] uppercase border border-warm-border rounded-full text-ink bg-white"
-                >
-                  <AdjustmentsHorizontalIcon className="w-3 h-3" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <span className="w-4 h-4 rounded-full bg-[#7b2d3e] text-white text-[9px] font-bold flex items-center justify-center">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-                <div className="ml-auto flex items-center gap-1.5">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="text-[11px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2 py-[6px] outline-none cursor-pointer"
-                  >
-                    <option value="rating">Rating</option>
-                    <option value="price">Price</option>
-                    <option value="vintage">Vintage</option>
-                    <option value="publicationDate">Review Date</option>
-                  </select>
-                  <button
-                    onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                    className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
-                  >
-                    {sortOrder === 'desc' ? '↓' : '↑'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Active filter pills + result count */}
-              <div className="mb-4 pb-3 border-b border-warm-border flex items-end justify-between gap-3">
-                <div className="flex-1">
-                  {hasAnyFilter(filters) && (
-                    <ActiveChips filters={filters} onChange={setFilters} />
-                  )}
-                </div>
-                {totalResults !== null && !loading && (
-                  <span data-testid="result-count" className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
-                    {totalResults.toLocaleString()} wines found
-                  </span>
-                )}
-              </div>
-
-              <WineList
-                wines={wines}
-                loading={loading}
-                onSelect={setSelectedWine}
-              />
-              <div ref={sentinelRef} className="h-1" />
-              {loadingMore && (
-                <p className="text-center text-sm text-muted py-4">Loading more…</p>
-              )}
-              {!hasMore && wines.length > 0 && (
-                <p className="text-center text-sm text-muted py-4">All {wines.length} results shown</p>
-              )}
-            </main>
+        {/* Main content */}
+        <main data-testid="results" className="flex-1 min-w-0 px-5 md:px-7 py-5 md:py-6">
+          {/* Search bar + desktop sort */}
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1">
+              <SearchBar value={query} onSearch={setQuery} />
+            </div>
+            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+              <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] outline-none cursor-pointer"
+              >
+                <option value="rating">Rating</option>
+                <option value="price">Price</option>
+                <option value="vintage">Vintage</option>
+                <option value="publicationDate">Review Date</option>
+              </select>
+              <button
+                onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
+              >
+                {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
+              </button>
+            </div>
           </div>
 
-          {/* Mobile bottom sheet */}
-          <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
-            <Sidebar meta={meta} filters={filters} onChange={setFilters} />
-          </BottomSheet>
-        </>
-      )}
+          {/* Mobile: Filters button + sort controls */}
+          <div className="lg:hidden flex items-center gap-2 mb-3">
+            <button
+              onClick={() => setSheetOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-[7px] text-[11px] font-medium tracking-[0.06em] uppercase border border-warm-border rounded-full text-ink bg-white"
+            >
+              <AdjustmentsHorizontalIcon className="w-3 h-3" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-[#7b2d3e] text-white text-[9px] font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            <div className="ml-auto flex items-center gap-1.5">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="text-[11px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2 py-[6px] outline-none cursor-pointer"
+              >
+                <option value="rating">Rating</option>
+                <option value="price">Price</option>
+                <option value="vintage">Vintage</option>
+                <option value="publicationDate">Review Date</option>
+              </select>
+              <button
+                onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
+              >
+                {sortOrder === 'desc' ? '↓' : '↑'}
+              </button>
+            </div>
+          </div>
 
-      {/* Chat tab — hidden until ready to launch */}
+          {/* Active filter pills + result count */}
+          <div className="mb-4 pb-3 border-b border-warm-border flex items-end justify-between gap-3">
+            <div className="flex-1">
+              {hasAnyFilter(filters) && (
+                <ActiveChips filters={filters} onChange={setFilters} />
+              )}
+            </div>
+            {totalResults !== null && !loading && (
+              <span data-testid="result-count" className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
+                {totalResults.toLocaleString()} wines found
+              </span>
+            )}
+          </div>
+
+          <WineList
+            wines={wines}
+            loading={loading}
+            onSelect={setSelectedWine}
+          />
+          <div ref={sentinelRef} className="h-1" />
+          {loadingMore && (
+            <p className="text-center text-sm text-muted py-4">Loading more…</p>
+          )}
+          {!hasMore && wines.length > 0 && (
+            <p className="text-center text-sm text-muted py-4">All {wines.length} results shown</p>
+          )}
+        </main>
+      </div>
+
+      {/* Mobile bottom sheet */}
+      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
+        <Sidebar meta={meta} filters={filters} onChange={setFilters} />
+      </BottomSheet>
 
       <WineDetail wine={selectedWine} onClose={() => setSelectedWine(null)} query={query} />
     </div>

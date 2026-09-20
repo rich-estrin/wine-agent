@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.31.0
+ * Version: 2.32.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
@@ -283,15 +283,6 @@ add_action( 'rest_api_init', function () {
     register_rest_route( 'wine-agent/v1', '/meta', array_merge( $public_args, [
         'methods'  => 'GET',
         'callback' => 'wine_agent_handle_meta',
-    ] ) );
-
-    // The app ships a chat client; the feature is disabled on both backends.
-    // Answering here keeps the contract explicit rather than 404-ing.
-    register_rest_route( 'wine-agent/v1', '/chat', array_merge( $public_args, [
-        'methods'  => 'POST',
-        'callback' => function () {
-            return new WP_REST_Response( [ 'error' => 'Chat is not available yet.' ], 503 );
-        },
     ] ) );
 } );
 

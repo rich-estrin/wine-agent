@@ -20,7 +20,6 @@
     "start": "tsx server/index.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "csv-parse": "^6.2.1",
