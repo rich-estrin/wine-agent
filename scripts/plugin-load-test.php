@@ -39,6 +39,33 @@ function register_deactivation_hook( $file, $callback ) {
 	$GLOBALS['stub_hooks']['deactivate'][] = $callback;
 }
 
+function wp_dequeue_script( $handle ) {}
+function wp_enqueue_script( $handle, $src = '', $deps = [], $ver = null, $footer = false ) {}
+function wp_enqueue_style( $handle, $src = '', $deps = [], $ver = null ) {}
+function plugins_url( $path = '', $file = '' ) {
+	return 'https://example.test/wp-content/plugins/wine-agent-api/' . ltrim( $path, '/' );
+}
+function rest_url( $path = '' ) {
+	return 'https://example.test/wp-json/' . ltrim( $path, '/' );
+}
+function wp_json_encode( $value, $flags = 0 ) {
+	return json_encode( $value, $flags );
+}
+function esc_html( $text ) {
+	return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+}
+/** Real get_file_data is close enough for a header read. */
+function get_file_data( $file, $headers, $context = '' ) {
+	$contents = file_get_contents( $file );
+	$found    = [];
+	foreach ( $headers as $key => $label ) {
+		$found[ $key ] = preg_match( '/^[ \t\/*#@]*' . preg_quote( $label, '/' ) . ':(.*)$/mi', $contents, $m )
+			? trim( $m[1] )
+			: '';
+	}
+	return $found;
+}
+
 $plugin = __DIR__ . '/../wordpress-plugin/wine-agent-api.php';
 require_once $plugin;
 
@@ -118,6 +145,51 @@ foreach ( $required_hooks as $hook ) {
 }
 
 expect( isset( $GLOBALS['stub_shortcodes']['wine-search'] ), '[wine-search] shortcode not registered' );
+
+// ── The version marker ───────────────────────────────────────────────────────
+// The rendered page has to name the plugin version it is running, so a deploy
+// can be confirmed from the page itself rather than from WP Admin. Read the
+// expected version straight out of the header, so the two cannot drift.
+preg_match( '/^\s*\*\s*Version:\s*(.+)$/m', file_get_contents( $plugin ), $header );
+$header_version = isset( $header[1] ) ? trim( $header[1] ) : '';
+
+expect( '' !== $header_version, 'could not read a Version out of the plugin header' );
+expect(
+	function_exists( 'wine_agent_plugin_version' ),
+	'function wine_agent_plugin_version is not defined'
+);
+if ( function_exists( 'wine_agent_plugin_version' ) ) {
+	expect(
+		$header_version === wine_agent_plugin_version(),
+		"wine_agent_plugin_version() returned '" . wine_agent_plugin_version() . "', header says '$header_version'"
+	);
+}
+
+$rendered = $GLOBALS['stub_shortcodes']['wine-search']();
+
+expect(
+	false !== strpos( $rendered, $header_version ),
+	"the shortcode output does not name the plugin version ($header_version)"
+);
+expect(
+	false !== strpos( $rendered, 'id="wine-agent-version"' ),
+	'the version marker has no stable id to look it up by'
+);
+// Non-visible: it is a verification aid, not page content.
+expect(
+	(bool) preg_match( '/<span id="wine-agent-version"[^>]*display:\s*none/', $rendered ),
+	'the version marker is not hidden — it would print on the page'
+);
+expect(
+	(bool) preg_match( '/<span id="wine-agent-version"[^>]*aria-hidden="true"/', $rendered ),
+	'the version marker is not hidden from screen readers'
+);
+// Emitted even when the assets are missing, which is exactly when knowing the
+// installed version matters most. This run has no assets/manifest.json.
+expect(
+	false !== strpos( $rendered, 'assets not found' ),
+	'expected the assets-missing path in a source checkout (no built assets present)'
+);
 expect( defined( 'WINE_AGENT_INDEX_VERSION' ), 'WINE_AGENT_INDEX_VERSION not defined' );
 
 // The index row and the schema have to agree on the column set, or every

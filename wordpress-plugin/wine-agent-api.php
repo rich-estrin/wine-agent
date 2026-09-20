@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.39.0
+ * Version: 2.40.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
@@ -235,11 +235,52 @@ function wine_agent_index_maybe_start_rebuild(): void {
 // Usage: add [wine-search] to any page or post.
 // The app JS/CSS are bundled with the plugin under assets/.
 
+/**
+ * This file's declared version, read from the plugin header.
+ *
+ * The header is the single place the version is written, so reading it back
+ * rather than restating it in a constant keeps the two from drifting. Read
+ * once per request.
+ *
+ * @return string Version string, e.g. '2.40.0'.
+ */
+function wine_agent_plugin_version(): string {
+    static $version = null;
+    if ( null === $version ) {
+        $data    = get_file_data( __FILE__, [ 'Version' => 'Version' ] );
+        $version = isset( $data['Version'] ) ? trim( $data['Version'] ) : '';
+    }
+    return $version;
+}
+
+/**
+ * A non-visible marker naming the running plugin version.
+ *
+ * Confirms which build a page is actually serving without opening WP Admin —
+ * which matters because an upload that silently did not replace the old files
+ * looks exactly like one that did. Hidden two ways: display:none so it never
+ * prints, aria-hidden so a screen reader doesn't announce it.
+ *
+ *   View Source:  <span id="wine-agent-version" …>wine-agent-api 2.40.0</span>
+ *   Console:      document.getElementById('wine-agent-version').textContent
+ *
+ * @return string HTML span.
+ */
+function wine_agent_version_marker(): string {
+    return '<span id="wine-agent-version" style="display:none" aria-hidden="true">'
+         . esc_html( 'wine-agent-api ' . wine_agent_plugin_version() )
+         . '</span>';
+}
+
 add_shortcode( 'wine-search', function () {
+    // Emitted on every path, including the failure below: when the assets are
+    // missing, knowing which version is installed is the whole question.
+    $marker = wine_agent_version_marker();
+
     // Read the Vite manifest bundled with the plugin (no HTTP calls needed).
     $manifest_path = plugin_dir_path( __FILE__ ) . 'assets/manifest.json';
     if ( ! file_exists( $manifest_path ) ) {
-        return '<p><em>Wine search: assets not found. Re-upload the plugin zip.</em></p>';
+        return $marker . '<p><em>Wine search: assets not found. Re-upload the plugin zip.</em></p>';
     }
     $assets   = json_decode( file_get_contents( $manifest_path ), true );
     $js_file  = $assets['index.html']['file'] ?? null;
@@ -259,7 +300,8 @@ add_shortcode( 'wine-search', function () {
     }
 
     // Point the app at this site's own REST endpoints.
-    return '<div id="wine-agent-root"></div>' . "\n"
+    return $marker . "\n"
+         . '<div id="wine-agent-root"></div>' . "\n"
          . '<script>window.__WINE_AGENT_API_BASE__ = ' . wp_json_encode( rest_url( 'wine-agent/v1' ) ) . ';</script>';
 } );
 
