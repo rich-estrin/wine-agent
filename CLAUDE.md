@@ -67,9 +67,8 @@ The cache is invalidated automatically when the source path/URL changes. All thr
 
 `/wp-json/wine-agent/v1/search` and `/meta` are answered from the
 `{prefix}wine_agent_index` table in this site's own database. There is no
-external search server, no cache sync, and reviews appear as soon as they're
-saved. (Through 2.28 a `proxy` mode forwarded to an EC2 Node API; it was removed
-in 2.29.0.)
+external search server and no cache to sync, so reviews appear as soon as
+they're saved.
 
 `/meta` forwards the active filters, so the dropdowns narrow each other — Wine
 Type narrows Varietal and State narrows Appellation.

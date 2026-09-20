@@ -24,10 +24,10 @@ require_once __DIR__ . '/wine-map.php';
  * The filter keys the app sends, and the only ones either endpoint honours.
  *
  * An allowlist rather than a denylist, because /search and /meta are public
- * and unauthenticated. Anything else in the query string is ignored: a CDN
- * cache-buster, a tracking tag, a typo, and WordPress's own REST params
- * (`rest_route` on plain permalinks, `_locale`, `_envelope`) all used to be
- * read as wine fields, where they matched no row and emptied the page.
+ * and unauthenticated. Anything else in the query string is ignored — a CDN
+ * cache-buster, a tracking tag, a typo, or one of WordPress's own REST params
+ * (`rest_route` on plain permalinks, `_locale`, `_envelope`). Read as a wine
+ * field instead, any of them would match no row and empty the page.
  *
  * Mirrors `FILTER_PARAMS` in web/server/app.ts.
  *

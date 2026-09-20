@@ -82,7 +82,7 @@ cd web && npm install
 
 cat > .env <<EOF
 CSV_PATH=/path/to/your/wordpress-export.csv
-WEBHOOK_SECRET=any-local-secret
+WINE_AGENT_KEY=any-local-secret
 EOF
 
 npm run dev:all

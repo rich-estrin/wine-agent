@@ -160,7 +160,7 @@ function wine_agent_normalize_pub_date( ?string $raw ): string {
 }
 
 /**
- * Map a raw review row (the shape the /reviews endpoint and the webhook both
+ * Map a raw review row (the shape the postmeta pivot and the /reviews endpoint
  * produce) into a Wine. Mirrors `mapWPReview` field for field.
  *
  * @param array $row Raw review row.
