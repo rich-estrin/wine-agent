@@ -164,9 +164,8 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
       const sortOrd = sort_order === 'asc' ? 'asc' : 'desc';
       // Newest reviews first when the caller doesn't say — matches the app's
       // own default, so a caller that omits sort_by sees the same order.
-      let sortBy = typeof sort_by === 'string' ? sort_by : '';
-      if (sortBy === 'relevance') sortBy = 'rating';
-      if (!SORT_FIELDS.has(sortBy)) sortBy = DEFAULT_SORT;
+      const requested = typeof sort_by === 'string' ? sort_by : '';
+      const sortBy = SORT_FIELDS.has(requested) ? requested : DEFAULT_SORT;
 
       let results = dataClient.getAllWines();
 

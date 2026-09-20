@@ -63,7 +63,7 @@
   { "name": "sort:cases-desc",             "endpoint": "search", "query": "sort_by=cases&sort_order=desc&limit=100" },
   { "name": "sort:pubdate-asc",            "endpoint": "search", "query": "sort_by=publicationDate&sort_order=asc&limit=100" },
   { "name": "sort:pubdate-desc",           "endpoint": "search", "query": "sort_by=publicationDate&sort_order=desc&limit=100" },
-  { "name": "sort:relevance-alias",        "endpoint": "search", "query": "sort_by=relevance&limit=100" },
+  { "name": "sort:unsortable-field",       "endpoint": "search", "query": "sort_by=relevance&limit=100" },
   { "name": "sort:string-field",           "endpoint": "search", "query": "sort_by=brandName&sort_order=asc&limit=100" },
 
   { "name": "page:limit",                  "endpoint": "search", "query": "limit=5" },

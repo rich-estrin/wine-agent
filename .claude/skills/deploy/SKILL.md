@@ -9,11 +9,11 @@ version: 3.2.0
 There is **one delivery target**: the WordPress plugin. End users load the React
 app via the `[wine-search]` shortcode, which serves the JS **bundled inside the
 plugin zip**, and search is answered from an index table in WordPress's own
-database. There is no EC2 server, no data cache to rsync and no webhook.
+database. Everything ships in the zip: there is nothing else to push.
 
 ## A. Frontend build + plugin repackage
 
-1. **Build the frontend with the default base path** (do NOT set `VITE_BASE_PATH` — assets are served from the plugin dir via `plugins_url()`, not from an EC2 path). CSS is injected via JS, so there is no separate `.css` file.
+1. **Build the frontend with the default base path** (do NOT set `VITE_BASE_PATH` — assets are served from the plugin dir via `plugins_url()`). CSS is injected via JS, so there is no separate `.css` file.
    ```bash
    cd /Users/rich/src/wine-agent/web && npm run build
    ```

@@ -1,7 +1,8 @@
 import type { Wine, Meta } from './types';
 
 // When embedded in WordPress the plugin injects window.__WINE_AGENT_API_BASE__
-// pointing to its WP REST proxy. Falls back to relative path for standalone use.
+// pointing at its own /wp-json/wine-agent/v1 routes, so every request is
+// same-origin. Falls back to a relative path for standalone use.
 const BASE: string =
   (typeof window !== 'undefined' && (window as any).__WINE_AGENT_API_BASE__) ||
   './api';

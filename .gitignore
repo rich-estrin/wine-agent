@@ -10,15 +10,11 @@ server-dist/
 
 # Credentials (IMPORTANT: Never commit these!)
 credentials/
-*.json
-!package.json
-!package-lock.json
-!tsconfig.json
-!.claude/settings.json
-# Committed on purpose: the standalone/test dataset (see web/fixtures/README.md)
-!web/fixtures/wines.json
-# Committed on purpose: the search parity battery and its edge-case dataset
-!scripts/parity/*.json
+
+# The data cache, which holds real review content. Named explicitly: a blanket
+# *.json ignore with a whitelist silently swallowed every new JSON file added to
+# the repo, which is not something you notice until it is missing.
+web/cache/
 
 # Environment files
 .env
@@ -46,3 +42,7 @@ yarn-error.log*
 test-results/
 playwright-report/
 **/e2e/screenshots/
+
+# The built plugin zip: a release artifact, rebuilt from source by /deploy on
+# every version bump. Keeping it in git meant a binary churning on every change.
+wordpress-plugin/wine-agent-api*.zip

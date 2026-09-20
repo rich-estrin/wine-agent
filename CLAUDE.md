@@ -113,7 +113,7 @@ Settings → Wine Agent API shows index status and a Rebuild button.
   `includes/wine-index.php` at the top.
 - The zip is named for the version inside it (`wine-agent-api-2.23.0.zip`), and the
   previous version's zip is deleted in the same step — there is never an
-  unversioned `wine-agent-api.zip`
+  unversioned `wine-agent-api.zip`. It is gitignored: build it when you deploy
 - The plugin zip bundles the built JS/CSS assets — no HTTP fetching at runtime
 - Plugin settings (WP Admin → Settings → Wine Agent API): API Key, plus search index status and the Rebuild button
 
@@ -271,5 +271,7 @@ web/
 - Filter state lives in `App.tsx` as `Filters` (imported from `Sidebar.tsx`).
   Checkbox facets (`type`, `stateProvince`, `specialDesignation`) hold `string[]`;
   the combobox and tree pickers stay single-select `string`
-- Never commit `web/.env` or `web/cache/`
+- Never commit `web/.env`, `web/cache/`, or the built plugin zip — all three are
+  gitignored. The zip is a release artifact `/deploy` rebuilds from source on
+  every version bump
 - `WPReview` and `mapWPReview()` are internal to `wp-client.ts` — the shape the WordPress REST loader maps from

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.36.0
+ * Version: 2.37.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
@@ -210,7 +210,7 @@ add_action( 'admin_init', function () {
 
 /**
  * Start a background rebuild when the index can't serve search — a first
- * install, an upgrade from proxy mode that never built one, or a schema bump.
+ * install, or a schema bump that invalidated the existing index.
  * Search answers 503 until the index exists, so waiting for someone to press
  * Rebuild or for the nightly cron would leave the site without search.
  *

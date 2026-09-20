@@ -421,9 +421,6 @@ function wine_agent_build_search_sql( array $params ): array {
 
 	$sort_order = ( isset( $params['sort_order'] ) && 'asc' === $params['sort_order'] ) ? 'asc' : 'desc';
 	$sort_by    = isset( $params['sort_by'] ) ? (string) $params['sort_by'] : '';
-	if ( 'relevance' === $sort_by ) {
-		$sort_by = 'rating';
-	}
 	// Only sorts the index has a typed column for. Anything else falls back to
 	// the default rather than being sorted in memory over every matched row.
 	// Mirrors SORT_FIELDS in web/server/app.ts.

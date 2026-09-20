@@ -4,10 +4,10 @@
  * on activation — a redeclared function, a missing include, a call made at load
  * time rather than on a hook.
  *
- * This is not a functional test of the WordPress integration (that needs a real
- * $wpdb; see the staging A/B in scripts/parity/run-remote.mjs). It is the cheap
- * check that the file WordPress is about to run parses, loads, and registers
- * what it means to.
+ * This is not a functional test of the WordPress integration — that needs a
+ * real $wpdb, and is what the post-upload spot-check in DEPLOYMENT.md covers.
+ * It is the cheap check that the file WordPress is about to run parses, loads,
+ * and registers what it means to.
  *
  * Usage: php scripts/plugin-load-test.php
  */

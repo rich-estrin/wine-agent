@@ -106,12 +106,6 @@ describe('GET /api/search', () => {
     expect(noQuery.wines.map((w) => w.id)).toEqual(dated.wines.map((w) => w.id));
   });
 
-  it('treats a legacy sort_by=relevance as rating', async () => {
-    const legacy = await search('sort_by=relevance&limit=5');
-    const rating = await search('sort_by=rating&limit=5');
-    expect(legacy.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
-  });
-
   it('narrows on a case-production range', async () => {
     const all = await search('limit=200');
     const small = await search('casesMax=500&limit=200');
@@ -331,11 +325,5 @@ describe('unrecognised sorts', () => {
       const byDefault = await search('limit=10');
       expect(sorted.wines.map((w) => w.id)).not.toEqual(byDefault.wines.map((w) => w.id));
     }
-  });
-
-  it('still treat the relevance alias as rating', async () => {
-    const alias = await search('sort_by=relevance&limit=5');
-    const rating = await search('sort_by=rating&limit=5');
-    expect(alias.wines.map((w) => w.id)).toEqual(rating.wines.map((w) => w.id));
   });
 });

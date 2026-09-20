@@ -70,8 +70,7 @@ export default function WineCard({
   // Line 1 names the varietal from the Varietal Label alone. A blend has none —
   // "DeLille Chaleur Estate Red Wine 2022", not "DeLille Bordeaux-Style Red
   // Blend Chaleur Estate Red Wine 2022" — and its style shows on line 2 instead.
-  // Caches written before the field existed fall back to the old behaviour.
-  const varietalLabel = wine.varietalLabel ?? wine.mainVarietal;
+  const varietalLabel = wine.varietalLabel;
 
   // Line 2: varietyStyle (only if it isn't already the varietal) · ava · stateProvince
   const varietyStylePart = wine.varietyStyle && wine.varietyStyle !== varietalLabel

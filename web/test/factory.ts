@@ -2,7 +2,7 @@ import type { Wine } from '../src/types.js';
 
 const BLANK: Wine = {
   id: '', brandName: '', wineName: '', ava: '', vintage: '', price: '', rating: '',
-  review: '', region: '', type: '', mainVarietal: '', varietyStyle: '',
+  review: '', region: '', type: '', mainVarietal: '', varietalLabel: '', varietyStyle: '',
   publicationDate: '', setting: '', purchasedProvided: '', temp: '', hyperlink: '',
   specialDesignation: '', alcohol: '', closure: '', cases: '', stateProvince: '',
   source: '', reviewer: '',

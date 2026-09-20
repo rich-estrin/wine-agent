@@ -42,7 +42,7 @@ wine-agent/
 ├── wordpress-plugin/
 │   ├── wine-agent-api.php  # Plugin: shortcode, REST endpoints, index lifecycle
 │   ├── includes/           # Native PHP search core (ports of the Node pipeline)
-│   └── wine-agent-api-<version>.zip  # Deployable zip (bundles built JS/CSS)
+│   └── wine-agent-api-<version>.zip  # Deployable zip (gitignored; built by /deploy)
 ├── DEPLOYMENT.md           # Deploy procedure
 └── docs/production-rollout.md  # First-time production install runbook
 ```

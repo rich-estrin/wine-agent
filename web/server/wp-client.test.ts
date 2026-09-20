@@ -139,9 +139,9 @@ describe('case production', () => {
 });
 
 
-// A cache written before a mapping change has to be discarded, or the new field
-// is silently absent everywhere: EC2 keeps its cache across deploys, and only
-// the WP URL used to be compared.
+// The cache outlives the code that wrote it, so a mapping change has to
+// invalidate it — otherwise a field added to the mapper is silently absent for
+// anyone with a cache on disk. Comparing the source URL alone is not enough.
 describe('WPClient — cache versioning', () => {
   let dir: string;
   const cachePath = () => join(dir, 'cache.json');

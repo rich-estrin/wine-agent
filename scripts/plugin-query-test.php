@@ -87,16 +87,13 @@ foreach ( array_keys( wine_agent_sortable_columns() ) as $sortable ) {
 	$plan = wine_agent_build_search_sql( [ 'sort_by' => $sortable ] );
 	expect( $sortable === $plan['sort_by'], "sort_by=$sortable was not honoured" );
 }
-foreach ( [ 'brandName', 'tastingDate', 'reviewer', '', 'nonsense' ] as $unsortable ) {
+foreach ( [ 'brandName', 'tastingDate', 'reviewer', 'relevance', '', 'nonsense' ] as $unsortable ) {
 	$plan = wine_agent_build_search_sql( [ 'sort_by' => $unsortable ] );
 	expect(
 		'publicationDate' === $plan['sort_by'],
 		"sort_by=$unsortable should fall back to publicationDate, got {$plan['sort_by']}"
 	);
 }
-$plan = wine_agent_build_search_sql( [ 'sort_by' => 'relevance' ] );
-expect( 'rating' === $plan['sort_by'], 'the relevance alias no longer maps to rating' );
-
 // ── The allowlist and the clause builder cannot drift apart ───────────────────
 // An allowlisted key with no clause builder fails closed — it would match
 // nothing and empty the page, which is the failure this whole allowlist exists
