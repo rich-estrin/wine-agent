@@ -104,23 +104,33 @@ everything else — but step 7 edits a live page, and that is worth a restore po
 If WordPress reports the plugin requires a newer PHP or WordPress version, that
 is preflight 2.1/2.2 failing — do not force it.
 
-Activation creates the index table and schedules the nightly rebuild. It does
-**not** change anything a visitor can see: no shortcode is on any page yet.
+Activation creates the index table, schedules the nightly rebuild and starts the
+first build in the background (step 5). It does **not** change anything a visitor can see: no shortcode is on any page yet.
 
 ---
 
 ## 5. Build the search index
 
-Search returns HTTP 503 until the index has been built once. Build it now,
-before anything is public.
+Search returns HTTP 503 until the index has been built once. **The build starts
+on its own:** the admin page load straight after activation schedules a
+background rebuild, which WP-Cron runs in 20-second passes until it is done —
+a few minutes on a site this size. You do not need to press anything.
 
-1. Go to **Settings → Wine Agent API**. You should see a red notice: *"The search
-   index is not ready."* That is expected on a fresh install.
-2. Press **Rebuild index**.
-3. Each press processes reviews for about 20 seconds and then reports progress —
-   *"Indexed 10,000 of 18,355 reviews. Press Continue to carry on."* Press
-   **Continue rebuild** until it reports **"Index rebuilt: N reviews."**
-   Expect two to four presses on a site this size.
+1. Go to **Settings → Wine Agent API**. A red notice — *"The search index is not
+   ready."* — is expected until the build finishes; it tells you to rebuild, but
+   one is already running.
+2. Reload the page every minute or so. **Rebuild in progress** shows the reviews
+   written so far, and climbs. **Indexed reviews** stays at 0 throughout, because
+   rows go to a staging table, then jumps to the full count when it swaps in.
+3. It is done when the red notice is gone, **Indexed reviews** shows the full
+   count and **Last full rebuild** has a timestamp.
+
+**Only if it stalls** — **Rebuild in progress** unchanged for five minutes, or
+the row never appears — press **Rebuild index** (or **Continue rebuild**) and
+keep pressing Continue until it reports **"Index rebuilt: N reviews."** A stall
+means WP-Cron is not firing; the likeliest cause is `DISABLE_WP_CRON` with a
+system cron that runs too rarely. Note it, because the nightly rebuild (step 8)
+depends on the same thing.
 
 The work is sliced deliberately so a large site never hits `max_execution_time`.
 Rows are written to a staging table and swapped in atomically at the end, so
@@ -130,10 +140,11 @@ mid-rebuild is not lost with the table it was written to.
 
 ### 5.1 Verify the count
 
-When it reports done, check that **N matches the number of published reviews**.
+When it is done, check that **Indexed reviews matches the number of published
+reviews**.
 Compare against **WP Admin → Reviews**, which shows the published count.
 
-If N is lower, press **Start over** and let it run to completion again.
+If it is lower, press **Rebuild index** and let it run to completion again.
 
 This is a sanity check, not a known failure mode. Only one rebuild pass can run
 at a time — the plugin takes a database lock — so a background rebuild and your
@@ -174,33 +185,25 @@ Work through all of this on the preview:
       slide-up sheet
 - [ ] Open the browser console (F12). There should be no red errors
 
-### 6.1 Two conflicts to check specifically
+### 6.1 Other blocks on the page
 
-**Other blocks on the page.** The shortcode deliberately de-registers
-WordPress's bundled React (`react`, `react-dom`, `wp-element`) so they cannot
-collide with the copy inside the app. Any *other* plugin or block on the same
-page that needs those scripts will break. Keep the search page minimal — the
-shortcode plus ordinary text — and if you must add another interactive block,
-retest this page after doing so.
+The shortcode deliberately de-registers WordPress's bundled React (`react`,
+`react-dom`, `wp-element`) so they cannot collide with the copy inside the app.
+Any *other* plugin or block on the same page that needs those scripts will
+break. Keep the search page minimal — the shortcode plus ordinary text — and if
+you must add another interactive block, retest this page after doing so.
 
-**Caching and Cloudflare.** The site sits behind Cloudflare, and the app's
-requests are ordinary same-origin URLs, so they can be caught by page caching
-rules:
+### 6.2 Caching needs no configuration
 
-- [ ] Exclude `/wp-json/wine-agent/v1/*` from page caching and from any CDN cache
-      rule. These responses vary by query string and must not be shared between
-      visitors. The plugin sends no-cache headers, but an aggressive page-cache
-      plugin or CDN rule can override them
-- [ ] Confirm the search page itself is excluded from full-page caching, or that
-      your cache passes query strings through
-- [ ] Check that **Rocket Loader**, JS minification/concatenation and any
-      "optimize JavaScript" feature are **not** applied to the app bundle
-      (`/wp-content/plugins/wine-agent-api/assets/index-*.js`). Rewriting that
-      file will break the app. If you cannot scope the exclusion narrowly,
-      disable Rocket Loader for the search page
+The site sits behind Cloudflare, and nothing needs excluding. The search
+endpoints send `no-store, private`, and Cloudflare passes them through
+uncached (`cf-cache-status: DYNAMIC`). Rocket Loader is not enabled, and the app
+bundle is served byte-for-byte as it ships in the zip. This was checked against
+the live site in September 2026.
 
-If the app works in preview but breaks once the page is public, caching is the
-first thing to suspect.
+The step 7 logged-out check covers the one thing that could change it: a
+page-cache plugin on production, or Rocket Loader switched on later. If the app
+works in preview but breaks once public, suspect one of those first.
 
 ---
 
@@ -279,15 +282,15 @@ Replace `{prefix}` with the site's actual table prefix (usually `wp_`). No
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Search box returns *"Search index is being built"* / HTTP 503 | The index has never completed | Settings → Wine Agent API → **Rebuild index**, press Continue to done (step 5) |
+| Search box returns *"Search index is being built"* / HTTP 503 | The first build has not finished | Wait a few minutes. If **Rebuild in progress** is not climbing, press **Rebuild index** and Continue to done (step 5) |
 | *"Wine search: assets not found. Re-upload the plugin zip."* | The zip was uploaded without its bundled assets, or partially extracted | Re-upload the zip; confirm `wp-content/plugins/wine-agent-api/assets/` contains a `.js` file and `manifest.json` |
 | Fatal error on activation | The zip is missing its `includes/` directory | Get a correctly packaged zip; the plugin requires `includes/wine-index.php` at load |
-| Page is blank where the app should be, console shows a React error | Another block on the page needs `wp-element`, or Rocket Loader / JS minification is rewriting the bundle | See 6.1 |
+| Page is blank where the app should be, console shows a React error | Another block on the page needs `wp-element`, or Rocket Loader / JS minification has been switched on | See 6.1, 6.2 |
 | Results appear but every filter dropdown is empty | The ACF meta keys do not match preflight 2.4 | Stop; report the actual key names — this needs a code change |
 | Filters work but a field is always blank on the cards | One meta key differs from preflight 2.4 | Same as above |
 | Indexed count is lower than the published review count | Rebuild was interrupted before it finished | **Start over** and let it run to done |
 | Reviews published today are missing from search | Index update hook did not fire (importer, direct SQL, or a bulk edit) | Press **Rebuild index**; routine editor saves should not need this |
-| Everything works logged in, broken logged out | Page or CDN caching | See 6.1 |
+| Everything works logged in, broken logged out | A page-cache plugin or CDN rule added since launch | See 6.2 |
 | Rebuild button times out / 502s | Host `max_execution_time` is below the 20-second slice budget | Press **Continue rebuild** repeatedly — progress is stored and resumes |
 
 ---
@@ -304,9 +307,8 @@ The rollout is done when all of these are true:
 6. Every filter group returns results and narrows the others
 7. Mobile viewport works
 8. A review edited in the editor appears in search immediately
-9. `/wp-json/wine-agent/v1/*` is excluded from page and CDN caching
-10. The old search is retired or redirected
-11. The nightly rebuild has been observed to run once
+9. The old search is retired or redirected
+10. The nightly rebuild has been observed to run once
 
 ---
 
@@ -360,6 +362,5 @@ and choose **Replace current with uploaded**.
 
 If the release notes mention a schema or index change, the first admin page load
 after the upload starts a background rebuild automatically and search returns 503
-until it finishes. To avoid that window, go straight to **Settings → Wine Agent
-API → Rebuild index** and press Continue to done, then re-check the count as in
-step 5.1.
+until it finishes — a few minutes. Nothing to press: watch it finish as in step
+5, then re-check the count as in step 5.1.

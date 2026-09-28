@@ -54,9 +54,13 @@ initial index build and rollback.
 
 ### 4. Build the search index (first install, or after a schema change)
 
-**WP Admin → Settings → Wine Agent API → Rebuild index.** Press Continue until
-it reports done; an 18k-review site takes several passes. Until the index is
-built, search returns 503. After that it is kept current automatically: saves,
+Nothing to press. The first admin page load after the upload (activation lands
+on one) starts a background rebuild, which WP-Cron runs in 20-second passes —
+a few minutes for 18k reviews. Search returns 503 until it swaps in. Watch it
+under **Settings → Wine Agent API**: **Rebuild in progress** climbs, then
+**Indexed reviews** jumps to the full count. If progress stalls for five
+minutes, WP-Cron is not firing — press **Rebuild index** and Continue to done.
+After that it is kept current automatically: saves,
 unpublishes, trashes and deletes update it, and a nightly cron rebuilds it in
 full.
 

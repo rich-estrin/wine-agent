@@ -17,8 +17,9 @@ The zip includes the plugin PHP, the `includes/` search core and the built React
 
 ## 2. Build the index
 
-Go to **WP Admin → Settings → Wine Agent API** and press **Rebuild index**.
-Press Continue until it reports done. Search returns 503 until this has run once.
+The index builds itself in the background after activation — a few minutes on
+a large site. Search returns 503 until it is done. Watch **WP Admin → Settings →
+Wine Agent API**; press **Rebuild index** only if progress stalls.
 
 ## 3. Add the shortcode
 

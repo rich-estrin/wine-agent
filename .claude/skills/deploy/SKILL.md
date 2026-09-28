@@ -52,7 +52,7 @@ database. Everything ships in the zip: there is nothing else to push.
 
    Default to staging and say so. Never name production unless the user asked for it.
 
-   Tell the user to do this, then press **Rebuild index** if the plugin schema changed, and what UI changes to verify.
+   Tell the user to do this and what UI changes to verify. If the plugin schema changed, the index rebuilds itself in the background after the upload (search 503s for a few minutes); they press **Rebuild index** only if it stalls.
 
    A **first-ever** install on a site that has never run this plugin is a different
    procedure — point the user at `docs/production-rollout.md` instead of this skill.
@@ -62,4 +62,4 @@ database. Everything ships in the zip: there is nothing else to push.
 
 5. Run `cd web && npm run test:plugin` before packaging — it catches anything that would fatal on activation.
 
-6. After the user uploads the zip: on a first install or a schema change, Settings → Wine Agent API → **Rebuild index** (press Continue until done). Then check the embedded page: search with accents ("semillon") and apostrophes ("lecole"), tick Search tasting notes, exercise each filter, and confirm the dropdowns narrow each other.
+6. After the user uploads the zip: on a first install or a schema change, the index rebuilds itself — watch Settings → Wine Agent API until **Indexed reviews** shows the full count, pressing **Rebuild index** only if progress stalls. Then check the embedded page: search with accents ("semillon") and apostrophes ("lecole"), tick Search tasting notes, exercise each filter, and confirm the dropdowns narrow each other.
