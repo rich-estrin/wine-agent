@@ -44,9 +44,27 @@ zip -rq "wine-agent-api-$VER.zip" wine-agent-api/ && rm -rf wine-agent-api
 
 Ship to staging first and verify there; production gets the same zip once it passes.
 
+| Target | Which zip |
+|---|---|
+| Staging | The local build, `wordpress-plugin/wine-agent-api-<version>.zip` |
+| Production | The zip attached to that version's [GitHub release](https://github.com/rich-estrin/wine-agent/releases), never a local build |
+
 1. Go to **WP Admin → Plugins → Add New → Upload Plugin**
-2. Upload `wordpress-plugin/wine-agent-api-<version>.zip`
+2. Upload the zip for the target
 3. Click **Replace current with uploaded** and activate
+
+**Publish the release once staging passes, before touching production.** The
+release is the record of what production runs: it tags the commit and carries
+the exact zip that was verified on staging.
+
+```bash
+cd wordpress-plugin
+VER=$(grep -m1 -E '^\s*\*\s*Version:' wine-agent-api.php | sed -E 's/.*Version:[[:space:]]*//')
+gh release create "v$VER" "wine-agent-api-$VER.zip" --target main \
+  --title "Wine Agent API $VER" --notes "What changed, and whether the index schema changed"
+```
+
+Push `main` first, so the tag lands on the commit the zip was built from.
 
 A **first-ever** install on a site is not this procedure — see
 [docs/production-rollout.md](docs/production-rollout.md) for preflight,

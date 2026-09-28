@@ -52,6 +52,8 @@ database. Everything ships in the zip: there is nothing else to push.
 
    Default to staging and say so. Never name production unless the user asked for it.
 
+   Production uploads the zip attached to that version's GitHub release, never the local build — publish the release (`gh release create`, see DEPLOYMENT.md step 3) once staging passes and before production.
+
    Tell the user to do this and what UI changes to verify. If the plugin schema changed, the index rebuilds itself in the background after the upload (search 503s for a few minutes); they press **Rebuild index** only if it stalls.
 
    A **first-ever** install on a site that has never run this plugin is a different

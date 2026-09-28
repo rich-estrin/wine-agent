@@ -98,7 +98,8 @@ everything else — but step 7 edits a live page, and that is worth a restore po
 ## 4. Install the plugin
 
 1. **WP Admin → Plugins → Add New → Upload Plugin**
-2. Choose `wine-agent-api-<version>.zip` (e.g. `wine-agent-api-2.31.0.zip`)
+2. Choose `wine-agent-api-<version>.zip` (e.g. `wine-agent-api-2.41.0.zip`),
+   downloaded from the **Assets** of the [latest GitHub release](https://github.com/rich-estrin/wine-agent/releases/latest)
 3. **Install Now**, then **Activate**
 
 If WordPress reports the plugin requires a newer PHP or WordPress version, that
@@ -357,8 +358,8 @@ with no credentials and no WordPress — the quickest way to see a change.
 
 ## Appendix B — Updating an already-installed plugin
 
-Not a first install. Upload the new zip at **Plugins → Add New → Upload Plugin**
-and choose **Replace current with uploaded**.
+Not a first install. Download the new zip from its [GitHub release](https://github.com/rich-estrin/wine-agent/releases),
+upload it at **Plugins → Add New → Upload Plugin** and choose **Replace current with uploaded**.
 
 If the release notes mention a schema or index change, the first admin page load
 after the upload starts a background rebuild automatically and search returns 503
