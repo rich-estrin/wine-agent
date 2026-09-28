@@ -7,6 +7,18 @@ const BASE: string =
   (typeof window !== 'undefined' && (window as any).__WINE_AGENT_API_BASE__) ||
   './api';
 
+// Search is exactly as protected as the page hosting it, so the plugin also
+// injects a REST nonce (without which WordPress runs every call logged out)
+// and a signed token naming that page. Both are absent standalone, where the
+// Node server needs neither.
+function authHeaders(): Record<string, string> {
+  const w = typeof window !== 'undefined' ? (window as any) : {};
+  const headers: Record<string, string> = {};
+  if (w.__WINE_AGENT_NONCE__) headers['X-WP-Nonce'] = w.__WINE_AGENT_NONCE__;
+  if (w.__WINE_AGENT_PAGE__) headers['X-Wine-Agent-Page'] = w.__WINE_AGENT_PAGE__;
+  return headers;
+}
+
 export interface SearchParams {
   q?: string;
   mainVarietal?: string;
@@ -43,8 +55,8 @@ export async function searchWines(params: SearchParams): Promise<{ wines: Wine[]
       searchParams.set(key, String(value));
     }
   }
-  const res = await fetch(`${BASE}/search?${searchParams}`);
-  if (!res.ok) throw new Error(`Search failed: ${res.statusText}`);
+  const res = await fetch(`${BASE}/search?${searchParams}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   return res.json();
 }
 
@@ -58,7 +70,7 @@ export async function fetchMeta(filters: SearchParams = {}): Promise<Meta> {
     if (value !== undefined && value !== '') searchParams.set(key, String(value));
   }
   const qs = searchParams.toString();
-  const res = await fetch(`${BASE}/meta${qs ? `?${qs}` : ''}`);
-  if (!res.ok) throw new Error(`Meta failed: ${res.statusText}`);
+  const res = await fetch(`${BASE}/meta${qs ? `?${qs}` : ''}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Meta failed: ${res.status}`);
   return res.json();
 }

@@ -73,6 +73,17 @@ they're saved.
 `/meta` forwards the active filters, so the dropdowns narrow each other — Wine
 Type narrows Varietal and State narrows Appellation.
 
+Both are **exactly as protected as the page hosting the search**
+(`wine_agent_can_search()`). Search returns full reviews, and a MemberPress
+rule on the page guards its HTML but not a REST route, which reads the index
+directly. So the shortcode injects a `wp_rest` nonce (without it WordPress runs
+every REST call logged out) and a signed page token (`<id>.<hmac>`, so a caller
+can't point the check at an unprotected page); `api.ts` sends them as
+`X-WP-Nonce` and `X-Wine-Agent-Page`. The route answers only if that page is
+readable and `MeprRule::is_locked()` is false for this reader. Fails closed.
+Admins bypass MemberPress, so access has to be tested as a non-admin member.
+`npm run test:plugin` covers it (`scripts/plugin-access-test.php`)
+
 ### The index table
 
 A flat row per published review, holding pre-folded match columns, typed sort
@@ -155,7 +166,7 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
   `wine_agent_sortable_columns()`): exactly the five fields the index has a typed
   column for, so every sort is one SQL can order by; anything else falls back to
   the default. `limit` is clamped to 1–100 and `offset` to ≥ 0 on both sides;
-  the endpoints are public, so neither number is trusted
+  the endpoints are open to any member, so neither number is trusted
 - `GET /api/meta` — returns `{ varietals, regions, types, avaList, stateProvinces, specialDesignations, casesMax }`.
   `casesMax` is the largest reported case production, computed over **all** wines
   (never narrowed by the active filters) so the Cases slider's top end holds still

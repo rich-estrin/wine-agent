@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.41.0
+ * Version: 2.42.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
@@ -279,12 +279,97 @@ add_shortcode( 'wine-search', function () {
     // Point the app at this site's own REST endpoints, and tell it which
     // plugin build it came from — the app logs that on startup, so which
     // version a page is serving is answerable from the browser console.
+    //
+    // The nonce is what lets WordPress see the reader's login on the app's
+    // REST calls — without it every call runs logged out. The page token
+    // names the page hosting the search, which is what search access is
+    // checked against (see wine_agent_can_search()).
+    $page_id = (int) get_the_ID();
     return '<div id="wine-agent-root"></div>' . "\n"
          . '<script>'
          . 'window.__WINE_AGENT_API_BASE__ = ' . wp_json_encode( rest_url( 'wine-agent/v1' ) ) . ';'
          . 'window.__WINE_AGENT_VERSION__ = ' . wp_json_encode( wine_agent_plugin_version() ) . ';'
+         . 'window.__WINE_AGENT_NONCE__ = ' . wp_json_encode( wp_create_nonce( 'wp_rest' ) ) . ';'
+         . 'window.__WINE_AGENT_PAGE__ = ' . wp_json_encode( $page_id > 0 ? wine_agent_page_token( $page_id ) : '' ) . ';'
          . '</script>';
 } );
+
+// ─── Search access ───────────────────────────────────────────────────────────
+//
+// Search returns the full review — tasting note, score, price — so it must be
+// exactly as protected as the page it is embedded on. A MemberPress rule on
+// that page protects the page's HTML, but not a REST route, which reads the
+// index table directly. So every search and meta call names its host page, and
+// is answered only for a reader MemberPress would let see that page.
+//
+// The page is named by a signed token rather than a bare id: the shortcode
+// only issues one for a page it actually renders on, so a caller cannot point
+// the check at some unprotected page and read through it.
+
+/**
+ * The token the shortcode hands the app for its host page: "<id>.<hmac>".
+ *
+ * @param int $page_id Host page id.
+ * @return string
+ */
+function wine_agent_page_token( int $page_id ): string {
+    return $page_id . '.' . wine_agent_page_signature( $page_id );
+}
+
+function wine_agent_page_signature( int $page_id ): string {
+    return substr( hash_hmac( 'sha256', 'wine-agent-page|' . $page_id, wp_salt( 'auth' ) ), 0, 32 );
+}
+
+/**
+ * The host page a token names, or null when the token is missing or forged.
+ *
+ * @param string $token Value of the X-Wine-Agent-Page header.
+ * @return WP_Post|null
+ */
+function wine_agent_token_page( string $token ) {
+    if ( ! preg_match( '/^([1-9][0-9]*)\.([0-9a-f]{32})$/', $token, $m ) ) {
+        return null;
+    }
+    if ( ! hash_equals( wine_agent_page_signature( (int) $m[1] ), $m[2] ) ) {
+        return null;
+    }
+    $post = get_post( (int) $m[1] );
+    return $post instanceof WP_Post ? $post : null;
+}
+
+/**
+ * Permission callback for /search and /meta: may this reader see the page
+ * hosting the search?
+ *
+ * Fails closed. Without MemberPress the page's own visibility decides, so a
+ * site with no membership plugin keeps search as public as the page.
+ *
+ * @param WP_REST_Request $request Incoming request.
+ * @return bool
+ */
+function wine_agent_can_search( WP_REST_Request $request ): bool {
+    $post = wine_agent_token_page( (string) $request->get_header( 'X-Wine-Agent-Page' ) );
+    if ( ! $post ) {
+        return false;
+    }
+    // A draft or private page (the pre-launch test page) is readable only by
+    // those who can read it in WordPress.
+    if ( 'publish' !== $post->post_status && ! current_user_can( 'read_post', $post->ID ) ) {
+        return false;
+    }
+    if ( post_password_required( $post ) ) {
+        return false;
+    }
+    if ( class_exists( 'MeprRule' ) ) {
+        // MemberPress is active but its API has moved: refuse rather than
+        // guess, since guessing wrong serves the paid archive to everyone.
+        if ( ! is_callable( [ 'MeprRule', 'is_locked' ] ) ) {
+            return false;
+        }
+        return ! MeprRule::is_locked( $post );
+    }
+    return true;
+}
 
 // ─── Search endpoints ────────────────────────────────────────────────────────
 //
@@ -294,16 +379,16 @@ add_shortcode( 'wine-search', function () {
 // blocking the request as mixed content.
 
 add_action( 'rest_api_init', function () {
-    $public_args = [
-        'permission_callback' => '__return_true',
+    $search_args = [
+        'permission_callback' => 'wine_agent_can_search',
     ];
 
-    register_rest_route( 'wine-agent/v1', '/search', array_merge( $public_args, [
+    register_rest_route( 'wine-agent/v1', '/search', array_merge( $search_args, [
         'methods'  => 'GET',
         'callback' => 'wine_agent_handle_search',
     ] ) );
 
-    register_rest_route( 'wine-agent/v1', '/meta', array_merge( $public_args, [
+    register_rest_route( 'wine-agent/v1', '/meta', array_merge( $search_args, [
         'methods'  => 'GET',
         'callback' => 'wine_agent_handle_meta',
     ] ) );

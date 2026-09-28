@@ -35,7 +35,7 @@ Add `[wine-search]` to any page or post. The app renders inside a `#wine-agent-r
 
 | Field | Purpose |
 |-------|---------|
-| **Review Export API Key** | Authenticates the private `/reviews` export endpoint (`X-Wine-Agent-Key` header). Not used by search — `/search` and `/meta` are public. |
+| **Review Export API Key** | Authenticates the private `/reviews` export endpoint (`X-Wine-Agent-Key` header). Not used by search — `/search` and `/meta` answer anyone who can see the page hosting `[wine-search]`, so a MemberPress rule on that page protects them too. |
 
 ## Updating the plugin
 

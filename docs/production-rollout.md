@@ -24,7 +24,7 @@ So you know exactly what is being introduced, and what to remove if you back out
 | Database table | `{prefix}wine_agent_index` (plus `_new` / `_old` transiently during a rebuild) |
 | Options | `wine_agent_search_key`, `wine_agent_index_version`, `wine_agent_index_built_at`, `wine_agent_index_rebuild_offset`, `wine_agent_index_rebuild_dirty` |
 | Cron events | `wine_agent_index_nightly` (daily rebuild), `wine_agent_index_continue` (rebuild continuation) |
-| REST routes | `GET /wp-json/wine-agent/v1/search`, `/meta` (public), `/reviews` (API-key protected) |
+| REST routes | `GET /wp-json/wine-agent/v1/search`, `/meta` (only for readers who can see the page hosting the search, so members-only under MemberPress), `/reviews` (API-key protected) |
 | Database lock | A MySQL advisory lock named `wine_agent_rebuild_<db>_<prefix>`, held only while a rebuild pass runs |
 | Shortcode | `[wine-search]` |
 | Admin screen | Settings → Wine Agent API |
@@ -202,7 +202,7 @@ uncached (`cf-cache-status: DYNAMIC`). Rocket Loader is not enabled, and the app
 bundle is served byte-for-byte as it ships in the zip. This was checked against
 the live site in September 2026.
 
-The step 7 logged-out check covers the one thing that could change it: a
+The step 7 private-window checks cover the one thing that could change it: a
 page-cache plugin on production, or Rocket Loader switched on later. If the app
 works in preview but breaks once public, suspect one of those first.
 
@@ -214,9 +214,15 @@ Only after step 6 passes cleanly:
 
 1. Put `[wine-search]` on the **real** search page — the one you noted in
    preflight 2.7 — replacing the existing search.
-2. Update it and load the public URL, logged out, in a private window.
-3. Re-run the quick checks: search `semillon`, apply two filters, load it on a
-   phone.
+2. Update it, then check access in a private window, **logged out**:
+   - [ ] The page shows the MemberPress paywall, not the app
+   - [ ] `https://www.northwestwinereport.com/wp-json/wine-agent/v1/search`
+         answers **401** *"Sorry, you are not allowed to do that."* — not a list
+         of wines. The search API follows the page's protection; if this
+         returns wines, deactivate the plugin and stop
+3. Log in as an ordinary **non-admin member** — MemberPress lets administrators
+   through everything, so an admin login proves nothing about members. Re-run
+   the quick checks: search `semillon`, apply two filters, load it on a phone.
 4. Retire what it replaced. If the old search lived on a *different* URL, add a
    redirect from the old URL to the new one, and update any menu or internal
    links pointing at it.
@@ -292,6 +298,7 @@ Replace `{prefix}` with the site's actual table prefix (usually `wp_`). No
 | Indexed count is lower than the published review count | Rebuild was interrupted before it finished | **Start over** and let it run to done |
 | Reviews published today are missing from search | Index update hook did not fire (importer, direct SQL, or a bulk edit) | Press **Rebuild index**; routine editor saves should not need this |
 | Everything works logged in, broken logged out | A page-cache plugin or CDN rule added since launch | See 6.2 |
+| A member sees no results; the console shows a 401 or 403 from `/wine-agent/v1/` | Their membership does not unlock the search page, or the tab has been open more than a day and its login token expired | Reload the page. If it persists, check the MemberPress rule covering the page and the member's subscription |
 | Rebuild button times out / 502s | Host `max_execution_time` is below the 20-second slice budget | Press **Continue rebuild** repeatedly — progress is stored and resumes |
 
 ---
@@ -303,7 +310,8 @@ The rollout is done when all of these are true:
 1. Plugin active on production, version recorded
 2. **Indexed reviews** equals the published review count
 3. **Last full rebuild** shows a timestamp
-4. The public search page loads, logged out, with a non-zero result count
+4. The search page loads for a non-admin member with a non-zero result count,
+   and logged out shows the paywall while the search API answers 401
 5. Accent (`semillon`) and apostrophe (`lecole`) searches return results
 6. Every filter group returns results and narrows the others
 7. Mobile viewport works
