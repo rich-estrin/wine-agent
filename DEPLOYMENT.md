@@ -88,7 +88,7 @@ First confirm the upload actually landed. Open the page with the shortcode and
 check the browser console — the app logs its version on startup:
 
 ```
-wine-agent-api 2.41.0
+wine-agent-api 2.42.0
 ```
 
 That number comes from the plugin header of the build actually serving the

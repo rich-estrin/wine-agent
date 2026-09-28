@@ -98,7 +98,7 @@ everything else — but step 7 edits a live page, and that is worth a restore po
 ## 4. Install the plugin
 
 1. **WP Admin → Plugins → Add New → Upload Plugin**
-2. Choose `wine-agent-api-<version>.zip` (e.g. `wine-agent-api-2.41.0.zip`),
+2. Choose `wine-agent-api-<version>.zip` (e.g. `wine-agent-api-2.42.0.zip`),
    downloaded from the **Assets** of the [latest GitHub release](https://github.com/rich-estrin/wine-agent/releases/latest)
 3. **Install Now**, then **Activate**
 
