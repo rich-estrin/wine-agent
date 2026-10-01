@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.43.0
+ * Version: 2.44.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
@@ -337,13 +337,149 @@ add_shortcode( 'wine-search', function () {
     // names the page hosting the search, which is what search access is
     // checked against (see wine_agent_can_search()).
     $page_id = (int) get_the_ID();
+
+    // A `?wine=` link opens straight onto that review. It is inlined rather
+    // than fetched, and only for a reader who could search from this page.
+    $review = wine_agent_requested_review();
+    $page   = $page_id > 0 ? get_post( $page_id ) : null;
+    $wine   = ( $review && $page && wine_agent_can_read_page( $page ) ) ? wine_agent_review_wine( $review ) : null;
+
     return '<div id="wine-agent-root"></div>' . "\n"
          . '<script>'
+         . 'window.__WINE_AGENT_WINE__ = ' . wp_json_encode( $wine, JSON_HEX_TAG | JSON_HEX_AMP ) . ';'
+         . 'window.__WINE_AGENT_EDIT__ = ' . wp_json_encode( wine_agent_review_edit_link() ) . ';'
          . 'window.__WINE_AGENT_API_BASE__ = ' . wp_json_encode( rest_url( 'wine-agent/v1' ) ) . ';'
          . 'window.__WINE_AGENT_VERSION__ = ' . wp_json_encode( wine_agent_plugin_version() ) . ';'
          . 'window.__WINE_AGENT_NONCE__ = ' . wp_json_encode( wp_create_nonce( 'wp_rest' ) ) . ';'
          . 'window.__WINE_AGENT_PAGE__ = ' . wp_json_encode( $page_id > 0 ? wine_agent_page_token( $page_id ) : '' ) . ';'
          . '</script>';
+} );
+
+// ─── Review links ────────────────────────────────────────────────────────────
+//
+// An open review is named on the host page's URL as `?wine=<post slug>`, so a
+// link to it can be shared, and the admin bar offers "Edit Brand Review" for it
+// the way the review's own page does. The slug is read from the posts table at
+// response time rather than stored in the index, so it is never stale and adding
+// it cost no rebuild.
+
+/**
+ * Add each review's post slug to a page of search results.
+ *
+ * @param array[] $wines Wines from wine_agent_run_search().
+ * @return array[]
+ */
+function wine_agent_add_slugs( array $wines ): array {
+    global $wpdb;
+    $ids = array_values( array_filter( array_map( 'intval', array_column( $wines, 'id' ) ) ) );
+    if ( empty( $ids ) ) {
+        return $wines;
+    }
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT ID, post_name FROM {$wpdb->posts} WHERE ID IN (" . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ')',
+            $ids
+        ),
+        ARRAY_A
+    );
+    $slugs = array_column( (array) $rows, 'post_name', 'ID' );
+    foreach ( $wines as &$wine ) {
+        $wine['slug'] = (string) ( $slugs[ (int) $wine['id'] ] ?? '' );
+    }
+    unset( $wine );
+    return $wines;
+}
+
+/**
+ * The published review a `?wine=` link names, or null. Takes the slug, or a
+ * bare post id (what standalone links use when a wine has no slug).
+ *
+ * @return WP_Post|null
+ */
+function wine_agent_requested_review() {
+    $raw = isset( $_GET['wine'] ) ? sanitize_title( wp_unslash( (string) $_GET['wine'] ) ) : '';
+    if ( '' === $raw ) {
+        return null;
+    }
+    $post = ctype_digit( $raw ) ? get_post( (int) $raw ) : get_page_by_path( $raw, OBJECT, 'reviews' );
+    if ( ! $post instanceof WP_Post || 'reviews' !== $post->post_type || 'publish' !== $post->post_status ) {
+        return null;
+    }
+    return $post;
+}
+
+/**
+ * The review as the search API returns it — the index row's display JSON plus
+ * its slug — or null when it isn't indexed.
+ *
+ * @param WP_Post $review Review post.
+ * @return array|null
+ */
+function wine_agent_review_wine( $review ): ?array {
+    global $wpdb;
+    if ( wine_agent_index_needs_rebuild() ) {
+        return null;
+    }
+    $json = $wpdb->get_var(
+        $wpdb->prepare( 'SELECT display_json FROM ' . wine_agent_index_table() . ' WHERE id = %d', $review->ID )
+    );
+    $wine = is_string( $json ) ? json_decode( $json, true ) : null;
+    if ( ! is_array( $wine ) ) {
+        return null;
+    }
+    $wine['slug'] = $review->post_name;
+    return $wine;
+}
+
+/**
+ * The "Edit Brand Review" label and link template, for a reader who can edit
+ * any published review — null for everyone else. The app fills in the id as
+ * reviews are opened and closed.
+ *
+ * @return array{label:string,url:string}|null
+ */
+function wine_agent_review_edit_link(): ?array {
+    $type = get_post_type_object( 'reviews' );
+    if ( ! $type
+        || ! current_user_can( $type->cap->edit_others_posts )
+        || ! current_user_can( $type->cap->edit_published_posts ) ) {
+        return null;
+    }
+    return [
+        'label' => (string) ( $type->labels->edit_item ?? 'Edit Review' ),
+        'url'   => admin_url( 'post.php?post=__ID__&action=edit' ),
+    ];
+}
+
+// On a page hosting the search with `?wine=` set, put the review's edit link in
+// the admin bar, beside core's "Edit Page". The app swaps it as wines are opened
+// and closed (same node id); this is what the page loads with. Priority 81 sits
+// just after core's edit node.
+add_action( 'admin_bar_menu', function ( $wp_admin_bar ) {
+    if ( is_admin() || ! is_singular() ) {
+        return;
+    }
+    $page = get_queried_object();
+    if ( ! $page instanceof WP_Post || ! has_shortcode( $page->post_content, 'wine-search' ) ) {
+        return;
+    }
+    $review = wine_agent_requested_review();
+    if ( ! $review || ! current_user_can( 'edit_post', $review->ID ) ) {
+        return;
+    }
+    $type = get_post_type_object( 'reviews' );
+    $wp_admin_bar->add_node( [
+        'id'    => 'wine-agent-edit-review',
+        'title' => esc_html( (string) ( $type->labels->edit_item ?? 'Edit Review' ) ),
+        'href'  => get_edit_post_link( $review->ID ),
+    ] );
+}, 81 );
+
+// Core's pencil icon is keyed to its own `edit` node; give ours the same one.
+add_action( 'wp_head', function () {
+    if ( is_admin_bar_showing() ) {
+        echo '<style>#wpadminbar #wp-admin-bar-wine-agent-edit-review>.ab-item:before{content:"\f464";top:2px}</style>' . "\n";
+    }
 } );
 
 // ─── Search access ───────────────────────────────────────────────────────────
@@ -401,9 +537,17 @@ function wine_agent_token_page( string $token ) {
  */
 function wine_agent_can_search( WP_REST_Request $request ): bool {
     $post = wine_agent_token_page( (string) $request->get_header( 'X-Wine-Agent-Page' ) );
-    if ( ! $post ) {
-        return false;
-    }
+    return $post ? wine_agent_can_read_page( $post ) : false;
+}
+
+/**
+ * May this reader see the page? The check behind both the REST routes and the
+ * review the shortcode inlines for a `?wine=` link.
+ *
+ * @param WP_Post $post Page hosting the search.
+ * @return bool
+ */
+function wine_agent_can_read_page( $post ): bool {
     // A draft or private page (the pre-launch test page) is readable only by
     // those who can read it in WordPress.
     if ( 'publish' !== $post->post_status && ! current_user_can( 'read_post', $post->ID ) ) {
@@ -456,7 +600,8 @@ function wine_agent_handle_search( WP_REST_Request $request ): WP_REST_Response 
         );
     }
 
-    $result = wine_agent_run_search( wine_agent_index_executor(), $request->get_query_params() );
+    $result          = wine_agent_run_search( wine_agent_index_executor(), $request->get_query_params() );
+    $result['wines'] = wine_agent_add_slugs( $result['wines'] );
     return new WP_REST_Response( $result, 200 );
 }
 

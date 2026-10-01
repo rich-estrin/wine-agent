@@ -95,3 +95,65 @@ test.describe('a blend on the listing', () => {
     expect(line).toMatch(/2022.*Bordeaux-Style Red Blend/);
   });
 });
+
+test.describe('the wine link', () => {
+  const wineParam = (page: import('@playwright/test').Page) => new URL(page.url()).searchParams.get('wine');
+
+  test('opening a wine puts it on the URL, and closing takes it off', async ({ page }) => {
+    await page.getByTestId('wine-card').first().click();
+    await expect(dialog(page)).toBeVisible();
+    expect(wineParam(page)).toBeTruthy();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeHidden();
+    expect(wineParam(page)).toBeNull();
+  });
+
+  test('Back closes the wine and Forward reopens it', async ({ page }) => {
+    const brand = await page.getByTestId('wine-card-brand').first().innerText();
+    await page.getByTestId('wine-card').first().click();
+    await expect(dialog(page)).toBeVisible();
+
+    await page.goBack();
+    await expect(dialog(page)).toBeHidden();
+    expect(wineParam(page)).toBeNull();
+
+    await page.goForward();
+    await expect(dialog(page)).toContainText(brand);
+  });
+
+  test('a linked wine opens on load and keeps the admin-bar edit link in step', async ({ page }) => {
+    // Stand in for what the shortcode and WordPress render on a ?wine= link.
+    await page.addInitScript(() => {
+      const w = window as any;
+      w.__WINE_AGENT_WINE__ = {
+        id: '77', slug: 'linked-wine', brandName: 'Linked Cellars', wineName: 'Test Red', ava: '', vintage: '2020',
+        price: '$30', rating: '92', review: 'Linked note.', region: '', type: 'Red', mainVarietal: 'Syrah',
+        varietalLabel: 'Syrah', varietyStyle: '', publicationDate: '2025-01-01', setting: '', purchasedProvided: '',
+        temp: '', hyperlink: '', specialDesignation: '', alcohol: '', closure: '', cases: '', stateProvince: '',
+        source: '', reviewer: '',
+      };
+      w.__WINE_AGENT_EDIT__ = { label: 'Edit Brand Review', url: '/wp-admin/post.php?post=__ID__&action=edit' };
+      document.addEventListener('DOMContentLoaded', () => {
+        const bar = document.createElement('ul');
+        bar.id = 'wp-admin-bar-root-default';
+        bar.innerHTML = '<li id="wp-admin-bar-edit"><a class="ab-item" href="#">Edit Page</a></li>';
+        document.body.prepend(bar);
+      });
+    });
+    await page.goto('/?wine=linked-wine');
+
+    await expect(dialog(page)).toContainText('Linked Cellars');
+    const edit = page.locator('#wp-admin-bar-wine-agent-edit-review a');
+    await expect(edit).toHaveText('Edit Brand Review');
+    await expect(edit).toHaveAttribute('href', '/wp-admin/post.php?post=77&action=edit');
+
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeHidden();
+    expect(wineParam(page)).toBeNull();
+    await expect(edit).toHaveCount(0);
+
+    await page.getByTestId('wine-card').first().click();
+    await expect(edit).toHaveAttribute('href', /post=\d+&action=edit/);
+  });
+});

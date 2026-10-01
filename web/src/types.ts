@@ -1,5 +1,8 @@
 export interface Wine {
   id: string;
+  /** The review's post slug — what `?wine=` links use. Added by the plugin's
+   *  search endpoint; absent standalone, where links fall back to `id`. */
+  slug?: string;
   brandName: string;
   wineName: string;
   ava: string;

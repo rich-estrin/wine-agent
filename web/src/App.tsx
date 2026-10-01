@@ -18,6 +18,7 @@ import Sidebar, {
 import WineList from './components/WineList';
 import WineDetail from './components/WineDetail';
 import BottomSheet from './components/BottomSheet';
+import { wineKey, wineParam, urlWithWine, linkedWine, syncAdminBarEdit } from './lib/wine-link';
 
 // ── App ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ export default function App() {
   // and the one the results already arrive in.
   const [sortBy, setSortBy] = useState('publicationDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
+  const [selectedWine, setSelectedWine] = useState<Wine | null>(linkedWine);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -56,6 +57,49 @@ export default function App() {
   const PAGE_SIZE = 40;
   const [totalResults, setTotalResults] = useState<number | null>(null);
   const activeFilterCount = countActiveFilters(filters);
+
+  // The open wine rides on the URL as `?wine=`. Opening one pushes a history
+  // entry, so Back closes it; every wine opened is remembered by its key so
+  // Forward can reopen it.
+  const openedWines = useRef(new Map<string, Wine>());
+  const pushedWine = useRef(false);
+
+  const openWine = useCallback((wine: Wine) => {
+    const key = wineKey(wine);
+    openedWines.current.set(key, wine);
+    if (wineParam() !== key) {
+      // Opening over a wine already on the URL replaces it rather than stacking.
+      if (wineParam() && pushedWine.current) window.history.replaceState(null, '', urlWithWine(key));
+      else window.history.pushState(null, '', urlWithWine(key));
+      pushedWine.current = true;
+    }
+    setSelectedWine(wine);
+  }, []);
+
+  const closeWine = useCallback(() => {
+    setSelectedWine(null);
+    if (!wineParam()) return;
+    // Undo our own entry so Back doesn't reopen it; a wine the page was linked
+    // to has no entry of ours, so just drop the param.
+    if (pushedWine.current) window.history.back();
+    else window.history.replaceState(null, '', urlWithWine(null));
+    pushedWine.current = false;
+  }, []);
+
+  useEffect(() => {
+    const linked = linkedWine();
+    if (linked) openedWines.current.set(wineKey(linked), linked);
+    const onPop = () => {
+      const key = wineParam();
+      const wine = key ? openedWines.current.get(key) ?? null : null;
+      pushedWine.current = wine !== null;
+      setSelectedWine(wine);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  useEffect(() => syncAdminBarEdit(selectedWine), [selectedWine]);
 
   // Unnarrowed options, fetched once. Seeds the sidebar so it isn't empty
   // while the first faceted request is in flight.
@@ -285,7 +329,7 @@ export default function App() {
           <WineList
             wines={wines}
             loading={loading}
-            onSelect={setSelectedWine}
+            onSelect={openWine}
           />
           <div ref={sentinelRef} className="h-1" />
           {loadingMore && (
@@ -302,7 +346,7 @@ export default function App() {
         <Sidebar meta={meta} filters={filters} onChange={setFilters} />
       </BottomSheet>
 
-      <WineDetail wine={selectedWine} onClose={() => setSelectedWine(null)} query={query} />
+      <WineDetail wine={selectedWine} onClose={closeWine} query={query} />
     </div>
   );
 }

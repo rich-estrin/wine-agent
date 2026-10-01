@@ -84,6 +84,17 @@ readable and `MeprRule::is_locked()` is false for this reader. Fails closed.
 Admins bypass MemberPress, so access has to be tested as a non-admin member.
 `npm run test:plugin` covers it (`scripts/plugin-access-test.php`)
 
+### Review links (`?wine=`)
+
+Opening a wine pushes `?wine=<post slug>` onto the host page URL (Back closes
+it; `src/lib/wine-link.ts`). `/search` adds each wine's `slug` from the posts
+table at response time — it is not in the index, so it is never stale. On a
+`?wine=` load the shortcode inlines that review (`__WINE_AGENT_WINE__`, only if
+`wine_agent_can_read_page()` passes) and the `admin_bar_menu` hook adds "Edit
+Brand Review" (`wp-admin-bar-wine-agent-edit-review`) for an editor. Editors also
+get `__WINE_AGENT_EDIT__`, a link template the app uses to keep that node in step
+as wines open and close. Standalone, links use the id and don't reopen on load.
+
 ### The index table
 
 A flat row per published review, holding pre-folded match columns, typed sort
