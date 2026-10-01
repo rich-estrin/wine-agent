@@ -394,9 +394,13 @@ function wine_agent_index_upsert_post( int $post_id ): void {
 		return;
 	}
 
-	wine_agent_index_write_rows(
+	$written = wine_agent_index_write_rows(
 		[ wine_agent_build_index_row( wine_agent_map_review_row( $rows[0] ) ) ]
 	);
+	if ( 0 === $written ) {
+		global $wpdb;
+		error_log( sprintf( 'wine-agent-api: index upsert failed for review %d: %s', $post_id, $wpdb->last_error ) );
+	}
 }
 
 /**

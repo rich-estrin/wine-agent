@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Wine Agent API
  * Description: Serves the wine search directly from the WordPress database, and exposes a private REST endpoint for the wine agent to fetch all reviews.
- * Version: 2.42.1
+ * Version: 2.43.0
  * Requires at least: 5.9
  * Requires PHP: 7.4
  */
@@ -96,6 +96,34 @@ add_action( 'save_post_reviews', function ( int $post_id, WP_Post $post ) {
     wine_agent_index_delete_post( $post_id );
 }, 20, 2 );
 
+// Meta-only edits — update_field(), an importer, a front-end form — write
+// postmeta without firing save_post, so watch the meta itself. Ids are queued
+// and re-indexed once at shutdown, however many fields one request touches.
+function wine_agent_queue_meta_reindex( $meta_id, $post_id, $meta_key = '' ) {
+    static $queued = [];
+    $post_id = (int) $post_id;
+    // The edit lock is rewritten every time someone opens the edit screen.
+    if ( 0 === strpos( (string) $meta_key, '_edit_' ) || isset( $queued[ $post_id ] ) ) {
+        return;
+    }
+    if ( get_post_type( $post_id ) !== 'reviews' || wp_is_post_revision( $post_id ) ) {
+        return;
+    }
+    $queued[ $post_id ] = true;
+    add_action( 'shutdown', function () use ( $post_id ) {
+        if ( get_post_status( $post_id ) === 'publish' ) {
+            wine_agent_index_upsert_post( $post_id );
+        } else {
+            wine_agent_index_delete_post( $post_id );
+        }
+    } );
+}
+add_action( 'added_post_meta', 'wine_agent_queue_meta_reindex', 10, 3 );
+add_action( 'updated_post_meta', 'wine_agent_queue_meta_reindex', 10, 3 );
+add_action( 'deleted_post_meta', function ( $meta_ids, $post_id, $meta_key ) {
+    wine_agent_queue_meta_reindex( 0, $post_id, $meta_key );
+}, 10, 3 );
+
 // Fire on trash
 add_action( 'trashed_post', function ( int $post_id ) {
     if ( get_post_type( $post_id ) !== 'reviews' ) {
@@ -123,11 +151,36 @@ add_action( 'before_delete_post', function ( int $post_id ) {
 
 // ─── Index lifecycle ─────────────────────────────────────────────────────────
 
+/**
+ * Timestamp of the next 03:00 America/Los_Angeles. Computed in that zone so it
+ * stays at 3am PT across daylight-saving changes, whatever the site timezone.
+ */
+function wine_agent_next_nightly_time(): int {
+    $tz   = new DateTimeZone( 'America/Los_Angeles' );
+    $next = new DateTimeImmutable( 'today 03:00', $tz );
+    if ( $next->getTimestamp() <= time() ) {
+        $next = new DateTimeImmutable( 'tomorrow 03:00', $tz );
+    }
+    return $next->getTimestamp();
+}
+
+/**
+ * Keep exactly one nightly event pending, at 03:00 PT. It is a single event
+ * that re-arms itself each run (a fixed 24h interval would drift an hour at
+ * every DST change). A recurring event left by an older version is replaced.
+ */
+function wine_agent_schedule_nightly(): void {
+    $event = wp_get_scheduled_event( 'wine_agent_index_nightly' );
+    if ( $event && $event->schedule === false ) {
+        return;
+    }
+    wp_clear_scheduled_hook( 'wine_agent_index_nightly' );
+    wp_schedule_single_event( wine_agent_next_nightly_time(), 'wine_agent_index_nightly' );
+}
+
 register_activation_hook( __FILE__, function () {
     wine_agent_index_install();
-    if ( ! wp_next_scheduled( 'wine_agent_index_nightly' ) ) {
-        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'wine_agent_index_nightly' );
-    }
+    wine_agent_schedule_nightly();
 } );
 
 register_deactivation_hook( __FILE__, function () {
@@ -140,6 +193,7 @@ register_deactivation_hook( __FILE__, function () {
 // without firing a post hook (a direct SQL edit, an importer, a restored
 // backup).
 add_action( 'wine_agent_index_nightly', function () {
+    wine_agent_schedule_nightly();
     // Take the lock before resetting progress: a rebuild already in flight has
     // read the offset, and clearing it underneath that pass makes it rewrite
     // rows it has already written. If one is running, it produces an equivalent
@@ -202,9 +256,7 @@ add_action( 'admin_init', function () {
     if ( (int) get_option( 'wine_agent_index_version', 0 ) !== WINE_AGENT_INDEX_VERSION ) {
         wine_agent_index_install();
     }
-    if ( ! wp_next_scheduled( 'wine_agent_index_nightly' ) ) {
-        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'wine_agent_index_nightly' );
-    }
+    wine_agent_schedule_nightly();
     wine_agent_index_maybe_start_rebuild();
 } );
 
@@ -434,6 +486,70 @@ add_action( 'admin_menu', function () {
     );
 } );
 
+/**
+ * A stored UTC timestamp (ISO 8601) as Pacific time, e.g. "Sep 30, 2026 3:02 am PDT".
+ * Pacific whatever the site timezone, to match the 03:00 PT nightly rebuild.
+ */
+function wine_agent_format_pacific( string $iso ): string {
+    try {
+        $time = new DateTimeImmutable( $iso );
+    } catch ( Exception $e ) {
+        return $iso;
+    }
+    return $time->setTimezone( new DateTimeZone( 'America/Los_Angeles' ) )->format( 'M j, Y g:i a T' );
+}
+
+/**
+ * One rebuild pass for the settings page's live progress. The page calls this
+ * in a loop until it reports done, so a short budget keeps each request well
+ * inside any proxy timeout while the reader watches the count climb.
+ */
+add_action( 'wp_ajax_wine_agent_rebuild_step', 'wine_agent_ajax_rebuild_step' );
+function wine_agent_ajax_rebuild_step(): void {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( 'forbidden', 403 );
+    }
+    check_ajax_referer( 'wine_agent_rebuild_index' );
+
+    if ( ! wine_agent_index_table_exists() ) {
+        wine_agent_index_install();
+    }
+    if ( ! empty( $_POST['restart'] ) && wine_agent_index_lock() ) {
+        // Same reasoning as the nightly rebuild: only reset progress when no
+        // pass is mid-flight. If one is, this call reports busy and the page
+        // follows it instead.
+        delete_option( 'wine_agent_index_rebuild_offset' );
+        wine_agent_index_unlock();
+    }
+    $built_at = get_option( 'wine_agent_index_built_at', '' );
+    if (
+        ! empty( $_POST['follow'] )
+        && false === get_option( 'wine_agent_index_rebuild_offset', false )
+        && ! wine_agent_index_needs_rebuild()
+    ) {
+        // The page is mid-loop, but the rebuild it was following has finished
+        // (a background pass swapped it in). A step now would read the missing
+        // offset as 0 and start the whole rebuild again.
+        $count = wine_agent_index_count();
+        wp_send_json_success( [
+            'done'      => true,
+            'busy'      => false,
+            'processed' => $count,
+            'total'     => $count,
+            'indexed'   => $count,
+            'built_at'  => $built_at ? wine_agent_format_pacific( $built_at ) : '',
+        ] );
+    }
+    $state    = wine_agent_index_rebuild_step( 8 );
+    $built_at = get_option( 'wine_agent_index_built_at', '' );
+    wp_send_json_success(
+        $state + [
+            'indexed'  => wine_agent_index_count(),
+            'built_at' => $built_at ? wine_agent_format_pacific( $built_at ) : '',
+        ]
+    );
+}
+
 
 function wine_agent_settings_page(): void {
     if ( ! current_user_can( 'manage_options' ) ) {
@@ -509,7 +625,7 @@ function wine_agent_settings_page(): void {
             <tr>
                 <th scope="row">Indexed reviews</th>
                 <td>
-                    <?php echo esc_html( number_format_i18n( $index_count ) ); ?>
+                    <span id="wine-agent-indexed"><?php echo esc_html( number_format_i18n( $index_count ) ); ?></span>
                     <?php if ( ! wine_agent_index_table_exists() ) : ?>
                         <span style="color:#b32d2e">— table not created yet</span>
                     <?php endif; ?>
@@ -517,16 +633,17 @@ function wine_agent_settings_page(): void {
             </tr>
             <tr>
                 <th scope="row">Last full rebuild</th>
-                <td><?php echo $built_at ? esc_html( $built_at ) : '<em>never</em>'; ?></td>
+                <td id="wine-agent-built-at"><?php echo $built_at ? esc_html( wine_agent_format_pacific( $built_at ) ) : '<em>never</em>'; ?></td>
             </tr>
-            <?php if ( $in_progress > 0 ) : ?>
-            <tr>
+            <tr id="wine-agent-progress-row"<?php echo $in_progress > 0 ? '' : ' hidden'; ?>>
                 <th scope="row">Rebuild in progress</th>
-                <td><?php echo esc_html( number_format_i18n( $in_progress ) ); ?> reviews written so far</td>
+                <td>
+                    <progress id="wine-agent-progress" style="width:20em;vertical-align:middle" max="1" value="0"></progress>
+                    <span id="wine-agent-progress-text"><?php echo esc_html( number_format_i18n( $in_progress ) ); ?> reviews written so far</span>
+                </td>
             </tr>
-            <?php endif; ?>
         </table>
-        <form method="post">
+        <form method="post" id="wine-agent-rebuild-form">
             <?php wp_nonce_field( 'wine_agent_rebuild_index' ); ?>
             <p>
                 <button type="submit" name="wine_agent_rebuild" class="button button-primary">
@@ -545,6 +662,101 @@ function wine_agent_settings_page(): void {
                 you only need this after importing or editing reviews outside the editor.
             </p>
         </form>
+        <script>
+        // Drives the rebuild to completion in one click: one short pass per
+        // request, looping until done, with the count shown as it climbs. The
+        // form still posts normally (one pass per press) if this never runs.
+        ( function () {
+            var form = document.getElementById( 'wine-agent-rebuild-form' );
+            if ( ! form || ! window.fetch ) {
+                return;
+            }
+            var $ = function ( id ) { return document.getElementById( id ); };
+            var row = $( 'wine-agent-progress-row' );
+            var bar = $( 'wine-agent-progress' );
+            var text = $( 'wine-agent-progress-text' );
+            var buttons = form.querySelectorAll( 'button' );
+            var nonce = <?php echo wp_json_encode( wp_create_nonce( 'wine_agent_rebuild_index' ) ); ?>;
+            var url = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+            var fmt = function ( n ) { return Number( n ).toLocaleString(); };
+
+            function show( msg, state ) {
+                row.hidden = false;
+                text.textContent = msg;
+                if ( state && state.total > 0 ) {
+                    bar.max = state.total;
+                    bar.value = state.processed;
+                }
+            }
+
+            function finish( state ) {
+                show( 'Done — ' + fmt( state.processed ) + ' reviews indexed.', state );
+                $( 'wine-agent-indexed' ).textContent = fmt( state.indexed );
+                if ( state.built_at ) {
+                    $( 'wine-agent-built-at' ).textContent = state.built_at;
+                }
+                var notReady = document.querySelector( '.wrap > .notice-error' );
+                if ( notReady ) {
+                    notReady.remove();
+                }
+                buttons[ 0 ].textContent = 'Rebuild index';
+                for ( var i = 1; i < buttons.length; i++ ) {
+                    buttons[ i ].remove();
+                }
+                buttons = form.querySelectorAll( 'button' );
+                buttons.forEach( function ( b ) { b.disabled = false; } );
+            }
+
+            // The first call starts (or resumes) a rebuild; later ones only
+            // follow it, so they never restart one that has just finished.
+            function step( first, restart ) {
+                var body = new FormData();
+                body.append( 'action', 'wine_agent_rebuild_step' );
+                body.append( '_ajax_nonce', nonce );
+                if ( restart ) {
+                    body.append( 'restart', '1' );
+                }
+                if ( ! first ) {
+                    body.append( 'follow', '1' );
+                }
+                fetch( url, { method: 'POST', body: body, credentials: 'same-origin' } )
+                    .then( function ( r ) { return r.json(); } )
+                    .then( function ( res ) {
+                        if ( ! res || ! res.success ) {
+                            throw new Error( 'the server refused the request' );
+                        }
+                        var s = res.data;
+                        if ( s.done ) {
+                            finish( s );
+                            return;
+                        }
+                        var of = fmt( s.processed ) + ' of ' + fmt( s.total ) + ' reviews';
+                        if ( s.busy ) {
+                            // A background pass holds the lock; wait for it to
+                            // let go, then carry on from where it stopped.
+                            show( of + ' — a background pass is running, following it…', s );
+                            setTimeout( function () { step( false ); }, 3000 );
+                        } else {
+                            show( of + ' written…', s );
+                            step( false );
+                        }
+                    } )
+                    .catch( function ( err ) {
+                        show( 'Stopped: ' + err.message + '. Progress is saved — press Continue rebuild to resume.' );
+                        buttons[ 0 ].textContent = 'Continue rebuild';
+                        buttons.forEach( function ( b ) { b.disabled = false; } );
+                    } );
+            }
+
+            form.addEventListener( 'submit', function ( e ) {
+                e.preventDefault();
+                var restart = !! ( e.submitter && e.submitter.name === 'wine_agent_rebuild_restart' );
+                buttons.forEach( function ( b ) { b.disabled = true; } );
+                show( restart ? 'Starting over…' : 'Starting…' );
+                step( true, restart );
+            } );
+        } )();
+        </script>
 
         <h2>Review export endpoint</h2>
         <p><code><?php echo esc_html( $endpoint ); ?></code></p>

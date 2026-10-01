@@ -289,7 +289,7 @@ Replace `{prefix}` with the site's actual table prefix (usually `wp_`). No
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Search box returns *"Search index is being built"* / HTTP 503 | The first build has not finished | Wait a few minutes. If **Rebuild in progress** is not climbing, press **Rebuild index** and Continue to done (step 5) |
+| Search box returns *"Search index is being built"* / HTTP 503 | The first build has not finished | Wait a few minutes. If **Rebuild in progress** is not climbing, press **Rebuild index** — it runs to completion on its own (step 5) |
 | *"Wine search: assets not found. Re-upload the plugin zip."* | The zip was uploaded without its bundled assets, or partially extracted | Re-upload the zip; confirm `wp-content/plugins/wine-agent-api/assets/` contains a `.js` file and `manifest.json` |
 | Fatal error on activation | The zip is missing its `includes/` directory | Get a correctly packaged zip; the plugin requires `includes/wine-index.php` at load |
 | Page is blank where the app should be, console shows a React error | Another block on the page needs `wp-element`, or Rocket Loader / JS minification has been switched on | See 6.1, 6.2 |
@@ -299,7 +299,7 @@ Replace `{prefix}` with the site's actual table prefix (usually `wp_`). No
 | Reviews published today are missing from search | Index update hook did not fire (importer, direct SQL, or a bulk edit) | Press **Rebuild index**; routine editor saves should not need this |
 | Everything works logged in, broken logged out | A page-cache plugin or CDN rule added since launch | See 6.2 |
 | A member sees no results; the console shows a 401 or 403 from `/wine-agent/v1/` | Their membership does not unlock the search page, or the tab has been open more than a day and its login token expired | Reload the page. If it persists, check the MemberPress rule covering the page and the member's subscription |
-| Rebuild button times out / 502s | Host `max_execution_time` is below the 20-second slice budget | Press **Continue rebuild** repeatedly — progress is stored and resumes |
+| Rebuild button times out / 502s | Host `max_execution_time` is below the 20-second slice budget | The button now runs 8-second passes; if one still fails, press **Continue rebuild** — progress is stored and resumes |
 
 ---
 

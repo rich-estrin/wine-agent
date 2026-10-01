@@ -117,6 +117,8 @@ $required_functions = [
 	'wine_agent_handle_meta',
 	'wine_agent_get_reviews',
 	'wine_agent_settings_page',
+	'wine_agent_ajax_rebuild_step',
+	'wine_agent_format_pacific',
 	'wine_agent_index_maybe_start_rebuild',
 	'wine_agent_index_continue_rebuild',
 ];
@@ -132,6 +134,7 @@ $required_hooks = [
 	'before_delete_post',
 	'admin_init',
 	'admin_menu',
+	'wp_ajax_wine_agent_rebuild_step',
 	'wine_agent_index_nightly',
 	'wine_agent_index_continue',
 	'activate',

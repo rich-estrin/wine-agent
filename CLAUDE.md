@@ -92,10 +92,10 @@ folded in PHP at write time, the generated SQL only ever does binary
 comparisons — no collation dependence, no `REGEXP`, identical on MySQL and
 MariaDB.
 
-Maintained incrementally from the post lifecycle (save/publish upserts;
+Maintained incrementally from the post lifecycle and postmeta writes (save/publish upserts;
 unpublish, trash and delete remove; untrash restores) at hook priority 20, after
 ACF writes its fields. Every normalization is per-row and stateless, so an
-incremental upsert is equivalent to a full rebuild by construction. A nightly
+incremental upsert is equivalent to a full rebuild by construction. A nightly (03:00 PT)
 cron rebuild catches changes that bypass the hooks entirely — an importer, a
 direct SQL edit, a restored backup.
 
@@ -106,7 +106,7 @@ Incremental upserts write to the *live* table, so anything saved while a
 rebuild is in flight would be discarded by that swap; the post hooks note those
 ids in `wine_agent_index_rebuild_dirty` and the pass that swaps replays them
 onto the new table straight afterwards.
-Settings → Wine Agent API shows index status and a Rebuild button.
+Settings → Wine Agent API shows index status (times in Pacific) and a Rebuild button that loops short AJAX passes (`wp_ajax_wine_agent_rebuild_step`) to completion with a live progress bar; without JS it falls back to one pass per press.
 - **Always bump the version** in the plugin header and repackage the zip after any change:
   ```bash
   cd wordpress-plugin

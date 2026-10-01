@@ -77,9 +77,9 @@ on one) starts a background rebuild, which WP-Cron runs in 20-second passes —
 a few minutes for 18k reviews. Search returns 503 until it swaps in. Watch it
 under **Settings → Wine Agent API**: **Rebuild in progress** climbs, then
 **Indexed reviews** jumps to the full count. If progress stalls for five
-minutes, WP-Cron is not firing — press **Rebuild index** and Continue to done.
+minutes, WP-Cron is not firing — press **Rebuild index** — it runs to completion, showing progress as it goes.
 After that it is kept current automatically: saves,
-unpublishes, trashes and deletes update it, and a nightly cron rebuilds it in
+unpublishes, trashes and deletes update it, and a nightly (03:00 PT) cron rebuilds it in
 full.
 
 ## Verify
