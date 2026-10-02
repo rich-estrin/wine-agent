@@ -180,7 +180,16 @@ export async function typeSearch(page: Page, query: string): Promise<number> {
 export async function sortBy(page: Page, value: string): Promise<number> {
   return withResults(
     page,
-    () => sortSelect(page).selectOption(value),
+    async () => {
+      // Desktop has the themed menu; phones keep the native select.
+      const menu = sortMenuButton(page);
+      if (await menu.isVisible()) {
+        await menu.click();
+        await page.locator(`[role="option"][data-value="${value}"]`).click();
+      } else {
+        await sortSelect(page).selectOption(value);
+      }
+    },
     (params) => params.get('sort_by') === value,
   );
 }
@@ -197,6 +206,14 @@ export async function toggleSortDirection(page: Page): Promise<number> {
 // breakpoint class — :visible picks whichever applies to the current viewport.
 export const sortSelect = (page: Page) =>
   page.getByTestId('results').locator('select:visible').first();
+export const sortMenuButton = (page: Page) => page.getByTestId('sort-menu-button');
+
+/** Assert the current sort field, on whichever control this viewport shows. */
+export async function expectSort(page: Page, value: string) {
+  const menu = sortMenuButton(page);
+  if (await menu.isVisible()) await expect(menu).toHaveAttribute('data-value', value);
+  else await expect(sortSelect(page)).toHaveValue(value);
+}
 // Not getByText(/wines found/) — the empty state says "No wines found" too.
 export const resultCount = (page: Page) => page.getByTestId('result-count');
 

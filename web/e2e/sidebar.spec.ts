@@ -96,9 +96,9 @@ test.describe('facet groups', () => {
     const labels = await panel.getByTestId(/^facet-/).evaluateAll((els) =>
       els.map((el) => el.getAttribute('data-testid')),
     );
-    expect(labels.slice(-6)).toEqual([
+    expect(labels.slice(-5)).toEqual([
       'facet-appellation', 'facet-review-date', 'facet-cases',
-      'facet-home-region', 'facet-special-designation', 'facet-tasting-notes',
+      'facet-home-region', 'facet-special-designation',
     ]);
   });
 
@@ -164,78 +164,5 @@ test.describe('range controls', () => {
 
     await expect(score.nth(0)).not.toHaveClass(/border-red/);
     await expect(score.nth(1)).not.toHaveClass(/border-red/);
-  });
-});
-
-// Prose is searched only on request: matching it by default turns a search for
-// a winery into every review that happens to mention one.
-test.describe('the tasting-note option', () => {
-  const notesToggle = (panel: import('@playwright/test').Locator) =>
-    panel.getByRole('checkbox', { name: 'Search tasting notes' });
-
-  async function openNotesGroup(page: import('@playwright/test').Page) {
-    const panel = await openFilters(page);
-    await facetHeader(panel, 'Advanced').click();
-    await facetHeader(panel, 'Tasting Notes').click();
-    await expect(notesToggle(panel)).toBeVisible();
-    return panel;
-  }
-
-  test('finds a word that only appears in a review', async ({ page }) => {
-    const panel = await openNotesGroup(page);
-
-    await withResults(page, () => searchBox(page).fill('bright'));
-    await expect(page.getByTestId('wine-card')).toHaveCount(0);
-
-    const total = await withResults(
-      page,
-      () => notesToggle(panel).click(),
-      (params) => params.get('notes') === '1',
-    );
-    expect(total).toBeGreaterThan(0);
-  });
-
-  test('shows an active chip and clears with the rest', async ({ page }) => {
-    const panel = await openNotesGroup(page);
-    await notesToggle(panel).click();
-
-    await expect(activeChips(page).filter({ hasText: /tasting notes/i })).toHaveCount(1);
-    await expect(notesToggle(panel)).toHaveAttribute('aria-checked', 'true');
-
-    // The panel's own Clear all: on mobile the sheet covers the results column.
-    await panel.getByRole('button', { name: /clear all/i }).first().click();
-    await expect(notesToggle(panel)).toHaveAttribute('aria-checked', 'false');
-    await expect(activeChips(page).filter({ hasText: /tasting notes/i })).toHaveCount(0);
-  });
-
-  // The flag cannot change a result set that has no query to widen, so ticking
-  // it must not re-run the search — a request there blanks the list to a
-  // skeleton and repaints it identical, which reads as a glitch.
-  test('does not re-run the search when the box is empty', async ({ page }) => {
-    const panel = await openNotesGroup(page);
-    const before = await resultCount(page).textContent();
-
-    const requests: string[] = [];
-    page.on('request', (r) => { if (r.url().includes('/api/search')) requests.push(r.url()); });
-
-    await notesToggle(panel).click();
-    await expect(notesToggle(panel)).toHaveAttribute('aria-checked', 'true');
-    await page.waitForTimeout(1_200); // longer than both debounces
-
-    expect(requests).toEqual([]);
-    await expect(resultCount(page)).toHaveText(before!);
-  });
-
-  // ...but it must still take effect the moment there is a query to widen.
-  test('re-runs the search when a query is already typed', async ({ page }) => {
-    const panel = await openNotesGroup(page);
-    await withResults(page, () => searchBox(page).fill('bright'));
-
-    const total = await withResults(
-      page,
-      () => notesToggle(panel).click(),
-      (params) => params.get('notes') === '1',
-    );
-    expect(total).toBeGreaterThan(0);
   });
 });

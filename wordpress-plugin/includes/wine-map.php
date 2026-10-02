@@ -268,6 +268,7 @@ function wine_agent_build_index_row( array $wine ): array {
 	$row = [
 		'id'             => (int) ( $wine['id'] ?? 0 ),
 		'words'          => implode( ' ', $words ),
+		'brand_words'    => implode( ' ', wine_agent_fold_search_words( (string) ( $wine['brandName'] ?? '' ) ) ),
 		'folded_note'    => wine_agent_tokenize( wine_agent_fold( (string) ( $wine['review'] ?? '' ) ) ),
 		// scoreMin/scoreMax read the raw number and reject star ratings, so the
 		// two rating columns are not interchangeable: this one is the filter's,

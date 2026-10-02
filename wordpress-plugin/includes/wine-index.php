@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/wine-api-core.php';
 
 /** Bumped when the schema or any indexed normalization changes; a mismatch triggers a rebuild. */
-const WINE_AGENT_INDEX_VERSION = 1;
+const WINE_AGENT_INDEX_VERSION = 2;
 
 /** How many reviews to pivot and write per batch during a full rebuild. */
 const WINE_AGENT_REBUILD_BATCH = 500;

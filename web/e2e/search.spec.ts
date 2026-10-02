@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { search, typeSearch, searchBox, sortSelect, sortBy, toggleSortDirection, resultBrands, resultCount, totalResults, withResults, gotoApp } from './helpers';
+import { search, typeSearch, searchBox, expectSort, sortMenuButton, sortSelect, sortBy, toggleSortDirection, resultBrands, resultCount, totalResults, withResults, gotoApp } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await gotoApp(page);
@@ -113,19 +113,23 @@ test.describe('search runs itself', () => {
 
 test.describe('sort control', () => {
   test('opens on Review Date and stays there when a query is typed', async ({ page }) => {
-    await expect(sortSelect(page)).toHaveValue('publicationDate');
+    await expectSort(page, 'publicationDate');
     await search(page, 'Kiona');
-    await expect(sortSelect(page)).toHaveValue('publicationDate');
+    await expectSort(page, 'publicationDate');
   });
 
   test('keeps a sort chosen by hand across a search', async ({ page }) => {
     await sortBy(page, 'price');
     await search(page, 'Kiona');
-    await expect(sortSelect(page)).toHaveValue('price');
+    await expectSort(page, 'price');
   });
 
   test('labels the publication date "Review Date"', async ({ page }) => {
-    await expect(sortSelect(page).locator('option[value="publicationDate"]')).toHaveText('Review Date');
+    if (await sortMenuButton(page).isVisible()) {
+      await expect(sortMenuButton(page)).toHaveText('Review Date');
+    } else {
+      await expect(sortSelect(page).locator('option[value="publicationDate"]')).toHaveText('Review Date');
+    }
   });
 
   test('keeps the direction toggle available while searching', async ({ page }) => {

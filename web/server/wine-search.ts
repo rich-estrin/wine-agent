@@ -24,6 +24,18 @@ const SEARCH_FIELDS: (keyof Wine)[] = ['brandName', 'vintage', 'wineName', 'main
 // itself, so a cache entry cannot outlive the row it describes.
 const wordCache = new WeakMap<Wine, string[]>();
 
+// The "winery name only" scope: just the producer, for a reader who typed a
+// winery and is tired of seeing every wine that mentions it elsewhere.
+const wineryWordCache = new WeakMap<Wine, string[]>();
+
+function wineryWords(wine: Wine): string[] {
+  const cached = wineryWordCache.get(wine);
+  if (cached) return cached;
+  const words = foldSearchWords(wine.brandName ?? '');
+  wineryWordCache.set(wine, words);
+  return words;
+}
+
 function searchWords(wine: Wine): string[] {
   const cached = wordCache.get(wine);
   if (cached) return cached;
@@ -59,9 +71,14 @@ function noteMatchers(terms: string[], searchNotes: boolean): RegExp[] | null {
  *  Prefix, not substring: "gard" finds "Gård Vintners" but not "garden", and
  *  all terms must match somewhere (AND), though not in the same field.
  *  The indexed words include apostrophe elisions, so "lecole" finds "L'Ecole". */
-function matchesQuery(wine: Wine, terms: string[], notes: RegExp[] | null): boolean {
+function matchesQuery(
+  wine: Wine,
+  terms: string[],
+  notes: RegExp[] | null,
+  wineryOnly: boolean,
+): boolean {
   if (terms.length === 0) return true;
-  const words = searchWords(wine);
+  const words = wineryOnly ? wineryWords(wine) : searchWords(wine);
   return terms.every(
     (term, i) =>
       words.some((w) => w.startsWith(term)) ||
@@ -82,13 +99,17 @@ export function searchWines(
     sort_by?: string;
     sort_order?: 'asc' | 'desc';
     searchNotes?: boolean;
+    /** Match the producer name and nothing else. Wins over `searchNotes`. */
+    wineryOnly?: boolean;
   },
 ): Wine[] {
-  const { query, limit = 20, sort_by, sort_order = 'desc', searchNotes = false } = params;
+  const {
+    query, limit = 20, sort_by, sort_order = 'desc', searchNotes = false, wineryOnly = false,
+  } = params;
   const terms = foldWords(query);
-  const notes = noteMatchers(terms, searchNotes);
+  const notes = noteMatchers(terms, searchNotes && !wineryOnly);
 
-  let results = wines.filter((wine) => matchesQuery(wine, terms, notes));
+  let results = wines.filter((wine) => matchesQuery(wine, terms, notes, wineryOnly));
   if (sort_by) results = sortWines(results, sort_by, sort_order);
   return results.slice(0, limit);
 }

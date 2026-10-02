@@ -40,7 +40,7 @@ group.
 ## Battery
 
 `battery.json` — ~85 requests covering accent folding, word-start matching,
-apostrophe elision (`lecole` → `L'Ecole`), tasting-note widening (`notes=1`),
+apostrophe elision (`lecole` → `L'Ecole`), tasting-note widening (`notes=1`), the winery-only scope (`scope=winery`),
 every filter key the app sends, comma-separated OR lists, each range pair
 including star-rating and blank-cases exclusion, all sorts in both directions,
 the `relevance` alias, pagination and its clamps, unrecognised keys, and

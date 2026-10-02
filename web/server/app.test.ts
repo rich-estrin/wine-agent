@@ -167,6 +167,33 @@ describe('GET /api/search — notes=1', () => {
   });
 });
 
+// The popover's "Winery name only" option.
+describe('GET /api/search — scope=winery', () => {
+  it('narrows a search to the producer name', async () => {
+    const all = await search('q=syrah&limit=100');
+    const winery = await search('q=syrah&scope=winery&limit=100');
+    expect(all.total).toBeGreaterThan(0);
+    expect(winery.total).toBeLessThan(all.total);
+  });
+
+  it('finds a winery by name', async () => {
+    const r = await search('q=gard&scope=winery&limit=100');
+    expect(r.total).toBeGreaterThan(0);
+    for (const wine of r.wines) expect(wine.brandName.toLowerCase()).toMatch(/g[aå]rd/);
+  });
+
+  it('overrides notes=1', async () => {
+    const r = await search('q=bright&scope=winery&notes=1');
+    expect(r.total).toBe(0);
+  });
+
+  it('ignores an unknown scope, and is not treated as a filter', async () => {
+    const plain = await search('q=syrah&limit=100');
+    expect((await search('q=syrah&scope=everything&limit=100')).total).toBe(plain.total);
+    expect((await search('scope=winery&limit=5')).total).toBe((await search('limit=5')).total);
+  });
+});
+
 describe('GET /api/meta — faceting', () => {
   it('returns every facet list', async () => {
     const m = await meta();

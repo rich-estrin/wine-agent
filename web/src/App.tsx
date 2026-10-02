@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import type { Wine, Meta } from './types';
 import type { SearchParams } from './api';
 import { searchWines, fetchMeta } from './api';
+import SortMenu from './components/SortMenu';
 import SearchBar from './components/SearchBar';
 import { expandAva } from './data/ava-tree';
 import { expandRegion } from './data/region-tree';
@@ -19,6 +20,7 @@ import WineList from './components/WineList';
 import WineDetail from './components/WineDetail';
 import BottomSheet from './components/BottomSheet';
 import { wineKey, wineParam, urlWithWine, linkedWine, syncAdminBarEdit } from './lib/wine-link';
+
 
 // ── App ────────────────────────────────────────────────────────────────────
 
@@ -156,9 +158,12 @@ export default function App() {
     // in unconditionally it moved `searchKey`, so ticking the box with nothing
     // typed re-ran the whole search and blinked the list away for a result set
     // that came back identical.
-    if (filters.searchNotes && query.trim()) params.notes = '1';
+    if (query.trim()) {
+      if (filters.searchScope === 'notes') params.notes = '1';
+      if (filters.searchScope === 'winery') params.scope = 'winery';
+    }
     return params;
-  }, [query, buildFilterParams, filters.searchNotes, sortBy, sortOrder]);
+  }, [query, buildFilterParams, filters.searchScope, sortBy, sortOrder]);
 
   // Effects key off the *values* of the query, not the callback's identity.
   // buildFilterParams closes over `allMeta`, which arrives a beat after mount
@@ -241,7 +246,7 @@ export default function App() {
   }, [hasMore, loading, loadingMore, offset, searchKey]);
 
   return (
-    <div className="min-h-screen bg-[#faf7f2] font-sans text-ink">
+    <div className="min-h-screen max-w-[1200px] mx-auto bg-[#faf7f2] font-sans text-ink">
 
       {/* Page body: sidebar + main */}
       <div className="flex">
@@ -255,23 +260,19 @@ export default function App() {
           {/* Search bar + desktop sort */}
           <div className="flex gap-2 mb-3">
             <div className="flex-1">
-              <SearchBar value={query} onSearch={setQuery} />
+              <SearchBar
+                value={query}
+                onSearch={setQuery}
+                scope={filters.searchScope}
+                onScopeChange={(searchScope) => setFilters((f) => ({ ...f, searchScope }))}
+              />
             </div>
-            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-              <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] outline-none cursor-pointer"
-              >
-                <option value="rating">Rating</option>
-                <option value="price">Price</option>
-                <option value="vintage">Vintage</option>
-                <option value="publicationDate">Review Date</option>
-              </select>
+            <div className="hidden lg:flex items-stretch gap-2 flex-shrink-0">
+              <span className="flex items-center text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
+              <SortMenu value={sortBy} onChange={setSortBy} />
               <button
                 onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
+                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] !px-3.5 !h-auto !m-0 hover:text-ink transition-colors"
               >
                 {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
               </button>
@@ -292,20 +293,23 @@ export default function App() {
                 </span>
               )}
             </button>
-            <div className="ml-auto flex items-center gap-1.5">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="text-[11px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2 py-[6px] outline-none cursor-pointer"
-              >
-                <option value="rating">Rating</option>
-                <option value="price">Price</option>
-                <option value="vintage">Vintage</option>
-                <option value="publicationDate">Review Date</option>
-              </select>
+            <div className="ml-auto flex items-stretch gap-1.5">
+              <div className="relative flex">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none !h-10 !m-0 pl-3.5 pr-9 text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] outline-none cursor-pointer"
+                >
+                  <option value="rating">Rating</option>
+                  <option value="price">Price</option>
+                  <option value="vintage">Vintage</option>
+                  <option value="publicationDate">Review Date</option>
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 stroke-[3] text-ink" />
+              </div>
               <button
                 onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
+                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] !h-10 !m-0 px-3.5 hover:text-ink transition-colors"
               >
                 {sortOrder === 'desc' ? '↓' : '↑'}
               </button>
