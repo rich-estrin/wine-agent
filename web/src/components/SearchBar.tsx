@@ -52,6 +52,7 @@ export default function SearchBar({
   const clear = () => {
     setDraft('');
     onSearch('');
+    if (scope) onScopeChange('');
   };
 
   return (
@@ -103,6 +104,12 @@ function ScopeMenu({
   const winery = scope === 'winery';
   const label = PILL_LABEL[scope];
 
+  // Choosing an option is the whole interaction, so it also dismisses the popover.
+  const pick = (next: SearchScope) => {
+    onChange(next);
+    setOpen(false);
+  };
+
   // Close on an outside press or Escape.
   useEffect(() => {
     if (!open) return;
@@ -131,8 +138,12 @@ function ScopeMenu({
         aria-haspopup="true"
         aria-label={`Search in: ${label.long}`}
         data-testid="search-scope-pill"
-        className={`inline-flex items-center gap-1.5 !h-9 !m-0 px-3 rounded-full border border-wine text-[11px] focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-wine font-semibold tracking-[0.03em] whitespace-nowrap transition-colors ${
-          open ? 'bg-wine text-parchment' : 'bg-[rgba(123,45,62,0.08)] text-wine hover:bg-[rgba(123,45,62,0.14)]'
+        className={`inline-flex items-center gap-1.5 !h-9 !m-0 px-3 rounded-[3px] border border-wine text-[11px] focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-wine font-semibold tracking-[0.03em] whitespace-nowrap transition-colors ${
+          open
+            ? 'bg-wine text-parchment'
+            : scope === ''
+              ? 'bg-white text-ink hover:bg-[rgba(123,45,62,0.06)]'
+              : 'bg-[rgba(123,45,62,0.08)] text-wine hover:bg-[rgba(123,45,62,0.14)]'
         }`}
       >
         <span className="hidden sm:inline">{label.long}</span>
@@ -146,13 +157,13 @@ function ScopeMenu({
           aria-label="Search in"
           className="absolute right-0 w-[22rem] max-w-[calc(100vw-2.5rem)] top-full mt-2 z-30 bg-white border border-warm-border rounded-[6px] p-2 shadow-[0_12px_28px_rgba(26,20,16,0.18)]"
         >
-          <div className={`rounded-[4px] pb-2 ${winery ? '' : 'bg-[#f1e7d3]'}`}>
+          <div className={`rounded-[4px] pb-2 ${winery ? '' : 'bg-[#f1efeb]'}`}>
             <label className="flex items-start gap-3 px-3 pt-3 pb-1.5 cursor-pointer">
               <input
                 type="radio"
                 name={name}
                 checked={!winery}
-                onChange={() => onChange('')}
+                onChange={() => pick('')}
                 className="mt-0.5 w-5 h-5 accent-wine flex-shrink-0"
               />
               <span className="flex flex-col gap-0.5">
@@ -169,7 +180,7 @@ function ScopeMenu({
                 type="checkbox"
                 checked={scope === 'notes'}
                 disabled={winery}
-                onChange={(e) => onChange(e.target.checked ? 'notes' : '')}
+                onChange={(e) => pick(e.target.checked ? 'notes' : '')}
                 className="w-[18px] h-[18px] accent-wine flex-shrink-0"
               />
               <span className="text-[13px] text-ink">Include tasting notes</span>
@@ -177,14 +188,14 @@ function ScopeMenu({
           </div>
           <label
             className={`flex items-center gap-3 mt-1 px-3 min-h-[44px] rounded-[4px] cursor-pointer ${
-              winery ? 'bg-[#f1e7d3]' : ''
+              winery ? 'bg-[#f1efeb]' : ''
             }`}
           >
             <input
               type="radio"
               name={name}
               checked={winery}
-              onChange={() => onChange('winery')}
+              onChange={() => pick('winery')}
               className="w-5 h-5 accent-wine flex-shrink-0"
             />
             <span className="text-[14px] font-semibold text-ink">Winery name only</span>

@@ -37,7 +37,7 @@ test.describe('the search scope menu', () => {
     await openMenu(page);
     const total = await withResults(
       page,
-      () => notesBox(page).check(),
+      () => notesBox(page).click(),
       (params) => params.get('notes') === '1',
     );
     expect(total).toBeGreaterThan(0);
@@ -52,22 +52,30 @@ test.describe('the search scope menu', () => {
     await openMenu(page);
     const total = await withResults(
       page,
-      () => wineryRadio(page).check(),
+      () => wineryRadio(page).click(),
       (params) => params.get('scope') === 'winery',
     );
     expect(total).toBeLessThan(all);
     await expect(pill(page)).toContainText(/winer/i);
+    // Picking an option dismisses the menu; reopening shows it applied.
+    await expect(defaultRadio(page)).toBeHidden();
+    await openMenu(page);
     await expect(notesBox(page)).toBeDisabled();
   });
 
   test('the two options are exclusive, and Default resets the notes box', async ({ page }) => {
     await openMenu(page);
-    await notesBox(page).check();
-    await wineryRadio(page).check();
+    await notesBox(page).click();
+    await expect(defaultRadio(page)).toBeHidden();
+    await openMenu(page);
+    await expect(notesBox(page)).toBeChecked();
+    await wineryRadio(page).click();
+    await openMenu(page);
     await expect(defaultRadio(page)).not.toBeChecked();
     await expect(notesBox(page)).not.toBeChecked();
 
-    await defaultRadio(page).check();
+    await defaultRadio(page).click();
+    await openMenu(page);
     await expect(wineryRadio(page)).not.toBeChecked();
     await expect(notesBox(page)).toBeEnabled();
     await expect(notesBox(page)).not.toBeChecked();
@@ -95,6 +103,12 @@ test.describe('the search scope menu', () => {
     expect(border).toBe('0px');
   });
 
+  test('closes as soon as an option is chosen', async ({ page }) => {
+    await openMenu(page);
+    await wineryRadio(page).click();
+    await expect(defaultRadio(page)).toBeHidden();
+  });
+
   test('closes on Escape and on an outside press', async ({ page }) => {
     await openMenu(page);
     await page.keyboard.press('Escape');
@@ -107,8 +121,7 @@ test.describe('the search scope menu', () => {
 
   test('a non-default scope shows an active chip and clears with the rest', async ({ page }) => {
     await openMenu(page);
-    await wineryRadio(page).check();
-    await page.keyboard.press('Escape');
+    await wineryRadio(page).click();
     await expect(activeChips(page).filter({ hasText: /winery names only/i })).toHaveCount(1);
 
     // The panel's own Clear all: on mobile the sheet covers the results column.
@@ -116,6 +129,18 @@ test.describe('the search scope menu', () => {
     await panel.getByRole('button', { name: /clear all/i }).first().click();
     await expect(activeChips(page).filter({ hasText: /winery names only/i })).toHaveCount(0);
     await expect(pill(page)).toContainText(/default/i);
+  });
+
+  test('clearing the search with the x resets the scope to Default', async ({ page }) => {
+    await searchBox(page).fill('ita');
+    await openMenu(page);
+    await wineryRadio(page).click();
+    await expect(pill(page)).toContainText(/winer/i);
+
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await expect(searchBox(page)).toHaveValue('');
+    await expect(pill(page)).toContainText(/default/i);
+    await expect(activeChips(page).filter({ hasText: /winery names only/i })).toHaveCount(0);
   });
 
   // The setting cannot change a result set that has no query to act on, so
@@ -127,7 +152,7 @@ test.describe('the search scope menu', () => {
     page.on('request', (r) => { if (r.url().includes('/api/search')) requests.push(r.url()); });
 
     await openMenu(page);
-    await wineryRadio(page).check();
+    await wineryRadio(page).click();
     await page.waitForTimeout(1_200); // longer than both debounces
 
     expect(requests).toEqual([]);
@@ -136,8 +161,7 @@ test.describe('the search scope menu', () => {
 
   test('keeps every result a winery match', async ({ page }) => {
     await openMenu(page);
-    await wineryRadio(page).check();
-    await page.keyboard.press('Escape');
+    await wineryRadio(page).click();
     await withResults(page, () => searchBox(page).fill('gard'), (p) => p.get('scope') === 'winery');
     const brands = await resultBrands(page);
     expect(brands.length).toBeGreaterThan(0);

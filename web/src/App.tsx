@@ -3,6 +3,7 @@ import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import type { Wine, Meta } from './types';
 import type { SearchParams } from './api';
 import { searchWines, fetchMeta } from './api';
+import SortMenu from './components/SortMenu';
 import SearchBar from './components/SearchBar';
 import { expandAva } from './data/ava-tree';
 import { expandRegion } from './data/region-tree';
@@ -19,6 +20,7 @@ import WineList from './components/WineList';
 import WineDetail from './components/WineDetail';
 import BottomSheet from './components/BottomSheet';
 import { wineKey, wineParam, urlWithWine, linkedWine, syncAdminBarEdit } from './lib/wine-link';
+
 
 // ── App ────────────────────────────────────────────────────────────────────
 
@@ -265,21 +267,12 @@ export default function App() {
                 onScopeChange={(searchScope) => setFilters((f) => ({ ...f, searchScope }))}
               />
             </div>
-            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-              <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] outline-none cursor-pointer"
-              >
-                <option value="rating">Rating</option>
-                <option value="price">Price</option>
-                <option value="vintage">Vintage</option>
-                <option value="publicationDate">Review Date</option>
-              </select>
+            <div className="hidden lg:flex items-stretch gap-2 flex-shrink-0">
+              <span className="flex items-center text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
+              <SortMenu value={sortBy} onChange={setSortBy} />
               <button
                 onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2.5 py-[6px] hover:text-ink transition-colors"
+                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] !px-3.5 !h-auto !m-0 hover:text-ink transition-colors"
               >
                 {sortOrder === 'desc' ? 'Highest' : 'Lowest'}
               </button>
