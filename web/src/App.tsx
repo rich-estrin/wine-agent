@@ -156,9 +156,12 @@ export default function App() {
     // in unconditionally it moved `searchKey`, so ticking the box with nothing
     // typed re-ran the whole search and blinked the list away for a result set
     // that came back identical.
-    if (filters.searchNotes && query.trim()) params.notes = '1';
+    if (query.trim()) {
+      if (filters.searchScope === 'notes') params.notes = '1';
+      if (filters.searchScope === 'winery') params.scope = 'winery';
+    }
     return params;
-  }, [query, buildFilterParams, filters.searchNotes, sortBy, sortOrder]);
+  }, [query, buildFilterParams, filters.searchScope, sortBy, sortOrder]);
 
   // Effects key off the *values* of the query, not the callback's identity.
   // buildFilterParams closes over `allMeta`, which arrives a beat after mount
@@ -255,7 +258,12 @@ export default function App() {
           {/* Search bar + desktop sort */}
           <div className="flex gap-2 mb-3">
             <div className="flex-1">
-              <SearchBar value={query} onSearch={setQuery} />
+              <SearchBar
+                value={query}
+                onSearch={setQuery}
+                scope={filters.searchScope}
+                onScopeChange={(searchScope) => setFilters((f) => ({ ...f, searchScope }))}
+              />
             </div>
             <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
               <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>

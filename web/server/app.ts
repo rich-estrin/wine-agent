@@ -154,12 +154,15 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
   // Combined search + filter endpoint
   app.get('/api/search', requireApiKey, (req, res) => {
     try {
-      const { q, limit, offset, sort_by, sort_order, notes, ...filterParams } = req.query;
+      const { q, limit, offset, sort_by, sort_order, notes, scope, ...filterParams } = req.query;
       const query = typeof q === 'string' ? q.trim() : '';
       const filters = collectFilters(filterParams);
       // Opt-in prose search. Off by default, so an embed that knows nothing
       // about it keeps today's behaviour.
       const searchNotes = notes === '1' || notes === 'true';
+      // `scope=winery` narrows the search to the producer name; it wins over
+      // `notes`, since the two are exclusive in the app.
+      const wineryOnly = scope === 'winery';
 
       const sortOrd = sort_order === 'asc' ? 'asc' : 'desc';
       // Newest reviews first when the caller doesn't say — matches the app's
@@ -169,7 +172,7 @@ export function createApp(dataClient: DataClient, options: AppOptions = {}) {
 
       let results = dataClient.getAllWines();
 
-      if (query) results = searchWines(results, { query, limit: Infinity, searchNotes });
+      if (query) results = searchWines(results, { query, limit: Infinity, searchNotes, wineryOnly });
 
       if (Object.keys(filters).length > 0) {
         results = filterWines(results, { filters, limit: Infinity });

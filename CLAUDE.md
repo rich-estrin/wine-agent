@@ -160,6 +160,7 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 - **`App.tsx`** — top-level state (filters, query, sort, pagination), layout
 - **`components/Sidebar.tsx`** — dark collapsible filter panel; also exports `Filters` type, `emptyFilters`, `getDateFilter`
 - **`components/WineCard.tsx`** — card with score badge or star row, serif names, price
+- **`components/SearchBar.tsx`** — the search field and the scope pill inside it (see Search/Filter Logic)
 - **`components/AvaTreeFilter.tsx`** — hierarchical AVA dropdown with search
 - **`data/ava-tree.ts`** — PNW AVA hierarchy; `expandAva(name)` returns node + all descendants
 - **`api.ts`** — typed fetch wrappers for `/api/search`, `/api/meta`
@@ -170,7 +171,8 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 - **`main.tsx`** — mounts to `#wine-agent-root` (WordPress embed) or `#root` (standalone)
 
 ### API Server (`web/server/index.ts`)
-- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `stateProvince`, `specialDesignation`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`).
+- `GET /api/search` — `q`, `limit`, `offset`, `sort_by`, `sort_order` + filter params (`mainVarietal`, `ava`, `region`, `type`, `stateProvince`, `specialDesignation`, `priceMin`, `priceMax`, `scoreMin`, `scoreMax`, `vintageMin`, `vintageMax`, `casesMin`, `casesMax`, `publicationDate`),
+  plus the search-only settings `notes=1` and `scope=winery` (not filters; see below).
   Filter keys are an **allowlist** (`FILTER_PARAMS` in `app.ts`, `wine_agent_filter_params()`
   in `wine-query.php`) — anything else in the query string is ignored rather than
   read as a wine field. `sort_by` is an allowlist too (`SORT_FIELDS` /
@@ -188,13 +190,21 @@ The `[wine-search]` shortcode embeds the app from the JS/CSS bundled in the zip.
 - Full-text search: `server/wine-search.ts` looks at `brandName`, `vintage`,
   `wineName`, `mainVarietal` and `ava` only — not the tasting note or home
   region, which are what the filters are for. The tasting note joins the search
-  when `notes=1` (the "Search tasting notes" checkbox under Advanced): each term
+  when `notes=1` (the "Include tasting notes" checkbox in the scope popover): each term
   may then match a field *or* the note, folded and matched at a word start like
   everything else. The folded note is cached per wine in a `WeakMap`, built on
   first use, so a reader who leaves the box off pays nothing. Each query term must match the **start of a
   word** (accent-folded), and every term must match somewhere, though not
   necessarily in the same field. Matching only: results keep the source order
   unless a sort is given, and `/api/search` sorts by rating by default
+- Search scope: the pill at the end of the search field opens a popover with two
+  radios — **Default** (the fields above; nested "Include tasting notes" checkbox
+  sets `notes=1`) and **Winery name only** (`scope=winery`: brand name alone,
+  matched against the `brand_words` index column; wins over `notes`). The pill
+  reads "Default" / "Default + tasting notes" / "Winery names only", shortened
+  to "Default+" / "Wineries" below the `sm` breakpoint. State is
+  `Filters.searchScope` (`'' | 'notes' | 'winery'`), so it shows as an active
+  chip and clears with Clear all. Any other `scope` value is ignored
 - Apostrophes: the search index is built with `foldSearchWords()`, which adds the
   elided form of any apostrophe compound alongside the split words — "L'Ecole"
   indexes as `l`, `ecole` *and* `lecole`, so all three spellings find it. Both the
@@ -286,12 +296,11 @@ web/
 ## Key Conventions
 
 - Sidebar order: Wine Type, Varietal, Score, Vintage, Price, State/Province, then
-  Advanced (Appellation, Review Date, Cases, Home Region, Special Designation,
-  Tasting Notes)
-- `Filters.searchNotes` is the odd one out: a boolean that *widens* the search
-  rather than narrowing it. It rides in `Filters` so it shows as an active chip,
+  Advanced (Appellation, Review Date, Cases, Home Region, Special Designation)
+- `Filters.searchScope` is the odd one out: a search *setting* that changes what
+  the box matches rather than narrowing the results. It rides in `Filters` so it shows as an active chip,
   counts in the mobile badge and clears with the rest — but `App.tsx` sends it
-  only on `/api/search` (as `notes=1`), never on `/api/meta`, which has no use
+  only on `/api/search` (as `notes=1` or `scope=winery`), never on `/api/meta`, which has no use
   for a search setting. It is also sent **only alongside a query** — with an empty search box it cannot change
   the results, and including it moved `searchKey`, so ticking the box re-ran the
   search and blinked the list away to redraw it identical

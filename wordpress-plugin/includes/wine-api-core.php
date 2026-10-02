@@ -110,6 +110,7 @@ function wine_agent_index_columns(): array {
 	$columns = [
 		'id'             => 'BIGINT UNSIGNED NOT NULL',
 		'words'          => 'TEXT COLLATE utf8mb4_bin',
+		'brand_words'    => 'TEXT COLLATE utf8mb4_bin',
 		'folded_note'    => 'MEDIUMTEXT COLLATE utf8mb4_bin',
 		'rating_num'     => 'FLOAT NULL',
 		'rating_is_star' => 'TINYINT NOT NULL DEFAULT 0',

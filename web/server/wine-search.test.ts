@@ -330,3 +330,37 @@ describe('matchesFilter', () => {
   });
 
 });
+
+// "Winery name only": the producer and nothing else, for the reader who typed
+// a winery and wants no wine that merely mentions it.
+describe('searchWines — winery name only', () => {
+  const winery = (q: string, searchNotes = false) =>
+    ids(searchWines(wines, { query: q, limit: 99, wineryOnly: true, searchNotes }));
+
+  it('finds the winery, accent-folded and at a word start', () => {
+    expect(winery('gard')).toEqual(['gard']);
+    expect(winery('Woodward')).toEqual(['woodward']);
+    expect(winery('canyon')).toEqual(['woodward']);
+  });
+
+  it('skips the wine name that carries the same word', () => {
+    // Fidelitas makes a "Kiona Vineyard Cabernet"; only Kiona is the winery.
+    expect(search('Kiona')).toEqual(['kiona', 'fidelitas']);
+    expect(winery('Kiona')).toEqual(['kiona']);
+  });
+
+  it('skips varietal, appellation and vintage', () => {
+    expect(winery('Syrah')).toEqual([]);
+    expect(winery('Walla')).toEqual([]);
+    expect(winery('2020')).toEqual([]);
+  });
+
+  it('wins over the tasting-note option', () => {
+    expect(winery('herbs', true)).toEqual([]);
+  });
+
+  it('still needs every term to match the winery', () => {
+    expect(winery('Woodward Canyon')).toEqual(['woodward']);
+    expect(winery('Woodward Walla')).toEqual([]);
+  });
+});

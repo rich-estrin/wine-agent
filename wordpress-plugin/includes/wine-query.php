@@ -170,9 +170,10 @@ function wine_agent_word_start_clause( string $column, string $term ): array {
  *
  * @param string $query        Raw query string.
  * @param bool   $search_notes Whether to widen to the tasting note.
+ * @param bool   $winery_only  Match the producer name only; wins over notes.
  * @return array{clauses:string[],bindings:array}
  */
-function wine_agent_build_query_clauses( string $query, bool $search_notes ): array {
+function wine_agent_build_query_clauses( string $query, bool $search_notes, bool $winery_only = false ): array {
 	$terms    = wine_agent_fold_words( $query );
 	$clauses  = [];
 	$bindings = [];
@@ -185,11 +186,11 @@ function wine_agent_build_query_clauses( string $query, bool $search_notes ): ar
 			continue;
 		}
 
-		$parts = wine_agent_word_start_clause( 'words', $safe );
+		$parts = wine_agent_word_start_clause( $winery_only ? 'brand_words' : 'words', $safe );
 		$sql   = $parts['sql'];
 		$binds = $parts['bindings'];
 
-		if ( $search_notes ) {
+		if ( $search_notes && ! $winery_only ) {
 			$note  = wine_agent_word_start_clause( 'folded_note', $safe );
 			$sql   = '(' . $sql . ' OR ' . $note['sql'] . ')';
 			$binds = array_merge( $binds, $note['bindings'] );
@@ -343,14 +344,15 @@ function wine_agent_in_clause( string $column, array $values ): array {
  * @param string $query        Free-text query.
  * @param bool   $search_notes Widen to tasting notes.
  * @param array  $filters      Field filters.
+ * @param bool   $winery_only  Match the producer name only.
  * @return array{sql:string,bindings:array}
  */
-function wine_agent_build_where( string $query, bool $search_notes, array $filters ): array {
+function wine_agent_build_where( string $query, bool $search_notes, array $filters, bool $winery_only = false ): array {
 	$clauses  = [];
 	$bindings = [];
 
 	if ( '' !== trim( $query ) ) {
-		$q = wine_agent_build_query_clauses( $query, $search_notes );
+		$q = wine_agent_build_query_clauses( $query, $search_notes, $winery_only );
 		foreach ( $q['clauses'] as $clause ) {
 			$clauses[] = $clause;
 		}
@@ -417,6 +419,7 @@ function wine_agent_build_search_sql( array $params ): array {
 
 	$query        = isset( $params['q'] ) ? trim( (string) $params['q'] ) : '';
 	$search_notes = isset( $params['notes'] ) && ( '1' === (string) $params['notes'] || 'true' === (string) $params['notes'] );
+	$winery_only  = isset( $params['scope'] ) && 'winery' === (string) $params['scope'];
 	$filters      = wine_agent_collect_filters( $params );
 
 	$sort_order = ( isset( $params['sort_order'] ) && 'asc' === $params['sort_order'] ) ? 'asc' : 'desc';
@@ -432,7 +435,7 @@ function wine_agent_build_search_sql( array $params ): array {
 	$limit  = $window['limit'];
 	$offset = $window['offset'];
 
-	$where    = wine_agent_build_where( $query, $search_notes, $filters );
+	$where    = wine_agent_build_where( $query, $search_notes, $filters, $winery_only );
 	$order_by = wine_agent_build_order_by( $sort_by, $sort_order );
 
 	return [
