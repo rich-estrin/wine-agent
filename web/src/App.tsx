@@ -244,7 +244,7 @@ export default function App() {
   }, [hasMore, loading, loadingMore, offset, searchKey]);
 
   return (
-    <div className="min-h-screen bg-[#faf7f2] font-sans text-ink">
+    <div className="min-h-screen max-w-[1200px] mx-auto bg-[#faf7f2] font-sans text-ink">
 
       {/* Page body: sidebar + main */}
       <div className="flex">
