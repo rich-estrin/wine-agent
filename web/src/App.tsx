@@ -294,6 +294,7 @@ export default function App() {
               )}
             </button>
             <div className="ml-auto flex items-stretch gap-1.5">
+              <span className="flex items-center mr-1 text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
               <div className="relative flex">
                 <select
                   value={sortBy}
