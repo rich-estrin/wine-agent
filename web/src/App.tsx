@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import type { Wine, Meta } from './types';
 import type { SearchParams } from './api';
 import { searchWines, fetchMeta } from './api';
@@ -293,20 +293,23 @@ export default function App() {
                 </span>
               )}
             </button>
-            <div className="ml-auto flex items-center gap-1.5">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="text-[11px] font-medium text-ink bg-white border border-warm-border rounded-[3px] px-2 py-[6px] outline-none cursor-pointer"
-              >
-                <option value="rating">Rating</option>
-                <option value="price">Price</option>
-                <option value="vintage">Vintage</option>
-                <option value="publicationDate">Review Date</option>
-              </select>
+            <div className="ml-auto flex items-stretch gap-1.5">
+              <div className="relative flex">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none !h-10 !m-0 pl-3.5 pr-9 text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] outline-none cursor-pointer"
+                >
+                  <option value="rating">Rating</option>
+                  <option value="price">Price</option>
+                  <option value="vintage">Vintage</option>
+                  <option value="publicationDate">Review Date</option>
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 stroke-[3] text-ink" />
+              </div>
               <button
                 onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] px-2 py-[6px] hover:text-ink transition-colors"
+                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] !h-10 !m-0 px-3.5 hover:text-ink transition-colors"
               >
                 {sortOrder === 'desc' ? '↓' : '↑'}
               </button>
