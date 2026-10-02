@@ -56,6 +56,9 @@ export default function SearchBar({
 
   return (
     <div className="relative">
+      {/* The wrapper draws the field; the input inside is stripped of every
+          border and shadow, because a host theme styles bare inputs and would
+          otherwise draw a second box around the text. */}
       <div className="flex items-center bg-white border border-warm-border rounded-[3px] focus-within:border-gold/60 transition-colors">
         <input
           type="text"
@@ -67,7 +70,7 @@ export default function SearchBar({
           }}
           placeholder="Search winery, varietal, appellation…"
           aria-label="Search"
-          className="flex-1 min-w-0 pl-3.5 pr-2 py-2.5 font-cormorant font-light text-[15px] text-ink bg-transparent placeholder:italic placeholder-muted/60 focus:outline-none"
+          className="flex-1 min-w-0 pl-3.5 pr-2 py-2.5 font-cormorant font-light text-[15px] text-ink placeholder:italic placeholder-muted/60 !bg-transparent !border-0 !rounded-none !shadow-none !h-auto !m-0 focus:!outline-none focus:!shadow-none"
         />
         {draft && (
           <button
@@ -120,7 +123,7 @@ function ScopeMenu({
   }, [open]);
 
   return (
-    <div ref={root} className="flex-shrink-0 mr-1.5" data-testid="search-scope">
+    <div ref={root} className="relative flex-shrink-0 mr-1.5" data-testid="search-scope">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -128,7 +131,7 @@ function ScopeMenu({
         aria-haspopup="true"
         aria-label={`Search in: ${label.long}`}
         data-testid="search-scope-pill"
-        className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-wine text-[11px] font-semibold tracking-[0.03em] whitespace-nowrap transition-colors ${
+        className={`inline-flex items-center gap-1.5 !h-9 !m-0 px-3 rounded-full border border-wine text-[11px] focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-wine font-semibold tracking-[0.03em] whitespace-nowrap transition-colors ${
           open ? 'bg-wine text-parchment' : 'bg-[rgba(123,45,62,0.08)] text-wine hover:bg-[rgba(123,45,62,0.14)]'
         }`}
       >
@@ -141,7 +144,7 @@ function ScopeMenu({
         <div
           role="group"
           aria-label="Search in"
-          className="absolute left-0 right-0 sm:right-auto sm:w-[22rem] top-full mt-1.5 z-30 bg-white border border-warm-border rounded-[6px] p-2 shadow-[0_12px_28px_rgba(26,20,16,0.18)]"
+          className="absolute right-0 w-[22rem] max-w-[calc(100vw-2.5rem)] top-full mt-2 z-30 bg-white border border-warm-border rounded-[6px] p-2 shadow-[0_12px_28px_rgba(26,20,16,0.18)]"
         >
           <div className={`rounded-[4px] pb-2 ${winery ? '' : 'bg-[#f1e7d3]'}`}>
             <label className="flex items-start gap-3 px-3 pt-3 pb-1.5 cursor-pointer">

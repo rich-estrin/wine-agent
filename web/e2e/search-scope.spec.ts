@@ -73,6 +73,28 @@ test.describe('the search scope menu', () => {
     await expect(notesBox(page)).not.toBeChecked();
   });
 
+  // The pill sits inside the field's border, and the popover hangs from the
+  // pill — not from the field, which is the full width of the toolbar.
+  test('the pill is inset in the field and the popover anchors to it', async ({ page }) => {
+    const field = pill(page).locator('xpath=ancestor::div[contains(@class,"border-warm-border")][1]');
+    await openMenu(page);
+    const f = (await field.boundingBox())!;
+    const p = (await pill(page).boundingBox())!;
+    const m = (await menu(page).getByRole('group').boundingBox())!;
+
+    expect(p.x).toBeGreaterThan(f.x);
+    expect(p.x + p.width).toBeLessThan(f.x + f.width);
+    expect(p.y).toBeGreaterThanOrEqual(f.y);
+    expect(p.y + p.height).toBeLessThanOrEqual(f.y + f.height);
+
+    // Right edges line up with the pill's container, and it opens below the field.
+    expect(Math.abs(m.x + m.width - (p.x + p.width))).toBeLessThan(2);
+    expect(m.y).toBeGreaterThanOrEqual(f.y + f.height);
+    // The input has no border of its own.
+    const border = await searchBox(page).evaluate((el) => getComputedStyle(el).borderTopWidth);
+    expect(border).toBe('0px');
+  });
+
   test('closes on Escape and on an outside press', async ({ page }) => {
     await openMenu(page);
     await page.keyboard.press('Escape');
