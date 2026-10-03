@@ -8,15 +8,20 @@ export const SORT_OPTIONS = [
   { value: 'publicationDate', label: 'Review Date' },
 ];
 
-/** The desktop sort picker. A native <select> opens the OS menu, which ignores
- *  the theme, so this draws its own list in the same style as the scope
- *  popover. Phones keep the native select, whose picker is the better touch UI. */
+/** The sort picker. A native <select> opens the OS menu, which ignores the
+ *  theme, so this draws its own list in the same style as the scope popover.
+ *  `align="right"` opens the list from the right edge, for the narrow row where
+ *  the control sits against the viewport's right side. */
 export default function SortMenu({
   value,
   onChange,
+  align = 'left',
+  buttonClassName = '',
 }: {
   value: string;
   onChange: (value: string) => void;
+  align?: 'left' | 'right';
+  buttonClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -75,7 +80,7 @@ export default function SortMenu({
         aria-label={`Sort by: ${current.label}`}
         data-testid="sort-menu-button"
         data-value={current.value}
-        className="inline-flex items-center justify-between gap-3 !h-auto !m-0 pl-3.5 pr-3 text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] cursor-pointer whitespace-nowrap focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-wine"
+        className={`inline-flex items-center justify-between gap-3 !h-auto !m-0 ${buttonClassName} pl-3.5 pr-3 text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] cursor-pointer whitespace-nowrap focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-wine`}
       >
         {current.label}
         <ChevronDownIcon className={`w-3 h-3 stroke-[3] transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -87,7 +92,7 @@ export default function SortMenu({
           role="listbox"
           aria-label="Sort by"
           onKeyDown={onListKey}
-          className="absolute left-0 min-w-full top-full mt-2 z-30 bg-white border border-warm-border rounded-[6px] p-1.5 shadow-[0_12px_28px_rgba(26,20,16,0.18)]"
+          className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} min-w-full top-full mt-2 z-30 bg-white border border-warm-border rounded-[6px] p-1.5 shadow-[0_12px_28px_rgba(26,20,16,0.18)]`}
         >
           {SORT_OPTIONS.map((o) => {
             const selected = o.value === value;

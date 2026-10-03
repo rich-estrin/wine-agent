@@ -130,7 +130,7 @@ function ScopeMenu({
   }, [open]);
 
   return (
-    <div ref={root} className="relative flex-shrink-0 mr-1.5" data-testid="search-scope">
+    <div ref={root} className="relative flex-shrink-0 self-stretch flex" data-testid="search-scope">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -138,7 +138,7 @@ function ScopeMenu({
         aria-haspopup="true"
         aria-label={`Search in: ${label.long}`}
         data-testid="search-scope-pill"
-        className={`inline-flex items-center gap-1.5 !h-9 !m-0 px-3 rounded-[3px] border border-wine text-[11px] focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-wine font-semibold tracking-[0.03em] whitespace-nowrap transition-colors ${
+        className={`inline-flex items-center gap-1.5 !h-auto !m-0 px-3 rounded-[3px] border border-wine text-[11px] focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-wine font-semibold tracking-[0.03em] whitespace-nowrap transition-colors ${
           open
             ? 'bg-wine text-parchment'
             : scope === ''

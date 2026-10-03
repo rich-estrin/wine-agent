@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import type { Wine, Meta } from './types';
 import type { SearchParams } from './api';
 import { searchWines, fetchMeta } from './api';
@@ -295,22 +295,10 @@ export default function App() {
             </button>
             <div className="ml-auto flex items-stretch gap-1.5">
               <span className="flex items-center mr-1 text-[11px] font-medium tracking-[0.08em] uppercase text-muted">Sort by</span>
-              <div className="relative flex">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none !h-10 !m-0 pl-3.5 pr-9 text-[12px] font-medium text-ink bg-white border border-warm-border rounded-[3px] outline-none cursor-pointer"
-                >
-                  <option value="rating">Rating</option>
-                  <option value="price">Price</option>
-                  <option value="vintage">Vintage</option>
-                  <option value="publicationDate">Review Date</option>
-                </select>
-                <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 stroke-[3] text-ink" />
-              </div>
+              <SortMenu value={sortBy} onChange={setSortBy} align="right" buttonClassName="!h-10" />
               <button
                 onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                className="text-[11px] font-medium tracking-[0.06em] uppercase text-muted bg-white border border-warm-border rounded-[3px] !h-10 !m-0 px-3.5 hover:text-ink transition-colors"
+                className="text-[16px] leading-none font-medium text-muted bg-white border border-warm-border rounded-[3px] !h-10 !m-0 px-3.5 hover:text-ink transition-colors"
               >
                 {sortOrder === 'desc' ? '↓' : '↑'}
               </button>

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { search, typeSearch, searchBox, expectSort, sortMenuButton, sortSelect, sortBy, toggleSortDirection, resultBrands, resultCount, totalResults, withResults, gotoApp } from './helpers';
+import { search, typeSearch, searchBox, expectSort, sortMenuButton, sortBy, toggleSortDirection, resultBrands, resultCount, totalResults, withResults, gotoApp } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await gotoApp(page);
@@ -125,11 +125,7 @@ test.describe('sort control', () => {
   });
 
   test('labels the publication date "Review Date"', async ({ page }) => {
-    if (await sortMenuButton(page).isVisible()) {
-      await expect(sortMenuButton(page)).toHaveText('Review Date');
-    } else {
-      await expect(sortSelect(page).locator('option[value="publicationDate"]')).toHaveText('Review Date');
-    }
+    await expect(sortMenuButton(page)).toHaveText('Review Date');
   });
 
   test('keeps the direction toggle available while searching', async ({ page }) => {

@@ -181,14 +181,8 @@ export async function sortBy(page: Page, value: string): Promise<number> {
   return withResults(
     page,
     async () => {
-      // Desktop has the themed menu; phones keep the native select.
-      const menu = sortMenuButton(page);
-      if (await menu.isVisible()) {
-        await menu.click();
-        await page.locator(`[role="option"][data-value="${value}"]`).click();
-      } else {
-        await sortSelect(page).selectOption(value);
-      }
+      await sortMenuButton(page).click();
+      await page.locator(`[role="option"][data-value="${value}"]`).click();
     },
     (params) => params.get('sort_by') === value,
   );
@@ -202,17 +196,13 @@ export async function toggleSortDirection(page: Page): Promise<number> {
   return withResults(page, () => button.click());
 }
 
-// The desktop and mobile sort controls are both in the DOM, one hidden by a
+// The wide and narrow sort rows are both in the DOM, one hidden by a
 // breakpoint class — :visible picks whichever applies to the current viewport.
-export const sortSelect = (page: Page) =>
-  page.getByTestId('results').locator('select:visible').first();
-export const sortMenuButton = (page: Page) => page.getByTestId('sort-menu-button');
+export const sortMenuButton = (page: Page) => page.locator('[data-testid="sort-menu-button"]:visible');
 
-/** Assert the current sort field, on whichever control this viewport shows. */
+/** Assert the current sort field, on whichever row this viewport shows. */
 export async function expectSort(page: Page, value: string) {
-  const menu = sortMenuButton(page);
-  if (await menu.isVisible()) await expect(menu).toHaveAttribute('data-value', value);
-  else await expect(sortSelect(page)).toHaveValue(value);
+  await expect(sortMenuButton(page)).toHaveAttribute('data-value', value);
 }
 // Not getByText(/wines found/) — the empty state says "No wines found" too.
 export const resultCount = (page: Page) => page.getByTestId('result-count');
